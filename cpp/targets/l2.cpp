@@ -13,9 +13,9 @@ void L2::makeStats(Buffer<L2Stat>* stats, Buffer<int32_t>* indices) const {
     }
 
     auto nzTargetsRef = nzTargets_.arrayRef();
-    auto nzWeightsRef = nzWeights_.dim() ? nzWeights_.arrayRef() : ConstArrayRef<float>((const float*)nullptr, (size_t)0u);
+    auto nzWeightsRef = nzWeights_.dim() ? nzWeights_.arrayRef() : ConstVecRef<float>((const float*)nullptr, (size_t)0u);
 
-    ArrayRef<L2Stat> statsRef = stats->arrayRef();
+    VecRef<L2Stat> statsRef = stats->arrayRef();
     if (!nzWeightsRef.empty()) {
         parallelFor(0, nzTargetsRef.size(), [&](int64_t i) {
             statsRef[i].Sum = nzWeightsRef[i] * nzTargetsRef[i];

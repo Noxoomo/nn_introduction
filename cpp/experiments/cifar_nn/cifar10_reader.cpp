@@ -32,7 +32,7 @@ namespace cifar {
 #define CIFAR10_FILE_SIZE 10000
 #define IMAGE_SIZE (3 * 32 * 32)
 
-std::unique_ptr<uint8_t[]> read_cifar10_file_buffer(const std::string& path) {
+ std::unique_ptr<uint8_t[]> read_cifar10_file_buffer(const std::string& path) {
     std::ifstream file;
     file.open(path, std::ios::in | std::ios::binary | std::ios::ate);
 
@@ -51,7 +51,7 @@ std::unique_ptr<uint8_t[]> read_cifar10_file_buffer(const std::string& path) {
     return buffer;
 }
 
-void read_cifar10_file_float(float* x, long* y, const std::string& path, int& limit) {
+  void read_cifar10_file_float(float* x, long* y, const std::string& path, int& limit) {
     if (limit == 0) {
         return;
     }
@@ -83,7 +83,7 @@ void read_cifar10_file_float(float* x, long* y, const std::string& path, int& li
  *
  * \param limit The maximum number of elements to read (0: no limit)
  */
-void read_test(const std::string& folder, int limit, float* images, long* labels) {
+ void read_test(const std::string& folder, int limit, float* images, long* labels) {
     read_cifar10_file_float(images, labels, folder + "/test_batch.bin", limit);
 }
 
@@ -94,7 +94,7 @@ void read_test(const std::string& folder, int limit, float* images, long* labels
  *
  * \param limit The maximum number of elements to read (0: no limit)
  */
-void read_training(const std::string& folder, int limit, float* images, long* labels) {
+ void read_training(const std::string& folder, int limit, float* images, long* labels) {
     for (int i = 1; i <= 5; i++) {
         if (limit == 0) {
             break;
@@ -108,7 +108,7 @@ void read_training(const std::string& folder, int limit, float* images, long* la
     }
 }
 
-std::pair<TensorPairDataset, TensorPairDataset> read_dataset(const std::string& folder, int training_limit = -1, int test_limit = -1) {
+ std::pair<TensorPairDataset, TensorPairDataset> read_dataset(const std::string& folder, int training_limit, int test_limit) {
     torch::Tensor trainX = torch::zeros({50000, 3, 32, 32}, torch::kFloat32);
     torch::Tensor trainY = torch::zeros({50000}, torch::kLong);
 

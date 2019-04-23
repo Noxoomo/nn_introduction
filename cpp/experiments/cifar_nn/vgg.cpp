@@ -70,10 +70,10 @@ torch::Tensor VggClassifier::forward(torch::Tensor x) {
 
 // Vgg
 
-Vgg::Vgg(VggConfiguration cfg) {
+Vgg::Vgg(VggConfiguration cfg,  std::shared_ptr<experiments::Model> classifier) {
     if (cfg == VggConfiguration::Vgg16) {
         conv_ = register_module("conv_", std::make_shared<Vgg16Conv>());
-        classifier_ = register_module("classifier_", std::make_shared<VggClassifier>());
+        classifier_ = register_module("classifier_", classifier);
     } else {
         throw "Unsupported configuration";
     }

@@ -115,14 +115,23 @@ struct Monom {
     PolynomStructure Structure_;
     std::vector<double> Values_;
 
+    int OutDim() const {
+        return Values_.size();
+    }
+
     Monom(PolynomStructure structure, std::vector<double> values)
     : Structure_(std::move(structure))
     , Values_(std::move(values)) {
 
     }
 
-    void Forward(double lambda, ConstArrayRef<float> features, ArrayRef<float> dst);
-    void Backward(double lambda, ConstArrayRef<float> features, ConstArrayRef<float> outputsDer, ArrayRef<float> featuresDer);
+    Monom() {
+
+    }
+
+    //forward/backward will append to dst
+    void Forward(double lambda, ConstVecRef<float> features, VecRef<float> dst) const;
+    void Backward(double lambda, ConstVecRef<float> features, ConstVecRef<float> outputsDer, VecRef<float> featuresDer) const;
 };
 
 struct Polynom {
@@ -136,8 +145,16 @@ struct Polynom {
         }
     }
 
-    void Forward(ConstArrayRef<float> features, ArrayRef<float> dst);
-    void Backward(ConstArrayRef<float> features, ConstArrayRef<float> outputsDer, ArrayRef<float> featuresDer);
+    Polynom() {
+
+    }
+    //forward/backward will append to dst
+    void Forward(ConstVecRef<float> features, VecRef<float> dst) const;
+    void Backward(ConstVecRef<float> features, ConstVecRef<float> outputsDer, VecRef<float> featuresDer) const;
+
+    int OutDim() const {
+        return Ensemble_.empty() ? 0 : Ensemble_.back().OutDim();
+    }
 
 
 };

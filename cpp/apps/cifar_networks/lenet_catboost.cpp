@@ -1,5 +1,6 @@
 #include "common.h"
 #include "common_em.h"
+#include "catboost_nn.h"
 
 #include <cifar_nn/lenet.h>
 #include <cifar_nn/cifar10_reader.h>
@@ -12,6 +13,7 @@
 #include <string>
 #include <memory>
 #include <iostream>
+#include <cifar_nn/polynom_model.h>
 
 int main(int argc, char* argv[]) {
     auto device = torch::kCPU;
@@ -26,22 +28,38 @@ int main(int argc, char* argv[]) {
     // Read dataset
 
     const std::string& path = "../../../../resources/cifar10/cifar-10-batches-bin";
+    const std::string& params = "../../../../resources/cifar10/cifar-10-batches-bin";
     auto dataset = cifar::read_dataset(path);
 
     // Init model
+    CatBoostNNConfig catBoostNnConfig;
+    catBoostNnConfig.batchSize = 32;
+    catBoostNnConfig.lambda_ = 10;
+    catBoostNnConfig.representationsIterations = 2;
+    catBoostNnConfig.catboostParamsFile = "../../../../cpp/apps/cifar_networks/catboost_params.json";
 
-    auto lenet = std::make_shared<LeNet>();
+    PolynomPtr polynom = std::make_shared<Polynom>();
+    polynom->Lambda_ = catBoostNnConfig.lambda_;
+    {
+        Monom emptyMonom;
+        emptyMonom.Structure_ .Splits.push_back({0, 0});
+        const auto outDim = 10;
+        emptyMonom.Values_.resize(outDim);
+        polynom->Ensemble_.push_back(emptyMonom);
+    }
+
+    auto lenet = std::make_shared<LeNet>(std::make_shared<PolynomModel>(polynom));
     lenet->to(device);
 
-    CommonEm emTrainer({5, 2, 4}, lenet, device);
+    CatBoostNN nnTrainer(catBoostNnConfig, lenet, device);
 
     // Attach Listeners
 
     auto mds = dataset.second.map(getDefaultCifar10TestTransform());
-    emTrainer.registerGlobalIterationListener([&](uint32_t epoch, experiments::ModelPtr model) {
+    nnTrainer.registerGlobalIterationListener([&](uint32_t epoch, experiments::ModelPtr model) {
         model->eval();
 
-        auto dloader = torch::data::make_data_loader(mds, torch::data::DataLoaderOptions(128));
+        auto dloader = torch::data::make_data_loader(mds, torch::data::DataLoaderOptions(catBoostNnConfig.batchSize));
         int rightAnswersCnt = 0;
 
         for (auto& batch : *dloader) {
@@ -73,7 +91,7 @@ int main(int argc, char* argv[]) {
     // Train
 
     auto loss = std::make_shared<CrossEntropyLoss>();
-    emTrainer.train(dataset.first, loss);
+    nnTrainer.train(dataset.first, loss);
 
     // Eval model
 

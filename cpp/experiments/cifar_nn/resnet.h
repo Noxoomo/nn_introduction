@@ -72,7 +72,7 @@ private:
 
 class ResNet : public experiments::ConvModel {
 public:
-    explicit ResNet(ResNetConfiguration cfg);
+    explicit ResNet(ResNetConfiguration cfg, std::shared_ptr<experiments::Model> classifier = std::make_shared<ResNetClassifier>(1));
 
     torch::Tensor forward(torch::Tensor x) override;
 
@@ -83,7 +83,7 @@ public:
     ~ResNet() override = default;
 
 private:
-    void init(std::vector<int> nBlocks);
+    void init(std::vector<int> nBlocks, std::shared_ptr<experiments::Model> classifier);
 
 private:
     std::shared_ptr<ResNetConv> conv_{nullptr};

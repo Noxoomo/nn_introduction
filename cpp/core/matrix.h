@@ -67,7 +67,7 @@ public:
 
     template <class Visitor>
     void iterateOverColumn(int64_t columnIdx, Visitor&& visitor) const {
-        ConstArrayRef<float> data = arrayRef();
+        ConstVecRef<float> data = arrayRef();
         for (int64_t i = 0; i < ydim(); ++i) {
             visitor(i, data[seqIndex(columnIdx, i)]);
         }

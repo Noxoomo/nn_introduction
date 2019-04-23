@@ -34,8 +34,8 @@ void ObliviousTree::applyToBds(const BinarizedDataSet& ds, Mx to, ApplyType type
     }
 
 
-    ArrayRef<float> dstArray = static_cast<Vec>(to).arrayRef();
-    ConstArrayRef<float> leavesRef = leaves_.arrayRef();
+    VecRef<float> dstArray = static_cast<Vec>(to).arrayRef();
+    ConstVecRef<float> leavesRef = leaves_.arrayRef();
 
     if (type == ApplyType::Set) {
         //TODO(noxoomo): this is gather primitive

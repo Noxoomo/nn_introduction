@@ -2,7 +2,7 @@
 #include "common_em.h"
 
 #include <cifar_nn/vgg.h>
-#include <cifar_nn/cifar10_reader.hpp>
+#include <cifar_nn/cifar10_reader.h>
 #include <cifar_nn/optimizer.h>
 #include <cifar_nn/cross_entropy_loss.h>
 #include <cifar_nn/em_like_train.h>
@@ -33,7 +33,7 @@ int main(int argc, char* argv[]) {
     auto vgg = std::make_shared<Vgg>(VggConfiguration::Vgg16);
     vgg->to(device);
 
-    CommonEm emTrainer({5, 2, 4}, vgg, device);
+    CommonEm emTrainer({500, 1, 1}, vgg, device);
 
     // Attach Listeners
 

@@ -129,7 +129,7 @@ GridPtr buildGrid(const DataSet& ds, const BinarizationConfig& config) {
         ds.copyColumn(fIndex, &column);
 
         auto featureBorders = buildBorders(config, &column);
-        if (featureBorders.size()) {
+        if (!featureBorders.empty()) {
             borders.push_back(featureBorders);
             const auto binCount = borders.back().size();
             features.push_back(Feature(nzFeatureId, binCount, fIndex));

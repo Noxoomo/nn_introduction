@@ -33,10 +33,6 @@ torch::Tensor LeNetClassifier::forward(torch::Tensor x) {
 
 // LeNet
 
-LeNet::LeNet() {
-    conv_ = register_module("conv_", std::make_shared<LeNetConv>());
-    classifier_ = register_module("classifier_", std::make_shared<LeNetClassifier>());
-}
 
 torch::Tensor LeNet::forward(torch::Tensor x) {
     x = conv_->forward(x);
@@ -50,4 +46,9 @@ experiments::ModelPtr LeNet::conv() {
 
 experiments::ModelPtr LeNet::classifier() {
     return classifier_;
+}
+
+LeNet::LeNet(std::shared_ptr<experiments::Model> classifier) {
+    conv_ = register_module("conv_", std::make_shared<LeNetConv>());
+    classifier_ = register_module("classifier_", classifier);
 }

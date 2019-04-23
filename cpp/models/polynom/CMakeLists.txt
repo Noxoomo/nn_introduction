@@ -5,8 +5,8 @@ project(polynom LANGUAGES CXX)
 add_library(polynom
         polynom.h
         polynom.cpp
-#        polynom_autograd.cpp
-#        polynom_autograd.h
+        polynom_autograd.cpp
+        polynom_autograd.h
 )
 
 

@@ -187,8 +187,8 @@ namespace Detail {
 }
 
 template <class T>
-using ArrayRef = Detail::ArrayRef<T>;
+using VecRef = Detail::ArrayRef<T>;
 
 
 template <class T>
-using ConstArrayRef = Detail::ArrayRef<const T>;
+using ConstVecRef = Detail::ArrayRef<const T>;

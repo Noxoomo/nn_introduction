@@ -58,7 +58,7 @@ private:
 
 class Vgg : public experiments::ConvModel {
 public:
-    explicit Vgg(VggConfiguration cfg);
+    explicit Vgg(VggConfiguration cfg, std::shared_ptr<experiments::Model> classifier = std::make_shared<VggClassifier>());
 
     torch::Tensor forward(torch::Tensor x) override;
 
@@ -70,5 +70,5 @@ public:
 
 private:
     std::shared_ptr<VggConv> conv_;
-    std::shared_ptr<VggClassifier> classifier_;
+    std::shared_ptr<experiments::Model> classifier_;
 };

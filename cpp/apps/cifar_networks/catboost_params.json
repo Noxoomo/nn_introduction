@@ -1,0 +1,10 @@
+{
+  "boosting_type": "Plain",
+  "iterations" : 100,
+  "eval_metric": "Accuracy",
+  "od_type": "IncToDec",
+  "logging_level" : "Debug",
+  "loss_function": "MultiClass",
+  "learning_rate" : 0.8,
+  "bootstrap_type": "No"
+}

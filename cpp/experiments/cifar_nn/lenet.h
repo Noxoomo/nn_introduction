@@ -41,7 +41,7 @@ private:
 
 class LeNet : public experiments::ConvModel {
 public:
-    LeNet();
+    LeNet(std::shared_ptr<experiments::Model> classifier = std::make_shared<LeNetClassifier>());
 
     torch::Tensor forward(torch::Tensor x) override;
 
@@ -53,5 +53,6 @@ public:
 
 private:
     std::shared_ptr<LeNetConv> conv_{nullptr};
-    std::shared_ptr<LeNetClassifier> classifier_{nullptr};
+    std::shared_ptr<experiments::Model> classifier_{nullptr};
 };
+

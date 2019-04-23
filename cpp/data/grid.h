@@ -59,11 +59,11 @@ public:
         return borders_[fIndex][binIndex];
     }
 
-    ConstArrayRef<Feature> nzFeatures() const {
-        return ConstArrayRef<Feature>(features_);
+    ConstVecRef<Feature> nzFeatures() const {
+        return ConstVecRef<Feature>(features_);
     }
 
-    ConstArrayRef<float> borders(int64_t fIndex) const {
+    ConstVecRef<float> borders(int64_t fIndex) const {
         return borders_[fIndex];
     }
 
@@ -74,7 +74,7 @@ public:
         return binFeatures_.size();
     }
 
-    ConstArrayRef<int64_t> binFeatureOffsets() const {
+    ConstVecRef<int64_t> binFeatureOffsets() const {
         return binFeatureOffsets_;
     }
 
@@ -82,7 +82,7 @@ public:
         return features_[fIndex].conditionsCount_;
     }
 
-    void binarize(ConstArrayRef<float> row, ArrayRef<uint8_t> dst) const;
+    void binarize(ConstVecRef<float> row, VecRef<uint8_t> dst) const;
 //
 //    void binarizeColumn(int32_t fIndex, const Vec& column, torch::Tensor* dst) const;
 
@@ -112,7 +112,7 @@ private:
 };
 
 
-inline int32_t computeBin(float val, ConstArrayRef<float> borders) {
+inline int32_t computeBin(float val, ConstVecRef<float> borders) {
     int32_t bin = 0;
     while (bin < borders.size() && borders[bin] < val) {
         ++bin;

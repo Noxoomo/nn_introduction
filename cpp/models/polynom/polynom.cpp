@@ -2,6 +2,7 @@
 #include <map>
 #include <util/exception.h>
 #include <util/parallel_executor.h>
+#include <cmath>
 
 struct PathBit {
     int Bits = 0;
@@ -104,7 +105,20 @@ void PolynomBuilder::AddTree(const TSymmetricTree& tree)  {
 }
 
 
-void Monom::Forward(double lambda, ConstArrayRef<float> features, ArrayRef<float> dst) {
+void Monom::Forward(double lambda, ConstVecRef<float> features, VecRef<float> dst) const {
+//    bool allTrue = true;
+//    for (const auto& split : Structure_.Splits) {
+//
+//        if (features[split.Feature] <= split.Condition) {
+//            allTrue = false;
+//            break;
+//        }
+//    }
+//    if (allTrue) {
+//        for (int dim = 0; dim < dst.size(); ++dim) {
+//            dst[dim] +=  Values_[dim];
+//        }
+//    }
   double trueLogProb = 0;
   for (const auto& split : Structure_.Splits) {
     const double val = -lambda * (features[split.Feature] - split.Condition);
@@ -124,9 +138,9 @@ void Monom::Forward(double lambda, ConstArrayRef<float> features, ArrayRef<float
 }
 
 void Monom::Backward(double lambda,
-                     ConstArrayRef<float> features,
-                     ConstArrayRef<float> outputsDer,
-                     ArrayRef<float> featuresDer) {
+                     ConstVecRef<float> features,
+                     ConstVecRef<float> outputsDer,
+                     VecRef<float> featuresDer) const {
 
   std::vector<float> logProbs(Structure_.Splits.size());
 
@@ -160,10 +174,32 @@ void Monom::Backward(double lambda,
 }
 
 
-void Polynom::Forward(ConstArrayRef<float> features,
-                      ArrayRef<float> dst) {
+void Polynom::Forward(ConstVecRef<float> features,
+                      VecRef<float> dst) const {
+    const int threadCount = GlobalThreadPool().numThreads();
 
+    std::vector<std::vector<float>> partResults(threadCount, std::vector<float>(dst.size()));
+
+    parallelFor(0, threadCount, [&](int i) {
+        const int elemsPerBlock = (Ensemble_.size() + threadCount - 1) / threadCount;
+        const int blockStart = i  * elemsPerBlock;
+        const int blockEnd = std::min<int>(blockStart + elemsPerBlock, Ensemble_.size());
+        for (int j = blockStart; j < blockEnd; ++j) {
+            Ensemble_[j].Forward(Lambda_, features, partResults[i]);
+        }
+    });
+
+    for (int i = 0; i < threadCount; ++i) {
+        for (int j = 0; j < dst.size(); ++j) {
+            dst[j] += partResults[i][j];
+        }
+    }
 }
-void Polynom::Backward(ConstArrayRef<float> features,
-                       ConstArrayRef<float> outputsDer,
-                       ArrayRef<float> featuresDer) {}
+
+void Polynom::Backward(ConstVecRef<float> features,
+                       ConstVecRef<float> outputsDer,
+                       VecRef<float> featuresDer) const {
+    for (const auto& monom : Ensemble_) {
+        monom.Backward(Lambda_, features, outputsDer, featuresDer);
+    }
+}

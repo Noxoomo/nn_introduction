@@ -19,7 +19,6 @@ public:
       , leaves_(leaves) {
             bitVec.reserve(leaves_.size());
             auto leavesPtr = leaves_.arrayRef();
-
             for (uint32_t b = 0; b < leaves_.size(); ++b) {
                 double value = 0;
                 uint bitsB = bits(b);

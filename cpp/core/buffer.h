@@ -63,8 +63,8 @@ public:
 
     }
 
-    ArrayRef<T> arrayRef() {
-        return ArrayRef<T>(reinterpret_cast<T*>(Detail::TorchBufferTrait<T>::data(data_)), size());
+    VecRef<T> arrayRef() {
+        return VecRef<T>(reinterpret_cast<T*>(Detail::TorchBufferTrait<T>::data(data_)), size());
     }
 
     void fill(const T& val) {
@@ -74,8 +74,8 @@ public:
         }
     }
 
-    ConstArrayRef<T> arrayRef() const {
-        return ConstArrayRef<T>(reinterpret_cast<const T*>(Detail::TorchBufferTrait<T>::data(data_)), size());
+    ConstVecRef<T> arrayRef() const {
+        return ConstVecRef<T>(reinterpret_cast<const T*>(Detail::TorchBufferTrait<T>::data(data_)), size());
     }
 
 
@@ -98,7 +98,7 @@ public:
 
     static Buffer fromVector(const std::vector<T>& vec) {
         Buffer x(static_cast<int64_t>(vec.size()));
-        ArrayRef<T> dst = x.arrayRef();
+        VecRef<T> dst = x.arrayRef();
         for (int64_t i = 0; i < dst.size(); ++i) {
             dst[i] = vec[i];
         }

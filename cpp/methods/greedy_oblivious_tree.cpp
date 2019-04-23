@@ -34,7 +34,7 @@ namespace {
         }
 
         void split(const BinaryFeature& feature) {
-            ArrayRef<int32_t> binsRef = bins_.arrayRef();
+            VecRef<int32_t> binsRef = bins_.arrayRef();
             auto indicesRef = indices_.arrayRef();
             auto statRef = stat_.arrayRef();
 
@@ -204,21 +204,21 @@ namespace {
             }
         }
 
-        void buildHistogramsForParts(ConstArrayRef<int32_t> partIds, ArrayRef<Stat> dst) const {
+        void buildHistogramsForParts(ConstVecRef<int32_t> partIds, VecRef<Stat> dst) const {
             auto& threadPool = GlobalThreadPool();
             for (int32_t i = 0; i < partIds.size(); ++i) {
                 const int32_t partId = partIds[i];
                 const auto& part = leaves_[partId];
-                ConstArrayRef<int32_t> indices = indices_.arrayRef().slice(part.Offset, part.Size);
-                ConstArrayRef<Stat> stat = stat_.arrayRef().slice(part.Offset, part.Size);
+                ConstVecRef<int32_t> indices = indices_.arrayRef().slice(part.Offset, part.Size);
+                ConstVecRef<Stat> stat = stat_.arrayRef().slice(part.Offset, part.Size);
 
                 ds_.visitGroups([dst, this, indices, stat, i, &threadPool](
                     FeaturesBundle bundle,
-                    ConstArrayRef<uint8_t> data) {
+                    ConstVecRef<uint8_t> data) {
 
 //                    const int64_t minIndicesToBuildParallel = 4096;
                     auto binOffsets = ds_.binOffsets().slice(bundle.firstFeature_, bundle.groupSize());
-                    ArrayRef<Stat> dstForBundle = dst.slice(ds_.totalBins() * i, ds_.totalBins());
+                    VecRef<Stat> dstForBundle = dst.slice(ds_.totalBins() * i, ds_.totalBins());
 
                     threadPool.enqueue([=]() {
                         buildHistograms(bundle.groupSize(),

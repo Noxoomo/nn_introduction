@@ -44,16 +44,22 @@ int main(int /*argc*/, char* /*argv*/[]) {
     std::string params = strStream.str();
     auto model = Train(trainPool, testPool, params);
     Polynom polynom(PolynomBuilder().AddEnsemble(model).Build());
-    polynom.Lambda_ = 1000000;
+    polynom.Lambda_ = 10;
 
+    std::cout << "Model size: " << model.Trees.size() << std::endl;
+    std::cout << "Polynom size: " << polynom.Ensemble_.size() << std::endl;
     int outDim = 1;
     std::vector<float> out(outDim);
     double error = 0;
     for (int i = 0; i < testPool.SamplesCount; ++i) {
-        polynom.Forward(ds.sample(i).arrayRef(), out);
+        std::fill(out.begin(), out.end(), 0.0f);
+        polynom.Forward(test.sample(i).arrayRef(), out);
+//        model.Forward(test.sample(i).arrayRef().data(), out.data());
         const double val = (out[0] - testPool.Labels[i]);
         error += val * val;
     }
+    error /= testPool.SamplesCount;
+    error = sqrt(error);
     std::cout << "polynom error: " << error << std::endl;
 
 }

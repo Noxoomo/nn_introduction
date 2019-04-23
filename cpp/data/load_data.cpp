@@ -45,7 +45,7 @@ DataSet loadFeaturesTxt(const std::string& file) {
     std::cout << "fCount  #" << fCount << std::endl;
 
     auto data = VecFactory::create(ComputeDeviceType::Cpu, pool.size());
-    ArrayRef<float> dst = data.arrayRef();
+    VecRef<float> dst = data.arrayRef();
     std::copy(pool.begin(), pool.end(), dst.begin());
 
 

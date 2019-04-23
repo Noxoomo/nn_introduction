@@ -23,7 +23,7 @@ public:
     void copyColumn(int fIndex, Vec* col) const {
         assert(col->dim() == samplesCount());
         assert(col->isContiguous());
-        ArrayRef<float> writeDst = col->arrayRef();
+        VecRef<float> writeDst = col->arrayRef();
         data_.iterateOverColumn(fIndex, [&](int64_t lineIdx, float val) {
             writeDst[lineIdx] = val;
         });

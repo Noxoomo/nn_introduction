@@ -37,8 +37,8 @@ public:
         return groups_[groupIdx];
     }
 
-    ConstArrayRef<uint8_t> group(int64_t groupIdx) const {
-       return ConstArrayRef<uint8_t>(data_.arrayRef().data() + groups_[groupIdx].groupOffset_ * samplesCount_,
+    ConstVecRef<uint8_t> group(int64_t groupIdx) const {
+       return ConstVecRef<uint8_t>(data_.arrayRef().data() + groups_[groupIdx].groupOffset_ * samplesCount_,
                                      groups_[groupIdx].groupSize()  * samplesCount_);
     }
 
@@ -76,7 +76,7 @@ public:
 
 
     template <class Visitor>
-    void visitFeature(int64_t fIndex, ConstArrayRef<int32_t> indices, Visitor&& visitor, bool parallel = false) const {
+    void visitFeature(int64_t fIndex, ConstVecRef<int32_t> indices, Visitor&& visitor, bool parallel = false) const {
         int64_t groupIdx =  featureToGroup_.at(fIndex);
         const auto& groupInfo = groups_[groupIdx];
         auto groupBundle = group(groupIdx);
@@ -93,7 +93,7 @@ public:
     }
 
 
-    ConstArrayRef<int32_t> binOffsets() const {
+    ConstVecRef<int32_t> binOffsets() const {
         return binOffsets_;
     }
 
@@ -101,18 +101,18 @@ public:
         return binOffsets_.back();
     }
 private:
-    ArrayRef<uint8_t> group(int64_t groupIdx) {
-        return ArrayRef<uint8_t>(data_.arrayRef().data() + groups_[groupIdx].groupOffset_ * samplesCount_,
+    VecRef<uint8_t> group(int64_t groupIdx) {
+        return VecRef<uint8_t>(data_.arrayRef().data() + groups_[groupIdx].groupOffset_ * samplesCount_,
                                  groups_[groupIdx].groupSize() * samplesCount_);
     }
 
 
     template <class Visitor>
     void updateLineForGroup(int64_t groupIdx, int64_t line, Visitor&& updater) {
-        ConstArrayRef<int32_t> featureIds = groupToFeatures[groupIdx];
-        ArrayRef<uint8_t> groupRef = group(groupIdx);
+        ConstVecRef<int32_t> featureIds = groupToFeatures[groupIdx];
+        VecRef<uint8_t> groupRef = group(groupIdx);
         const auto groupSize = groups_[groupIdx].groupSize();
-        auto lineBins = ArrayRef<uint8_t>(groupRef.data() + line * groupSize, groupSize);
+        auto lineBins = VecRef<uint8_t>(groupRef.data() + line * groupSize, groupSize);
         updater(featureIds, lineBins);
     }
 

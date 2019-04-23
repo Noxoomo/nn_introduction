@@ -1,4 +1,4 @@
-#include "../../experiments/cifar_nn/cifar10_reader.hpp"
+#include "experiments/cifar_nn/cifar10_reader.h"
 
 #include <cstdint>
 #include <vector>

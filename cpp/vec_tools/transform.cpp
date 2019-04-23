@@ -64,7 +64,7 @@ namespace VecTools {
     }
 
     template <class T, class I, class TC>
-    inline void gatherCpuImpl(ConstArrayRef<T> from, ConstArrayRef<I> map, ArrayRef<TC> to) {
+    inline void gatherCpuImpl(ConstVecRef<T> from, ConstVecRef<I> map, VecRef<TC> to) {
         for (int64_t i = 0; i < map.size(); ++i) {
             to[i] = from[map[i]];
         }
@@ -72,7 +72,7 @@ namespace VecTools {
 
 
     template <class T, class I, class TC>
-    inline void scatterCpuImpl(ConstArrayRef<T> from, ConstArrayRef<I> map, ArrayRef<TC> to) {
+    inline void scatterCpuImpl(ConstVecRef<T> from, ConstVecRef<I> map, VecRef<TC> to) {
         for (int64_t i = 0; i < map.size(); ++i) {
             to[map[i]] = from[i];
         }

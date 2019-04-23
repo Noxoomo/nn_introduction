@@ -6,6 +6,8 @@ include_directories(${EIGEN_INCLUDE_DIR})
 
 add_library(cifar_nn
         em_like_train.h
+        cifar10_reader.cpp
+        cifar10_reader.h
         model.h
         model.cpp
         tensor_pair_dataset.h
@@ -43,6 +45,8 @@ add_library(cifar_nn
         tree_train.h
         transform.cpp
         transform.h
+        polynom_model.h
+        polynom_model.cpp
         )
 target_link_libraries(cifar_nn "${TORCH_LIBRARIES}"  Eigen3::Eigen methods core models targets)
 enable_cxx14(cifar_nn)

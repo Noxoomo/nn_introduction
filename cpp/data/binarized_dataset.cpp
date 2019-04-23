@@ -12,11 +12,11 @@ std::unique_ptr<BinarizedDataSet> binarize(const DataSet& ds, GridPtr gridPtr, i
 
     for (int64_t line = 0; line < ds.samplesCount(); ++line) {
         const Vec lineFeatures = ds.sample(line);
-        ConstArrayRef<float> row = lineFeatures.arrayRef();
+        ConstVecRef<float> row = lineFeatures.arrayRef();
         grid.binarize(row, binarizedLine);
 
         for (int64_t i = 0; i < groups; ++i) {
-            bds->updateLineForGroup(i, line, [&](ConstArrayRef<int32_t> gridFeatures, ArrayRef<uint8_t> bins) {
+            bds->updateLineForGroup(i, line, [&](ConstVecRef<int32_t> gridFeatures, VecRef<uint8_t> bins) {
                 for (int64_t f = 0; f < gridFeatures.size(); ++f) {
                     bins[f] = binarizedLine[gridFeatures[f]];
                 }

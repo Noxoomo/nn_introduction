@@ -12,11 +12,11 @@ template <class AdditiveStat,
           int64_t BundleSize = 4,
           int64_t N = 8>
 void buildHistograms(
-    ConstArrayRef<AdditiveStat> statistics,
-    ConstArrayRef<I> binLoadIndices,
-    ConstArrayRef<int32_t> binOffsets,
-    ConstArrayRef<uint8_t> data,
-    ArrayRef<AdditiveStat> dst) {
+    ConstVecRef<AdditiveStat> statistics,
+    ConstVecRef<I> binLoadIndices,
+    ConstVecRef<int32_t> binOffsets,
+    ConstVecRef<uint8_t> data,
+    VecRef<AdditiveStat> dst) {
     std::array<int32_t, BundleSize * N> localBins;
     const auto size = static_cast<const int64_t>(binLoadIndices.size());
 
@@ -49,11 +49,11 @@ template <class AdditiveStat,
         int64_t N = 4>
 void buildHistograms(
     int32_t bundleSize,
-    ConstArrayRef<AdditiveStat> statistics,
-    ConstArrayRef<I> binLoadIndices,
-    ConstArrayRef<int32_t> binOffsets,
-    ConstArrayRef<uint8_t> data,
-    ArrayRef<AdditiveStat> dst) {
+    ConstVecRef<AdditiveStat> statistics,
+    ConstVecRef<I> binLoadIndices,
+    ConstVecRef<int32_t> binOffsets,
+    ConstVecRef<uint8_t> data,
+    VecRef<AdditiveStat> dst) {
 
     assert(bundleSize <= 64);
     #define DISPATCH(sz)\
