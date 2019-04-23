@@ -104,18 +104,18 @@ __global__ void PolynomForwardImpl(const float* probs,
 
 //
 
-//
-//void PolynomForward(const float* features,
-//    int fCount,
-//    int batchSize,
-//    const int* splits,
-//    const float* conditions,
-//    const int* polynomOffsets,
-//    const int* polynomSizes,
-//
-//    ) {
-//
-//}
+
+void PolynomForward(const float* features,
+    int fCount,
+    int batchSize,
+    const int* splits,
+    const float* conditions,
+    const int* polynomOffsets,
+    const int* polynomDepth,
+    ) {
+        
+
+}
 
 
 

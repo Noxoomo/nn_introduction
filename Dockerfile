@@ -20,6 +20,6 @@ RUN cd /eigen/build/ && cmake .. && make install
 COPY . /app
 WORKDIR /app/build
 RUN cmake .. -DCMAKE_PREFIX_PATH=/libtorch -DCMAKE_BUILD_TYPE=Release
-RUN make resnet
-WORKDIR /app/build/cpp/apps/cifar_networks 
-ENTRYPOINT ./resnet CUDA
+RUN make soft_tree_ut
+#WORKDIR /app/build/cpp/apps/cifar_networks 
+#ENTRYPOINT ./resnet CUDA

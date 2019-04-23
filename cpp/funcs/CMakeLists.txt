@@ -15,7 +15,7 @@ add_library(funcs
 
 enable_cxx17(funcs)
 
-target_link_libraries(funcs "${TORCH_LIBRARIES}" core util vec_tools)
+target_link_libraries(funcs "${TORCH_LIBRARIES}" core util vec_tools models)
 #target_link_libraries(models_kernels util)
 
 

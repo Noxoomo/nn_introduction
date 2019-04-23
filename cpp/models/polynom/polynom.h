@@ -30,7 +30,7 @@ struct BinarySplit {
 };
 
 
-struct PolynomStructure {
+struct  PolynomStructure {
     std::vector<BinarySplit> Splits;
 
 
