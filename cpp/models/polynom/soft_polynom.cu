@@ -112,8 +112,10 @@ void PolynomForward(const float* features,
     const float* conditions,
     const int* polynomOffsets,
     const int* polynomDepth,
+    int polynomCount,
+    int outputDim,
+    float* out
     ) {
-        
 
 }
 

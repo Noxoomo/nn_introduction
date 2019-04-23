@@ -1,4 +1,4 @@
-#include <funcs/soft_tree_function_cuda.h>
+#include <models/polynom/polynom_autograd_gpu.h>
 #include <gtest/gtest.h>
 
 TEST(A, SoftTreeCuda) {

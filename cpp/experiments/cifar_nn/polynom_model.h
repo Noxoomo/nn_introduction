@@ -9,9 +9,7 @@ public:
     PolynomModel(PolynomPtr polynom)
         : polynom_(polynom) {}
 
-    PolynomModel() {
-
-    }
+    PolynomModel() = default;
 
     torch::Tensor forward(torch::Tensor x) override;
 
