@@ -17,9 +17,13 @@ RUN mv /eigen* /eigen
 RUN mkdir /eigen/build
 RUN cd /eigen/build/ && cmake .. && make install
 
+ADD libcatboost.so /usr/local/lib
 COPY . /app
 WORKDIR /app/build
 RUN cmake .. -DCMAKE_PREFIX_PATH=/libtorch -DCMAKE_BUILD_TYPE=Release
-RUN make soft_tree_ut
-#WORKDIR /app/build/cpp/apps/cifar_networks 
-#ENTRYPOINT ./resnet CUDA
+WORKDIR /app/cpp/models/polynom/polynom_cuda/
+RUN ./compile.sh
+WORKDIR /app/build
+RUN make -j 4 lenet_catboost
+WORKDIR /app/build/cpp/apps/cifar_networks
+ENTRYPOINT ./lenet_catboost CUDA
