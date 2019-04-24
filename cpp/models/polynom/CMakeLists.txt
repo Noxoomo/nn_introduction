@@ -7,6 +7,9 @@ add_library(polynom
         polynom.cpp
         polynom_autograd.cpp
         polynom_autograd.h
+        polynom_gpu.h
+        polynom_gpu.cpp
+        soft_polynom.h
 )
 
 
@@ -14,10 +17,18 @@ add_library(polynom
 #maybe_enable_cuda(models_kernels)
 
 enable_cxx17(polynom)
-maybe_enable_cuda(polynom)
 
-target_link_libraries(polynom util)
-#target_link_libraries(polynom_kernels util)
+
+
+if (LINK_CUDA_POLYNOM)
+    find_package(CUDA 10.0 REQUIRED)
+    find_library(soft_polynom soft_polynom)
+    target_link_libraries(polynom util core soft_polynom ${CUDA_LIBRARIES})
+else()
+    add_library(polynom_cuda_stub no_soft_polynom.cpp)
+    target_link_libraries(polynom util core polynom_cuda_stub)
+endif()
+
 
 
 target_include_directories(polynom INTERFACE
@@ -26,10 +37,6 @@ target_include_directories(polynom INTERFACE
         PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/
         )
 
-#target_include_directories(polynom_kernels INTERFACE
-#        PUBLIC $<INSTALL_INTERFACE:include>
-#        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/kernels>
-#        )
 
 install(TARGETS polynom EXPORT PolynomConfig
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}

@@ -1,8 +1,9 @@
 #include "polynom.h"
+#include <array>
+#include <cmath>
 #include <map>
 #include <util/exception.h>
 #include <util/parallel_executor.h>
-#include <cmath>
 
 struct PathBit {
     int Bits = 0;
@@ -142,7 +143,8 @@ void Monom::Backward(double lambda,
                      ConstVecRef<float> outputsDer,
                      VecRef<float> featuresDer) const {
 
-  std::vector<float> logProbs(Structure_.Splits.size());
+  std::array<double, 8> logProbs;
+  logProbs.fill(0.0f);//Structure_.Splits.size());
 
   double totalLogProb = 0;
 

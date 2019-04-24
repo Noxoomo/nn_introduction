@@ -110,7 +110,6 @@ private:
     std::unordered_map<PolynomStructure, TStat> EnsemblePolynoms;
 };
 
-
 struct Monom {
     PolynomStructure Structure_;
     std::vector<double> Values_;
@@ -155,6 +154,5 @@ struct Polynom {
     int OutDim() const {
         return Ensemble_.empty() ? 0 : Ensemble_.back().OutDim();
     }
-
-
 };
+
