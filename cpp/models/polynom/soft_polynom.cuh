@@ -15,3 +15,15 @@ void PolynomBackward(const float* features,
                      int polynomCount,
                      float* out,
                      cudaStream_t stream);
+
+void PolynomBackward(const float* features,
+                     int featuresCount,
+                     int batchSize,
+                     const float* outDer,
+                     int outputDim,
+                     const float* leafSum,
+                     int* polynomOffset,
+                     int* featureIds,
+                     float* conditions,
+                     int polynomCount,
+                     float* out);

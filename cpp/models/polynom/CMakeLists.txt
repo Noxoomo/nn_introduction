@@ -7,6 +7,8 @@ add_library(polynom
         polynom.cpp
         polynom_autograd.cpp
         polynom_autograd.h
+        polynom_gpu_autograd.cpp
+        polynom_gpu_autograd.h
         polynom_gpu.h
         polynom_gpu.cpp
         soft_polynom.h

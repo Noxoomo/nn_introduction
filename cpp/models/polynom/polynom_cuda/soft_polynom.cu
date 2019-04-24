@@ -126,130 +126,127 @@ void PolynomForward(
 
 //
 //
-///*
-// * Here layout is not the same as in forward pass
-// * BlockSize = 256, MaxDepth = 6, K = 24
-// * should give 50% occupancy, this should be enough
-// */
-//template <int MaxDepth, int BlockSize, int K>
-//__global__ void PolynomBackwardImpl(const float* features,
-//                                    int featuresCount,
-//                                    const float* outDer,
-//                                    int outputDim,
-//                                    const float* leafSum,
-//                                    int* polynomDepths,
-//                                    int* polynomOffset,
-//                                    int* featureIds,
-//                                    float* conditions,
-//                                    int polynomCount,
-//                                    float* out) {
-//    const int sampleId = blockIdx.y;
-//    features += sampleId * featuresCount;
-//    out += sampleId * featuresCount;
-//
-//    outDer += sampleId * outputDim;
-////    float outputDer = 0;
-////    for (int dim = 0; dim < outputDim; ++dim) {
-////        outputDer += outDer[dim];
-////    }
-//
-//    //out: batch_elem0 dim0, dim1, dimk batch_elem1 dim0 dim1 dimk
-//    //so threads
-//
-//    __shared__ float localFeaturesDer[BlockSize * K];
-//    for (int i = threadIdx.x; i < BlockSize * K; i += BlockSize) {
-//        localFeaturesDer[i] = 0;
+/*
+ * Here layout is not the same as in forward pass
+ * BlockSize = 256, MaxDepth = 6, K = 24
+ * should give 50% occupancy, this should be enough
+ */
+template <int MaxDepth, int BlockSize, int K>
+__global__ void PolynomBackwardImpl(const float* features,
+                                    int featuresCount,
+                                    const float* outDer,
+                                    int outputDim,
+                                    const float* leafSum,
+                                    int* polynomOffset,
+                                    int* featureIds,
+                                    float* conditions,
+                                    int polynomCount,
+                                    float* out) {
+    const int sampleId = blockIdx.y;
+    features += sampleId * featuresCount;
+    out += sampleId * featuresCount;
+
+    outDer += sampleId * outputDim;
+//    float outputDer = 0;
+//    for (int dim = 0; dim < outputDim; ++dim) {
+//        outputDer += outDer[dim];
 //    }
-//    __syncthreads();
-//    const int alignedFeaturesCount = ((featuresCount + BlockSize - 1) / BlockSize) * BlockSize;
-//    const int memoryBlocks = BlockSize * K / alignedFeaturesCount;
-//    const int memoryBlockId = threadIdx.x % memoryBlocks;
-//
-//
-//    int polynomId = blockIdx.x * gridDim.x + threadIdx.x;
-//
-//    while (polynomId < polynomCount) {
-//        const int depth = polynomDepths[polynomId];
-//        int offset = polynomOffset[polynomId];
-//
-//
-//        float logOneMinusProb[MaxDepth];
-//        short fids[MaxDepth];
-//        float totalLogProb = 0;
-//
-//        #pragma unroll
-//        for (int i = 0; i < MaxDepth; ++i) {
-//            if (i < depth) {
-//                const int f = __ldg(featureIds + i + offset);
-//                fids[i] = f;
-//                const float c = __ldg(conditions + i + offset);
-//                const float x = __ldg(features + f);
-//                const float val = -(x - c);
-//                const float expVal = 1.0f + exp(val);
-//                const float isTrueLogProb = (isfinite(expVal) ? log(expVal) : val);
-//                totalLogProb += isTrueLogProb;
-//                logOneMinusProb[i] = val - isTrueLogProb;
-//            }
-//        }
-//
-//        //featureDerivative is outputDer * total value before monom * monom derivative
-//        float derMultiplier  = 0;
-//        for (int dim = 0; dim < outputDim; ++dim) {
-//            derMultiplier += __ldg(leafSum + polynomId * outputDim + dim) * __ldg(outDer + dim);
-//        }
-//
-//        #pragma unroll
-//        for (int i = 0; i < MaxDepth; ++i) {
-//            if (i < depth) {
-//                const int f = fids[i];
-//                const int featureDer = exp(totalLogProb + logOneMinusProb[i]) * derMultiplier;
-//                //atomics in shared memory, pretty fast on pascal+ hardware
-//                atomicAdd(localFeaturesDer + memoryBlocks * f + memoryBlockId, featureDer);
-//            }
-//        }
-//        polynomId += gridDim.x * blockDim.x;
-//    }
-//
-//
-//    __syncthreads();
-//
-//    //outputDim = 1024 => memoryBlocks = 6
-//    for (int i = threadIdx.x; i < featuresCount; i += BlockSize) {
-//        float der = 0;
-//
-//        for (int k = 0; k < memoryBlocks; ++k) {
-//            der += localFeaturesDer[i * memoryBlocks + k];
-//        }
-//        atomicAdd(out + i,  localFeaturesDer[i * memoryBlocks + i]);
-//    }
-//}
-//
-//void PolynomBackward(const float* features,
-//                     int featuresCount,
-//                     int batchSize,
-//                     const float* outDer,
-//                     int outputDim,
-//                     const float* leafSum,
-//                     int* polynomDepths,
-//                     int* polynomOffset,
-//                     int* featureIds,
-//                     float* conditions,
-//                     int polynomCount,
-//                     float* out,
-//                     cudaStream_t stream) {
-//
-//    const int blockSize = 256;
-//    dim3 numBlocks;
-//    numBlocks.z = 1;
-//    numBlocks.y = batchSize;
-//    //should be ≈ smCount * 6 / batchSize
-//    numBlocks.x = (polynomCount + blockSize - 1) / blockSize;
-//
-//    const int maxDepth = 6;
-//    const int K = 16;
-//    PolynomBackwardImpl<maxDepth, blockSize, K> <<<numBlocks, blockSize, 0, stream >>>(features, featuresCount, outDer, outputDim,
-//        leafSum, polynomDepths, polynomOffset, featureIds, conditions, polynomCount, out);
-//
-//}
-//
+
+    //out: batch_elem0 dim0, dim1, dimk batch_elem1 dim0 dim1 dimk
+    //so threads
+
+    __shared__ float localFeaturesDer[BlockSize * K];
+    for (int i = threadIdx.x; i < BlockSize * K; i += BlockSize) {
+        localFeaturesDer[i] = 0;
+    }
+    __syncthreads();
+    const int alignedFeaturesCount = ((featuresCount + BlockSize - 1) / BlockSize) * BlockSize;
+    const int memoryBlocks = BlockSize * K / alignedFeaturesCount;
+    const int memoryBlockId = threadIdx.x % memoryBlocks;
+
+
+    int polynomId = blockIdx.x * gridDim.x + threadIdx.x;
+
+    while (polynomId < polynomCount) {
+        const int offset = polynomOffset[polynomId];
+        const int depth = polynomOffset[polynomId + 1] - offset;
+
+
+        float logOneMinusProb[MaxDepth];
+        short fids[MaxDepth];
+        float totalLogProb = 0;
+
+        #pragma unroll
+        for (int i = 0; i < MaxDepth; ++i) {
+            if (i < depth) {
+                const int f = __ldg(featureIds + i + offset);
+                fids[i] = f;
+                const float c = __ldg(conditions + i + offset);
+                const float x = __ldg(features + f);
+                const float val = -(x - c);
+                const float expVal = 1.0f + exp(val);
+                const float isTrueLogProb = (isfinite(expVal) ? log(expVal) : val);
+                totalLogProb += isTrueLogProb;
+                logOneMinusProb[i] = val - isTrueLogProb;
+            }
+        }
+
+        //featureDerivative is outputDer * total value before monom * monom derivative
+        float derMultiplier  = 0;
+        for (int dim = 0; dim < outputDim; ++dim) {
+            derMultiplier += __ldg(leafSum + polynomId * outputDim + dim) * __ldg(outDer + dim);
+        }
+
+        #pragma unroll
+        for (int i = 0; i < MaxDepth; ++i) {
+            if (i < depth) {
+                const int f = fids[i];
+                const int featureDer = exp(totalLogProb + logOneMinusProb[i]) * derMultiplier;
+                //atomics in shared memory, pretty fast on pascal+ hardware
+                atomicAdd(localFeaturesDer + memoryBlocks * f + memoryBlockId, featureDer);
+            }
+        }
+        polynomId += gridDim.x * blockDim.x;
+    }
+
+
+    __syncthreads();
+
+    //outputDim = 1024 => memoryBlocks = 6
+    for (int i = threadIdx.x; i < featuresCount; i += BlockSize) {
+        float der = 0;
+
+        for (int k = 0; k < memoryBlocks; ++k) {
+            der += localFeaturesDer[i * memoryBlocks + k];
+        }
+        atomicAdd(out + i,  localFeaturesDer[i * memoryBlocks + i]);
+    }
+}
+
+void PolynomBackward(const float* features,
+                     int featuresCount,
+                     int batchSize,
+                     const float* outDer,
+                     int outputDim,
+                     const float* leafSum,
+                     int* polynomOffset,
+                     int* featureIds,
+                     float* conditions,
+                     int polynomCount,
+                     float* out) {
+
+    const int blockSize = 256;
+    dim3 numBlocks;
+    numBlocks.z = 1;
+    numBlocks.y = batchSize;
+    //should be ≈ smCount * 6 / batchSize
+    numBlocks.x = (polynomCount + blockSize - 1) / blockSize;
+
+    const int maxDepth = 6;
+    const int K = 16;
+    PolynomBackwardImpl<maxDepth, blockSize, K> <<<numBlocks, blockSize, 0 >>>(features, featuresCount, outDer, outputDim,
+        leafSum, polynomOffset, featureIds, conditions, polynomCount, out);
+
+}
+
 

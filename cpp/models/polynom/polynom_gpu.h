@@ -13,10 +13,11 @@ struct PolynomCuda {
     torch::Tensor Conditions;
     torch::Tensor PolynomOffsets;
     torch::Tensor PolynomValues;
+    torch::Tensor LeafSum;
 
     PolynomCuda(PolynomPtr polynom_);
 
     torch::Tensor Forward(torch::Tensor batch) const;
-
+    torch::Tensor Backward(torch::Tensor batch, torch::Tensor backgrads) const;
 
 };
