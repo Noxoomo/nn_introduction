@@ -42,6 +42,7 @@ int main(int argc, char* argv[]) {
     catBoostNnConfig.sgdStep_ = 0.1;
     catBoostNnConfig.representationsIterations = 20;
 
+    std::string modelFile = "convolutions_nn.bin";
     catBoostNnConfig.catboostParamsFile = "../../../../cpp/apps/cifar_networks/vgg_params/catboost_params_gpu.json";
     catBoostNnConfig.catboostInitParamsFile = "../../../../cpp/apps/cifar_networks/vgg_params/catboost_params_init.json";
     catBoostNnConfig.catboostFinalParamsFile = "../../../../cpp/apps/cifar_networks/vgg_params/catboost_params_final.json";
@@ -57,7 +58,7 @@ int main(int argc, char* argv[]) {
     }
 
 //    auto classifier = makeClassifierWithBaseline<PolynomModel>(
-//        makeCifarLinearClassifier(512),
+//        makeClassifier<experiments::SigmoidLinearCifarClassifier>(512 * 4),
 //        polynom);
 
 
@@ -70,11 +71,14 @@ int main(int argc, char* argv[]) {
     auto vgg = std::make_shared<Vgg>(VggConfiguration::Vgg16, classifier);
     vgg->to(device);
 
+//    CatBoostNN nnTrainer(catBoostNnConfig,
+//        vgg,
+//        device,
+//        makeClassifier<experiments::SigmoidLinearCifarClassifier>(512 * 4));
     CatBoostNN nnTrainer(catBoostNnConfig,
-        vgg,
-        device,
-        makeClassifier<experiments::LinearCifarClassifier>(512));
-    // Attach Listeners
+                         vgg,
+                         device);
+//     Attach Listeners
 
     auto mds = dataset.second.map(getDefaultCifar10TestTransform());
 
@@ -92,6 +96,11 @@ int main(int argc, char* argv[]) {
         auto test =  nnTrainer.applyConvLayers(dataset.second.map(getDefaultCifar10TestTransform()));
         nnTrainer.trainFinalDecision(learn, test);
         std::cout << "--------===============CATBOOST learn + test finish ====================---------------  "  << std::endl;
+
+        if (auto castedModel = dynamic_cast<ConvModel*>(model.get())) {
+            std::cout << "Saving model to '" << modelFile  << "'" << std::endl;
+            torch::save(castedModel->conv(), modelFile);
+        }
     });
 
     // Train

@@ -14,14 +14,16 @@ static torch::nn::ConvOptions<2> buildConvOptions(int inChannels, int outChannel
 // Vgg16Conv
 
 Vgg16Conv::Vgg16Conv() {
-    static int layersLayout[] = {64, 64, -1, 128, 128, -1, 256, 256, 256, -1, 512, 512, 512, -1, 512, 512, 512, -1};
+    std::vector<int> layersLayout = {64, 64, -1, 128, 128, -1, 256, 256, 256, -1, 512, 512, 512, -1, 512, 512, 512};
 
     int poolings = 0;
     int id = 0;
     int inChannels = 3;
     const int kKernelSize = 3;
 
-    for (auto outChannels : layersLayout) {
+
+    for (uint32_t i = 0; i < layersLayout.size(); ++i) {
+        auto outChannels = layersLayout[i];
         if (outChannels == -1) {
             std::function<torch::Tensor(torch::Tensor)> layer = [=](torch::Tensor x) {
                 return torch::max_pool2d(x, 2, 2);
@@ -38,9 +40,17 @@ Vgg16Conv::Vgg16Conv() {
             std::string bnName = "batch_norm_" + std::to_string(poolings) + std::to_string(id);
             auto batchNorm = register_module(bnName, torch::nn::BatchNorm(outChannels));
 
-            std::function<torch::Tensor(torch::Tensor)> layer = [conv, batchNorm](torch::Tensor x){
-                return torch::relu(batchNorm->forward(conv->forward(x)));
-            };
+            std::function<torch::Tensor(torch::Tensor)> layer;
+            if (i + 1 == layersLayout.size()) {
+                 layer = [conv, batchNorm](torch::Tensor x) {
+                    return batchNorm->forward(conv->forward(x));
+                };
+            } else {
+                layer = [conv, batchNorm](torch::Tensor x){
+                    return torch::relu(batchNorm->forward(conv->forward(x)));
+                };
+            }
+
             layers_.push_back(layer);
 
             inChannels = outChannels;
@@ -48,9 +58,11 @@ Vgg16Conv::Vgg16Conv() {
         }
     }
 
-    layers_.emplace_back([](torch::Tensor x) {
-        return torch::avg_pool2d(x, 1, 1);
-    });
+//    layers_.emplace_back([](torch::Tensor x) {
+//        return torch::avg_pool2d(x, 1, 1);
+//        return torch::sigmoid(x);
+//        return x;
+//    });/**/
 //    layerNorm_ = register_module("layerNorm_", std::make_shared<LayerNorm>(512));
 
 }

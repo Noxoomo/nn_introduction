@@ -1,15 +1,20 @@
 {
   "boosting_type": "Plain",
-  "iterations" : 1000,
+  "iterations" : 5000,
   "task_type": "GPU",
   "devices": "0",
-  "depth" : 6,
+  "depth" : 8,
   "gpu_ram_part": 0.75,
   "od_type": "IncToDec",
   "logging_level" : "Verbose",
   "loss_function": "MultiClass",
-  "learning_rate" : 0.01,
+  "feature_border_type": "Uniform",
+  "learning_rate" : 1e-6,
   "rsm": 0.1,
+  "bootstrap_type": "Bernoulli",
+  "subsample": 0.1,
   "use_best_model": false,
-  "random_strength": 1
+  "random_strength": 1,
+  "metric_period": 20,
+  "border_count": 1
 }
