@@ -9,6 +9,8 @@
 
 
 int main(int argc, char* argv[]) {
+    using namespace experiments;
+
     auto lenet = std::make_shared<LeNet>();
     auto lenet2 = std::make_shared<LeNet>();
 

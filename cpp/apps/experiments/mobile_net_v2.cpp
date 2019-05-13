@@ -1,6 +1,6 @@
 #include "common.h"
 
-#include <experiments/core/mobile_net_v2.h>
+#include <experiments/core/networks/mobile_net_v2.h>
 #include <experiments//datasets/cifar10/cifar10_reader.h>
 #include <experiments/core/optimizer.h>
 #include <experiments/core/cross_entropy_loss.h>
@@ -22,6 +22,8 @@ int main(int argc, char* argv[]) {
         std::cout << "Using CPU device for training" << std::endl;
     }
 
+    using namespace experiments;
+
     // Init model
 
     auto mobileNetV2 = std::make_shared<MobileNetV2>();
@@ -30,7 +32,7 @@ int main(int argc, char* argv[]) {
     // Load data
 
     const std::string& path = "../../../../resources/cifar10/cifar-10-batches-bin";
-    auto dataset = experiments::cifar10::read_dataset(path);
+    auto dataset = cifar10::read_dataset(path);
 
 
     // Create optimizer
@@ -43,7 +45,7 @@ int main(int argc, char* argv[]) {
     attachDefaultListeners(optimizer, 50000 / 128 / 10, "mobile_net_v2_checkpoint.pt");
 
     auto mds = dataset.second.map(getDefaultCifar10TestTransform());
-    experiments::Optimizer::emplaceEpochListener<experiments::EpochEndCallback>(optimizer.get(), [&](int epoch, experiments::Model& model) {
+    experiments::Optimizer::emplaceEpochListener<EpochEndCallback>(optimizer.get(), [&](int epoch, experiments::Model& model) {
         model.eval();
 
         auto dloader = torch::data::make_data_loader(mds, torch::data::DataLoaderOptions(128));

@@ -26,11 +26,13 @@ int main(int argc, char* argv[]) {
         std::cout << "Using CPU device for training" << std::endl;
     }
 
+    using namespace experiments;
+
     // Read dataset
 
     const std::string& path = "../../../../resources/cifar10/cifar-10-batches-bin";
     const std::string& params = "../../../../resources/cifar10/cifar-10-batches-bin";
-    auto dataset = experiments::cifar10::read_dataset(path);
+    auto dataset = cifar10::read_dataset(path);
 
     // Init model
     CatBoostNNConfig catBoostNnConfig;
@@ -67,19 +69,19 @@ int main(int argc, char* argv[]) {
     CatBoostNN nnTrainer(catBoostNnConfig,
                          lenet,
                          device,
-                         makeClassifier<experiments::LinearCifarClassifier>(16 *5 *5));
+                         makeClassifier<LinearCifarClassifier>(16 *5 *5));
 
     // Attach Listener
 
 
 
     auto mds = dataset.second.map(getDefaultCifar10TestTransform());
-    nnTrainer.registerGlobalIterationListener([&](uint32_t epoch, experiments::ModelPtr model) {
+    nnTrainer.registerGlobalIterationListener([&](uint32_t epoch, ModelPtr model) {
         AccuracyCalcer<decltype(mds)>(device, catBoostNnConfig, mds, nnTrainer)(epoch, model);
     });
 
 
-    nnTrainer.registerGlobalIterationListener([&](uint32_t epoch, experiments::ModelPtr model) {
+    nnTrainer.registerGlobalIterationListener([&](uint32_t epoch, ModelPtr model) {
         if (epoch % 2 != 0) {
             std::cout << "--------===============CATBOOST learn + test start ====================---------------  "
                       << std::endl;

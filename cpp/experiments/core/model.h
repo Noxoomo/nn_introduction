@@ -13,7 +13,7 @@ namespace experiments {
 
   class Model : public torch::nn::Module {
   public:
-    virtual torch::Tensor forward(torch::Tensor x) = 0;
+    virtual torch::Tensor  forward(torch::Tensor x) = 0;
 
     // WTF torch, this should be default behaviour
     void train(bool on = true) override {
@@ -36,6 +36,7 @@ namespace experiments {
       explicit Classifier(ModelPtr classifier, ModelPtr baseline) {
           classifier_ = register_module("classifier_", std::move(classifier));
           baseline_ = register_module("baseline_", std::move(baseline));
+          classifierScale_ = register_parameter("scale_", torch::ones({1}, torch::kFloat32));
       }
 
       virtual ModelPtr classifier() {
@@ -46,10 +47,18 @@ namespace experiments {
           return baseline_;
       }
 
+      virtual void enableBaselineTrain(bool flag) {
+          if (baseline_) {
+              baseline_->train(flag);
+              classifierScale_.set_requires_grad(flag);
+          }
+      }
       torch::Tensor forward(torch::Tensor x) override;
+
   private:
       ModelPtr classifier_;
       ModelPtr baseline_;
+      torch::Tensor classifierScale_;
 
   };
 
@@ -109,6 +118,18 @@ namespace experiments {
   private:
     torch::nn::Linear fc1_{nullptr};
   };
+
+    class SigmoidLinearCifarClassifier : public experiments::Model {
+    public:
+        SigmoidLinearCifarClassifier(int dim);
+
+        torch::Tensor forward(torch::Tensor x) override;
+
+        ~SigmoidLinearCifarClassifier() override = default;
+
+    private:
+        torch::nn::Linear fc1_{nullptr};
+    };
 
 
     class Bias : public experiments::Model {

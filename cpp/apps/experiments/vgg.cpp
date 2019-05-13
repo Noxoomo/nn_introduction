@@ -1,5 +1,5 @@
 #include "common.h"
-#include <experiments/core/vgg.h>
+#include <experiments/core/networks/vgg.h>
 #include <experiments//datasets/cifar10/cifar10_reader.h>
 #include <experiments/core/optimizer.h>
 #include <experiments/core/cross_entropy_loss.h>
@@ -19,6 +19,8 @@ int main(int argc, char* argv[]) {
     } else {
         std::cout << "Using CPU device for training" << std::endl;
     }
+
+    using namespace experiments;
 
     // Init model
 

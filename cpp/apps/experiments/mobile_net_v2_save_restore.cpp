@@ -1,4 +1,4 @@
-#include <experiments/core/mobile_net_v2.h>
+#include <experiments/core/networks/mobile_net_v2.h>
 #include <experiments/core/model.h>
 
 #include <torch/torch.h>
@@ -8,6 +8,8 @@
 #include <cassert>
 
 int main(int argc, char* argv[]) {
+    using namespace experiments;
+
     auto mNet = std::make_shared<MobileNetV2>();
     auto mNet2 = std::make_shared<MobileNetV2>();
 

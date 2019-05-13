@@ -257,7 +257,7 @@ void PolynomBackward(int batchSize,
     //should be ≈ smCount * 6 / batchSize
     numBlocks.x = min((polynomCount + blockSize - 1) * outputDim / blockSize, 160);
 
-    const int maxDepth = 8;
+    const int maxDepth = 12;
     const int K = 16;
 
     PolynomBackwardImpl<maxDepth, blockSize, K> <<<numBlocks, blockSize>>>(lambda, features, featuresCount, outDer, outputDim, featureIds, conditions, values, polynomOffsets, polynomCount, featuresDer);

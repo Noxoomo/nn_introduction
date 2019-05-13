@@ -21,6 +21,8 @@ int main(int argc, char* argv[]) {
         std::cout << "Using CPU device for training" << std::endl;
     }
 
+    using namespace experiments;
+
     // Init model
 
     auto resnet = std::make_shared<ResNet>(ResNetConfiguration::ResNet18);

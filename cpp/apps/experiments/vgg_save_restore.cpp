@@ -1,4 +1,4 @@
-#include <experiments/core/vgg.h>
+#include <experiments/core/networks/vgg.h>
 #include <experiments/core/model.h>
 
 #include <torch/torch.h>
@@ -9,6 +9,8 @@
 
 
 int main(int argc, char* argv[]) {
+    using namespace experiments;
+
     auto vgg = std::make_shared<Vgg>(VggConfiguration::Vgg16);
     auto vgg2 = std::make_shared<Vgg>(VggConfiguration::Vgg16);
 

@@ -9,6 +9,8 @@
 
 
 int main(int argc, char* argv[]) {
+    using namespace experiments;
+
     auto resnet = std::make_shared<ResNet>(ResNetConfiguration::ResNet34);
     auto resnet2 = std::make_shared<ResNet>(ResNetConfiguration::ResNet34);
 

@@ -203,7 +203,7 @@ namespace {
                     ++total;
                 }
             }
-            std::cout << "Polynom used features: " << fCount << std::endl;
+            std::cout << "Polynom used features: " << featureIds.size() << std::endl;
             for (int k = 0; k < fCount; ++k) {
                 std::cout << featureIds[k] / total << " ";
             }
@@ -410,7 +410,7 @@ void CatBoostNN::trainDecision(TensorPairDataset& ds, const LossPtr& loss) {
     representationsModel->train(false);
 
     if (model_->classifier()->baseline()) {
-        model_->classifier()->baseline()->train(false);
+        model_->classifier()->enableBaselineTrain(false);
     }
     model_->classifier()->classifier()->train(true);
 
@@ -449,7 +449,7 @@ void CatBoostNN::trainRepr(TensorPairDataset& ds, const LossPtr& loss) {
     auto decisionModel = model_->classifier();
     decisionModel->train(false);
     if (decisionModel->baseline()) {
-        decisionModel->baseline()->train(true);
+        decisionModel->enableBaselineTrain(true);
     }
 
     std::cout << "    optimizing representation model" << std::endl;
@@ -486,7 +486,7 @@ void CatBoostNN::setLambda(double lambda) {
 using namespace experiments;
 
 void CatBoostNN::initialTrainRepr(TensorPairDataset& ds, const LossPtr& loss) {
-    iter_ = 2;
+    iter_ = 3;
 
     if (initClassifier_) {
         auto model = std::make_shared<CompositionalModel>(model_->conv(), initClassifier_);

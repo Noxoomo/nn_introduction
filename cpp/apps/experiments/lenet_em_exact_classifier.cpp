@@ -23,14 +23,16 @@ int main(int argc, char* argv[]) {
         std::cout << "Using CPU device for training" << std::endl;
     }
 
+    using namespace experiments;
+
     // Read dataset
 
     const std::string& path = "../../../../resources/cifar10/cifar-10-batches-bin";
-    auto dataset = experiments::cifar10::read_dataset(path);
+    auto dataset = cifar10::read_dataset(path);
 
     // Init model
 
-    auto lenetConv = std::make_shared<LeNetConv>();
+    auto lenetConv = std::make_shared<experiments::LeNetConv>();
     lenetConv->to(device);
 
     auto linearClassifier = std::make_shared<LinearClassifier>(16 * 5 * 5, 10);
@@ -43,7 +45,7 @@ int main(int argc, char* argv[]) {
     // Attach Listeners
 
     auto mds = dataset.second.map(getDefaultCifar10TestTransform());
-    emTrainer.registerGlobalIterationListener([&](uint32_t epoch, experiments::ModelPtr model) {
+    emTrainer.registerGlobalIterationListener([&](uint32_t epoch, ModelPtr model) {
         model->eval();
 
         auto dloader = torch::data::make_data_loader(mds, torch::data::DataLoaderOptions(128));
