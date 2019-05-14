@@ -29,12 +29,12 @@ namespace experiments {
   class Classifier : public Model {
   public:
 
-      explicit Classifier(ModelPtr classifier, double scale) {
+      explicit Classifier(ModelPtr classifier, double scale = 1) {
           classifier_ = register_module("classifier_", std::move(classifier));
           scale_ = scale;
       }
 
-      explicit Classifier(ModelPtr classifier, ModelPtr baseline, double scale) {
+      explicit Classifier(ModelPtr classifier, ModelPtr baseline, double scale = 1) {
           classifier_ = register_module("classifier_", std::move(classifier));
           baseline_ = register_module("baseline_", std::move(baseline));
           scale_ = scale;

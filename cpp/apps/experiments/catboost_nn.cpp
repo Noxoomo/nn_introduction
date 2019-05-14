@@ -357,7 +357,7 @@ experiments::OptimizerPtr CatBoostNN::getDecisionOptimizerWithLearningRate(const
         opts_.dropOut_
         );
 }
-experiments::OptimizerPtr getDecisionOptimizer(const experiments::ModelPtr& decisionModel) {
+experiments::OptimizerPtr CatBoostNN::getDecisionOptimizer(const experiments::ModelPtr& decisionModel) {
     return getDecisionOptimizerWithLearningRate(decisionModel, -1);
 }
 
