@@ -77,8 +77,8 @@ protected:
 protected:
     experiments::OptimizerPtr getReprOptimizer(const experiments::ModelPtr& reprModel) override;
 
-    experiments::OptimizerPtr getDecisionOptimizer(const experiments::ModelPtr& decisionModel, double learning_rate = -1) override;
-
+    experiments::OptimizerPtr getDecisionOptimizer(const experiments::ModelPtr& decisionModel) override;
+    experiments::OptimizerPtr getDecisionOptimizerWithLearningRate(const experiments::ModelPtr& decisionModel, double learning_rate = -1) override;
 private:
     const CatBoostNNConfig& opts_;
     torch::DeviceType device_;

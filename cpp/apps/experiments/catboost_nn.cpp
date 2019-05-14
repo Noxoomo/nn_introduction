@@ -335,7 +335,7 @@ inline std::string readFile(const std::string& path) {
     return params;
 }
 
-experiments::OptimizerPtr CatBoostNN::getDecisionOptimizer(const experiments::ModelPtr& decisionModel,
+experiments::OptimizerPtr CatBoostNN::getDecisionOptimizerWithLearningRate(const experiments::ModelPtr& decisionModel,
         double learning_rate) {
     seed_ += 10000;
     std::string params;
@@ -356,6 +356,9 @@ experiments::OptimizerPtr CatBoostNN::getDecisionOptimizer(const experiments::Mo
         opts_.lambda_ * lambdaMult_,
         opts_.dropOut_
         );
+}
+experiments::OptimizerPtr getDecisionOptimizer(const experiments::ModelPtr& decisionModel) {
+    return getDecisionOptimizerWithLearningRate(decisionModel, -1);
 }
 
 void CatBoostNN::train(TensorPairDataset& ds, const LossPtr& loss) {
@@ -444,7 +447,7 @@ void CatBoostNN::trainDecision(TensorPairDataset& ds, const LossPtr& loss, doubl
 
     std::cout << "    optimizing decision model" << std::endl;
 
-    auto decisionFuncOptimizer = getDecisionOptimizer(decisionModel);
+    auto decisionFuncOptimizer = getDecisionOptimizerWithLearningRate(decisionModel, step);
     decisionFuncOptimizer->train(repr, targets, loss, decisionModel);
 }
 
