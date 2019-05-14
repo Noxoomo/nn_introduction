@@ -31,7 +31,8 @@ torch::Tensor experiments::Classifier::forward(torch::Tensor x) {
     x = x.view({x.size(0), -1});
     auto result = classifier_->forward(x);
     if (baseline_)  {
-        result *= classifierScale_;
+        //result *= classifierScale_;
+        result *= scale_;
         result += baseline_->forward(x);
     }
     return result;

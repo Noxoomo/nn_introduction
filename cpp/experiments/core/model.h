@@ -29,14 +29,16 @@ namespace experiments {
   class Classifier : public Model {
   public:
 
-      explicit Classifier(ModelPtr classifier) {
+      explicit Classifier(ModelPtr classifier, double scale) {
           classifier_ = register_module("classifier_", std::move(classifier));
+          scale_ = scale;
       }
 
-      explicit Classifier(ModelPtr classifier, ModelPtr baseline) {
+      explicit Classifier(ModelPtr classifier, ModelPtr baseline, double scale) {
           classifier_ = register_module("classifier_", std::move(classifier));
           baseline_ = register_module("baseline_", std::move(baseline));
-          classifierScale_ = register_parameter("scale_", torch::ones({1}, torch::kFloat32));
+          scale_ = scale;
+          //classifierScale_ = register_parameter("scale_", torch::ones({1}, torch::kFloat32));
       }
 
       virtual ModelPtr classifier() {
@@ -50,7 +52,7 @@ namespace experiments {
       virtual void enableBaselineTrain(bool flag) {
           if (baseline_) {
               baseline_->train(flag);
-              classifierScale_.set_requires_grad(flag);
+              //classifierScale_.set_requires_grad(flag);
           }
       }
       torch::Tensor forward(torch::Tensor x) override;
@@ -58,7 +60,8 @@ namespace experiments {
   private:
       ModelPtr classifier_;
       ModelPtr baseline_;
-      torch::Tensor classifierScale_;
+      double scale_;
+      //torch::Tensor classifierScale_;
 
   };
 

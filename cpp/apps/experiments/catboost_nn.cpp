@@ -1,4 +1,5 @@
 #include "catboost_nn.h"
+#include "json.hpp"
 
 #include <utility>
 
@@ -8,6 +9,7 @@
 #include <models/model.h>
 #include <models/polynom/polynom.h>
 #include <random>
+#include <memory>
 
 experiments::ModelPtr CatBoostNN::getTrainedModel(TensorPairDataset& ds, const LossPtr& loss) {
     train(ds, loss);
@@ -333,7 +335,8 @@ inline std::string readFile(const std::string& path) {
     return params;
 }
 
-experiments::OptimizerPtr CatBoostNN::getDecisionOptimizer(const experiments::ModelPtr& decisionModel) {
+experiments::OptimizerPtr CatBoostNN::getDecisionOptimizer(const experiments::ModelPtr& decisionModel,
+        double learning_rate) {
     seed_ += 10000;
     std::string params;
     if (Init_) {
@@ -343,8 +346,12 @@ experiments::OptimizerPtr CatBoostNN::getDecisionOptimizer(const experiments::Mo
         params = opts_.catboostParamsFile;
     }
 
+    auto parameters = nlohmann::json::parse(readFile(params));
+    if (learning_rate > 0) {
+        parameters["learning_rate"] = learning_rate;
+    }
     return std::make_shared<CatBoostOptimizer>(
-        readFile(params),
+        parameters.dump(),
         seed_,
         opts_.lambda_ * lambdaMult_,
         opts_.dropOut_
@@ -389,7 +396,7 @@ void CatBoostNN::train(TensorPairDataset& ds, const LossPtr& loss) {
         fireListeners(2 * i);
         std::cout << "========== " << i << std::endl;
 
-        trainDecision(ds, loss);
+        trainDecision(ds, loss, 1e-5 + i * (1e-5 - 1e-2) / iterations_, 10 - i * (10 - 1e-4) / iterations_);
 
         std::cout << "Decision was trained " << i << std::endl;
 
@@ -403,10 +410,10 @@ void CatBoostNN::train(TensorPairDataset& ds, const LossPtr& loss) {
 
 
 
-void CatBoostNN::trainDecision(TensorPairDataset& ds, const LossPtr& loss) {
+void CatBoostNN::trainDecision(TensorPairDataset& ds, const LossPtr& loss, double step, double lambda) {
     model_->to(device_);
     auto representationsModel = model_->conv();
-    auto decisionModel = model_->classifier();
+    auto decisionModel = std::make_shared<experiments::Classifier>(model_->classifier(), lambda);
     representationsModel->train(false);
 
     if (model_->classifier()->baseline()) {
