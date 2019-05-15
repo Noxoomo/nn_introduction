@@ -188,7 +188,11 @@ namespace {
                 testBaseline.size() ? testBaseline.data() : nullptr,
                 baselineDim);
 
+            std::cout << "Training catboost with options: " << catBoostOptions_ << std::endl;
+
             auto catboost = Train(trainPool, testPool, catBoostOptions_);
+            std::cout << "CatBoost was trained " << std::endl;
+
             Polynom polynom(PolynomBuilder().AddEnsemble(catboost).Build());
             polynom.Lambda_ = lambda_;
             std::cout << "Model size: " << catboost.Trees.size() << std::endl;
@@ -385,6 +389,7 @@ void CatBoostNN::train(TensorPairDataset& ds, const LossPtr& loss) {
         trainRepr(ds, loss);
 
         std::cout << "Repr was trained, calling listeners " << i << std::endl;
+//        model_->classifier()->dumpClassifierScale();
 
         fireListeners(2 * i);
         std::cout << "========== " << i << std::endl;
@@ -456,6 +461,7 @@ void CatBoostNN::trainRepr(TensorPairDataset& ds, const LossPtr& loss) {
 
     LossPtr representationLoss = makeRepresentationLoss(decisionModel, loss);
     auto representationOptimizer = getReprOptimizer(model_);
+
     representationOptimizer->train(ds, representationLoss, representationsModel);
 
 }

@@ -41,11 +41,11 @@ struct TEnsemble {
 
 
 inline TEnsemble Train(const TDataSet& learn,
-                        const TDataSet& test,
-                        const std::string& paramsJson) {
+                       const TDataSet& test,
+                       const std::string& paramsJson) {
     ResultHandle handle;
-    TrainCatBoost(learn,
-                  test,
+    TrainCatBoost(&learn,
+                  &test,
                   paramsJson.data(),
                   &handle);
 

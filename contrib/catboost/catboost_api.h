@@ -38,8 +38,8 @@ struct TDataSet {
     int SamplesCount = 0;
 
 };
-EXPORT bool TrainCatBoost(const TDataSet& train,
-                          const TDataSet& test,
+EXPORT bool TrainCatBoost(const struct TDataSet* train,
+                          const struct TDataSet* test,
                           const char* params,
                           ResultHandle* handle);
 
