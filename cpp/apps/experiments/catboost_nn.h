@@ -21,7 +21,13 @@ struct CatBoostNNConfig {
     std::string catboostInitParamsFile = "catboost_params.json";
     std::string catboostFinalParamsFile = "catboost_final_params.json";
 
-    double sgdStep_ = 0.001;
+    double catBoostLrStart_ = 1e-5;
+    double catBoostLrEnd_ = 1e-2;
+
+    double cnnLrStart_ = 10;
+    double cnnLrEnd_ = 1e-4;
+
+    double sgdStep_ = 1;
 
 };
 
@@ -71,14 +77,20 @@ public:
     experiments::ModelPtr getTrainedModel(TensorPairDataset& ds, const LossPtr& loss) override;
 
 protected:
-    void trainDecision(TensorPairDataset& ds, const LossPtr& loss, double step = -1, double lambda = 1);
+    double learningRate(int currentIteration, int totalIterations) const;
+    double ensembleScale(int currentIteration, int totalIterations) const;
+    void trainDecision(TensorPairDataset& ds, const LossPtr& loss, double learningRate = -1, double ensembleScale = 1);
     void trainRepr(TensorPairDataset& ds, const LossPtr& loss);
     void initialTrainRepr(TensorPairDataset& ds, const LossPtr& loss);
 protected:
     experiments::OptimizerPtr getReprOptimizer(const experiments::ModelPtr& reprModel) override;
 
     experiments::OptimizerPtr getDecisionOptimizer(const experiments::ModelPtr& decisionModel) override;
-    experiments::OptimizerPtr getDecisionOptimizerWithLearningRate(const experiments::ModelPtr& decisionModel, double learning_rate = -1);
+    experiments::OptimizerPtr getClassifierOptimizer(
+        const experiments::ModelPtr& decisionModel,
+        double learningRate = -1,
+        double scale = 1.0
+        );
 private:
     const CatBoostNNConfig& opts_;
     torch::DeviceType device_;

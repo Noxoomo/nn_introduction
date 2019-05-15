@@ -68,8 +68,8 @@ static void attachReprListeners(const experiments::OptimizerPtr& optimizer,
   auto epochReportOptimizerListener = std::make_shared<experiments::EpochReportOptimizerListener>();
   optimizer->registerListener(epochReportOptimizerListener);
 
-  auto lrDecayListener = std::make_shared<LrLinearDecayOptimizerListener>(startLr, endLr, epochs);
-  optimizer->registerListener(lrDecayListener);
+//  auto lrDecayListener = std::make_shared<LrLinearDecayOptimizerListener>(startLr, endLr, epochs);
+//  optimizer->registerListener(lrDecayListener);
 }
 
 
@@ -111,12 +111,14 @@ namespace {
         explicit CatBoostOptimizer(std::string catboostOptions,
             uint64_t seed,
             double lambda,
-            double dropOut
+            double dropOut,
+            double scale
             )
         : catBoostOptions_(std::move(catboostOptions))
         , seed_(seed)
         , lambda_(lambda)
-        , drouput_(dropOut) {
+        , drouput_(dropOut)
+        , scale_(scale) {
 
         }
 
@@ -125,6 +127,7 @@ namespace {
                    LossPtr loss,
                    experiments::ModelPtr model) const override {
             auto classifier = dynamic_cast<experiments::Classifier*>(model.get());
+            classifier->setScale(scale_);
             auto polynomModel = dynamic_cast<PolynomModel*>(classifier->classifier().get());
             auto data = ds.data();
 
@@ -327,6 +330,7 @@ namespace {
         uint64_t seed_ = 0;
         double lambda_ = 1.0;
         double drouput_ = 0.0;
+        double scale_ = 1.0;
     };
 }
 
@@ -339,8 +343,11 @@ inline std::string readFile(const std::string& path) {
     return params;
 }
 
-experiments::OptimizerPtr CatBoostNN::getDecisionOptimizerWithLearningRate(const experiments::ModelPtr& decisionModel,
-        double learning_rate) {
+experiments::OptimizerPtr CatBoostNN::getClassifierOptimizer(
+    const experiments::ModelPtr& decisionModel,
+    double learningRate,
+    double ensembleScale
+    ) {
     seed_ += 10000;
     std::string params;
     if (Init_) {
@@ -351,18 +358,19 @@ experiments::OptimizerPtr CatBoostNN::getDecisionOptimizerWithLearningRate(const
     }
 
     auto parameters = nlohmann::json::parse(readFile(params));
-    if (learning_rate > 0) {
-        parameters["learning_rate"] = learning_rate;
+    if (learningRate > 0) {
+        parameters["learning_rate"] = learningRate;
     }
     return std::make_shared<CatBoostOptimizer>(
         parameters.dump(),
         seed_,
         opts_.lambda_ * lambdaMult_,
-        opts_.dropOut_
+        opts_.dropOut_,
+        ensembleScale
         );
 }
 experiments::OptimizerPtr CatBoostNN::getDecisionOptimizer(const experiments::ModelPtr& decisionModel) {
-    return getDecisionOptimizerWithLearningRate(decisionModel, -1);
+    return getClassifierOptimizer(decisionModel, -1);
 }
 
 void CatBoostNN::train(TensorPairDataset& ds, const LossPtr& loss) {
@@ -370,13 +378,16 @@ void CatBoostNN::train(TensorPairDataset& ds, const LossPtr& loss) {
 
     initialTrainRepr(ds, loss);
 
-    trainDecision(ds, loss);
+    trainDecision(ds,
+                   loss,
+                   learningRate(0, iterations_),
+                   1.0);
 
 
-    std::set<uint32_t> decayIters = {100 / opts_.representationsIterations,
-                                     200 / opts_.representationsIterations,
-                                     300 / opts_.representationsIterations
-                                     };
+//    std::set<uint32_t> decayIters = {100 / opts_.representationsIterations,
+//                                     200 / opts_.representationsIterations,
+//                                     300 / opts_.representationsIterations
+//                                     };
 //                                     50 / opts_.representationsIterations,
 //                                     75 / opts_.representationsIterations,
 //                                     100 / opts_.representationsIterations,
@@ -391,10 +402,10 @@ void CatBoostNN::train(TensorPairDataset& ds, const LossPtr& loss) {
 
     for (uint32_t i = 0; i < iterations_; ++i) {
         std::cout << "EM iteration: " << i << std::endl;
-        if (decayIters.count(i)) {
-          lr_ /= 10;
-//          lambdaMult_ /= 2;
-        }
+//        if (decayIters.count(i)) {
+//          lr_ /= 10;
+////          lambdaMult_ /= 2;
+//        }
 
         trainRepr(ds, loss);
 
@@ -404,7 +415,10 @@ void CatBoostNN::train(TensorPairDataset& ds, const LossPtr& loss) {
         fireListeners(2 * i);
         std::cout << "========== " << i << std::endl;
 
-        trainDecision(ds, loss, 1e-5 + i * (1e-5 - 1e-2) / iterations_, 10 - i * (10 - 1e-4) / iterations_);
+        trainDecision(ds,
+            loss,
+            learningRate(i, iterations_),
+            ensembleScale(i, iterations_));
 
         std::cout << "Decision was trained " << i << std::endl;
 
@@ -418,10 +432,13 @@ void CatBoostNN::train(TensorPairDataset& ds, const LossPtr& loss) {
 
 
 
-void CatBoostNN::trainDecision(TensorPairDataset& ds, const LossPtr& loss, double step, double lambda) {
+void CatBoostNN::trainDecision(TensorPairDataset& ds,
+    const LossPtr& loss,
+    double learningRate,
+    double ensembleScale) {
     model_->to(device_);
     auto representationsModel = model_->conv();
-    auto decisionModel = std::make_shared<experiments::Classifier>(model_->classifier(), lambda);
+    auto decisionModel = model_->classifier();
     representationsModel->train(false);
 
     if (model_->classifier()->baseline()) {
@@ -452,7 +469,7 @@ void CatBoostNN::trainDecision(TensorPairDataset& ds, const LossPtr& loss, doubl
 
     std::cout << "    optimizing decision model" << std::endl;
 
-    auto decisionFuncOptimizer = getDecisionOptimizerWithLearningRate(decisionModel, step);
+    auto decisionFuncOptimizer = getClassifierOptimizer(decisionModel, learningRate, ensembleScale);
     decisionFuncOptimizer->train(repr, targets, loss, decisionModel);
 }
 
@@ -480,7 +497,8 @@ experiments::ModelPtr CatBoostNN::trainFinalDecision(const TensorPairDataset& le
         readFile(opts_.catboostFinalParamsFile),
         seed_,
         1e10,
-        0.0
+        0.0,
+        1.0
     );
     experiments::ClassifierPtr classifier;
     auto baseline = model_->classifier()->baseline();
@@ -518,6 +536,13 @@ void CatBoostNN::initialTrainRepr(TensorPairDataset& ds, const LossPtr& loss) {
 
     iter_ =  opts_.representationsIterations;
 
+}
+double CatBoostNN::learningRate(int currentIteration, int totalIterations) const {
+    return opts_.catBoostLrStart_ + currentIteration * (opts_.catBoostLrEnd_ - opts_.catBoostLrStart_) / totalIterations;
+}
+
+double CatBoostNN::ensembleScale(int currentIteration, int totalIterations) const {
+    return opts_.cnnLrStart_ + currentIteration * (opts_.cnnLrEnd_ - opts_.cnnLrStart_) / totalIterations;
 }
 
 //

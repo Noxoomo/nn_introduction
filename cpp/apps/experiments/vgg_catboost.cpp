@@ -41,9 +41,9 @@ int main(int argc, char* argv[]) {
     catBoostNnConfig.batchSize = 128;
     catBoostNnConfig.dropOut_ = 0.0;
     catBoostNnConfig.lambda_ = 1.0;
-    catBoostNnConfig.sgdStep_ = 0.1;
+    catBoostNnConfig.sgdStep_ = 1;
     catBoostNnConfig.representationsIterations = 20;
-
+    catBoostNnConfig.catBoostLrStart_ = 1e-5;
     std::string modelFile = "convolutions_nn.bin";
     catBoostNnConfig.catboostParamsFile = "../../../../cpp/apps/cifar_networks/vgg_params/catboost_params_gpu.json";
     catBoostNnConfig.catboostInitParamsFile = "../../../../cpp/apps/cifar_networks/vgg_params/catboost_params_init.json";

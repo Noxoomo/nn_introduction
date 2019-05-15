@@ -49,6 +49,10 @@ namespace experiments {
           return baseline_;
       }
 
+      void setScale(float scale) {
+          scale_ = scale;
+      }
+
       virtual void enableBaselineTrain(bool flag) {
           if (baseline_) {
               baseline_->train(flag);
@@ -60,7 +64,7 @@ namespace experiments {
   private:
       ModelPtr classifier_;
       ModelPtr baseline_;
-      double scale_;
+      float scale_;
       //torch::Tensor classifierScale_;
 
   };
