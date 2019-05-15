@@ -71,14 +71,14 @@ public:
     experiments::ModelPtr getTrainedModel(TensorPairDataset& ds, const LossPtr& loss) override;
 
 protected:
-    void trainDecision(TensorPairDataset& ds, const LossPtr& loss);
+    void trainDecision(TensorPairDataset& ds, const LossPtr& loss, double step = -1, double lambda = 1);
     void trainRepr(TensorPairDataset& ds, const LossPtr& loss);
     void initialTrainRepr(TensorPairDataset& ds, const LossPtr& loss);
 protected:
     experiments::OptimizerPtr getReprOptimizer(const experiments::ModelPtr& reprModel) override;
 
     experiments::OptimizerPtr getDecisionOptimizer(const experiments::ModelPtr& decisionModel) override;
-
+    experiments::OptimizerPtr getDecisionOptimizerWithLearningRate(const experiments::ModelPtr& decisionModel, double learning_rate = -1);
 private:
     const CatBoostNNConfig& opts_;
     torch::DeviceType device_;
