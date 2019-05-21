@@ -3,8 +3,10 @@
 #include "experiments/core/transform.h"
 #include "experiments/core/model.h"
 #include "experiments/core/tensor_pair_dataset.h"
+
 #include "experiments/datasets/cifar10/cifar10_reader.h"
 #include "experiments/datasets/mnist/mnist_reader.h"
+#include "experiments/datasets/svhn/svhn_reader.h"
 
 #include <torch/torch.h>
 
@@ -136,19 +138,27 @@ torch::DeviceType getDevice(int argc, char* argv[]) {
     return device;
 }
 
-enum class Dataset {
+enum class DatasetType {
     cifar10,
     mnist,
+    svhn,
 };
 
-static Dataset getDataset(int argc, char* argv[]) {
-    auto dataset = Dataset::cifar10;
+static DatasetType getDataset(int argc, char* argv[]) {
+    auto dataset = DatasetType::cifar10;
 
     for (int i = 0; i < argc; ++i) {
         if (std::string(argv[i]) == std::string("mnist")) {
-            dataset = Dataset::mnist;
+            dataset = DatasetType::mnist;
 
             std::cout << "Using MNIST dataset" << std::endl;
+            return dataset;
+        }
+
+        if (std::string(argv[i]) == std::string("svhn")) {
+            dataset = DatasetType::svhn;
+
+            std::cout << "Using SVHN dataset" << std::endl;
             return dataset;
         }
     }
@@ -159,12 +169,15 @@ static Dataset getDataset(int argc, char* argv[]) {
 
 std::pair<TensorPairDataset, TensorPairDataset> readDataset(int argc, char* argv[]) {
     auto dataset = getDataset(argc, argv);
-    if (dataset == Dataset::cifar10) {
+    if (dataset == DatasetType::cifar10) {
         const std::string& path = "../../../../resources/cifar10/cifar-10-batches-bin";
         return experiments::cifar10::read_dataset(path);
-    } else if (dataset == Dataset::mnist) {
+    } else if (dataset == DatasetType::mnist) {
         const std::string& path = "../../../../resources/mnist";
         return experiments::mnist::read_dataset(path);
+    } else if (dataset == DatasetType::svhn) {
+        const std::string& path = "../../../../resources/svhn";
+        return experiments::svhn::read_dataset(path);
     } else {
         throw "Unsupported dataset";
     }

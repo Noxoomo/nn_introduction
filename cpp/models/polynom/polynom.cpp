@@ -5,6 +5,7 @@
 #include <util/exception.h>
 #include <util/parallel_executor.h>
 #include <iostream>
+
 struct PathBit {
     int Bits = 0;
     int Sign = 1;
@@ -41,6 +42,9 @@ inline void SortUnique(Vec& vec) {
 
 void PolynomBuilder::AddTree(const TSymmetricTree& tree)  {
     const int maxDepth = static_cast<int>(tree.Conditions.size());
+    if (maxDepth == 0) {
+        return;
+    }
     const int leaves = 1 << maxDepth;
 
     std::vector<double> weights(leaves);

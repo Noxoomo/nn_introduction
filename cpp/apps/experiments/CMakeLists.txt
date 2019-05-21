@@ -3,6 +3,9 @@ project(cifar_networks)
 
 include_directories(../../experiments)
 
+add_executable(svhn_read svhn_read.cpp common.h common.cpp)
+target_link_libraries(svhn_read "${TORCH_LIBRARIES}" experiments)
+
 add_executable(lenet lenet.cpp common.h common.cpp)
 target_link_libraries(lenet "${TORCH_LIBRARIES}" experiments)
 
