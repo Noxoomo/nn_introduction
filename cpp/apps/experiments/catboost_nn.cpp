@@ -532,11 +532,11 @@ void CatBoostNN::initialTrainRepr(TensorPairDataset& ds, const LossPtr& loss) {
 
 }
 double CatBoostNN::learningRate(int currentIteration, int totalIterations) const {
-    return opts_.catBoostLrStart_ + currentIteration * (opts_.catBoostLrEnd_ - opts_.catBoostLrStart_) / totalIterations;
+    return opts_.catBoostLrStart_ * pow ((opts_.catBoostLrEnd_ / opts_.catBoostLrStart_), (double) currentIteration / totalIterations);
 }
 
 double CatBoostNN::ensembleScale(int currentIteration, int totalIterations) const {
-    return opts_.cnnLrStart_ + currentIteration * (opts_.cnnLrEnd_ - opts_.cnnLrStart_) / totalIterations;
+    return opts_.cnnLrStart_ * pow(opts_.cnnLrEnd_ / opts_.cnnLrStart_, (double) currentIteration / totalIterations);
 }
 
 //
