@@ -15,7 +15,7 @@
 #include <iostream>
 #include <set>
 
-int main(int argc, const char* argv[]) {
+int main(int argc, const char *argv[]) {
     using namespace experiments;
 
     // Load params
@@ -33,8 +33,8 @@ int main(int argc, const char* argv[]) {
 
     // Init model
 
-    const json& convParams = params[ModelKey][ConvKey];
-    const json& classParams = params[ModelKey][ClassifierKey];
+    const json &convParams = params[ModelKey][ConvKey];
+    const json &classParams = params[ModelKey][ClassifierKey];
 
     auto conv = createConvLayers({}, convParams);
     auto classifier = createClassifier(2, classParams);
@@ -43,10 +43,13 @@ int main(int argc, const char* argv[]) {
 
     torch::setNumThreads(16);
 
-    CatBoostNN nnTrainer(params,
-                         model,
-                         dataset.second);
+    CatBoostNN nnTrainer(
+            params,
+            model,
+            dataset.second,
+            params["auto_train_scale"] != nullptr && params["auto_train_scale"]
 //                         createClassifier(2, classParams));
+    );
 
     // Attach Listener
 

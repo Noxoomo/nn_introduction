@@ -20,8 +20,8 @@ public:
     CatBoostNN(json opts,
         ConvModelPtr model,
         TensorPairDataset validationDs,
-        experiments::ClassifierPtr init = nullptr,
-        bool trainScale = false)
+        bool trainScale = false,
+        experiments::ClassifierPtr init = nullptr)
             : EMLikeTrainer(getDefaultCifar10TrainTransform(), opts[NIterationsKey][0], model)
             , opts_(std::move(opts))
             , initClassifier_(init)

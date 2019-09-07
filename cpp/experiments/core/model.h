@@ -42,6 +42,19 @@ private:
 
 using ModelPtr = std::shared_ptr<Model>;
 
+
+class ScaleModel : public Model {
+public:
+    ScaleModel(torch::Device device);
+
+    torch::Tensor forward(torch::Tensor x) override ;
+    void printScale();
+    ~ScaleModel() override = default;
+
+private:
+    torch::Tensor classifierScale_;
+};
+
 // Classifier
 
 class Classifier : public Model {
@@ -49,21 +62,16 @@ public:
 
     explicit Classifier(ModelPtr classifier) {
         classifier_ = register_module("classifier_", std::move(classifier));
-        torch::TensorOptions opts;
-        opts = opts.dtype(torch::kFloat32);
-        opts = opts.requires_grad(true);
+        scaleModel_.reset(new ScaleModel(classifier_->device()));
+        scaleModel_ = register_module("scale_", scaleModel_);
 //        classifierScale_ = torch::ones({1}, opts).to(baseline_->device());
-        classifierScale_ = register_parameter("scale_", torch::ones({1}, opts).to(classifier_->device()));
     }
 
     explicit Classifier(ModelPtr classifier, ModelPtr baseline) {
         classifier_ = register_module("classifier_", std::move(classifier));
         baseline_ = register_module("baseline_", std::move(baseline));
-        torch::TensorOptions opts;
-        opts = opts.dtype(torch::kFloat32);
-        opts = opts.requires_grad(true);
-        classifierScale_ = torch::ones({1}, opts).to(baseline_->device());
-        classifierScale_ = register_parameter("scale_", classifierScale_);
+        scaleModel_.reset(new ScaleModel(classifier_->device()));
+        scaleModel_ = register_module("scale_", scaleModel_);
     }
 
     virtual ModelPtr classifier() {
@@ -81,23 +89,22 @@ public:
     }
 
     virtual void enableScaleTrain(bool flag) {
-        classifierScale_.set_requires_grad(flag);
+       scaleModel_->train(flag);
     }
-
 
     void printScale() {
-        const at::Tensor &onCpu = classifierScale_.clone().to(torch::kCPU);
-        auto accessor = onCpu.accessor<float, 1>();
-        std::cout << "classifier scale = " << accessor.data()[0] << std::endl;
+        dynamic_cast<ScaleModel&>(*scaleModel_).printScale();
     }
+
     torch::Tensor forward(torch::Tensor x) override;
 
 private:
     ModelPtr classifier_;
     ModelPtr baseline_;
-    torch::Tensor classifierScale_;
+    ModelPtr scaleModel_;
 
 };
+
 
 using ClassifierPtr = std::shared_ptr<Classifier>;
 

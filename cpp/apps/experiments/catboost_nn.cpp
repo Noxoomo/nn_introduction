@@ -89,6 +89,9 @@ experiments::OptimizerPtr CatBoostNN::getReprOptimizer(const experiments::ModelP
     opt.weight_decay_ = 5e-4;
 //    auto optim = std::make_shared<torch::optim::Adam>(reprModel->parameters(), opt);
     auto optim = std::make_shared<torch::optim::SGD>(model->parameters(), opt);
+    for (auto& entry : model->named_parameters()) {
+        std::cout << "optimize " << entry.key() << std::endl;
+    }
     args.torchOptim_ = optim;
 
     auto lr = &(optim->options.learning_rate_);
@@ -399,7 +402,7 @@ void CatBoostNN::trainDecision(TensorPairDataset& ds, const LossPtr& loss) {
     if (model_->classifier()->baseline()) {
         model_->classifier()->enableBaselineTrain(false);
     }
-    model_->classifier()->enableScaleTrain(trainScale_);
+    model_->classifier()->enableScaleTrain(false);
     model_->classifier()->classifier()->train(true);
 
     std::cout << "    getting representations" << std::endl;
@@ -411,24 +414,48 @@ void CatBoostNN::trainDecision(TensorPairDataset& ds, const LossPtr& loss) {
 
     auto decisionFuncOptimizer = getDecisionOptimizer(decisionModel);
     decisionFuncOptimizer->train(trainDsRepr, validationDsRepr, loss, model_);
+
 }
 
 void CatBoostNN::trainRepr(TensorPairDataset& ds, const LossPtr& loss) {
     auto representationsModel = model_->conv();
+    at::Tensor prevX;
+    {
+        std::vector<at::Tensor> kolbosa;
+        for (const at::Tensor& t: representationsModel->parameters(true)) {
+            if (!t.dim())
+                continue;
+            kolbosa.push_back(t.flatten());
+        }
+        prevX = torch::cat(kolbosa, 0).clone();
+    }
     representationsModel->train(true);
     auto decisionModel = model_->classifier();
-    decisionModel->train(false);
+    decisionModel->classifier()->train(false);
+
     if (decisionModel->baseline()) {
         decisionModel->enableBaselineTrain(true);
     }
+    decisionModel->enableScaleTrain(trainScale_);
 
     std::cout << "    optimizing representation model" << std::endl;
 
     LossPtr representationLoss = makeRepresentationLoss(decisionModel, loss);
     auto representationOptimizer = getReprOptimizer(model_);
 
+    model_->classifier()->printScale();
     representationOptimizer->train(ds, representationLoss, representationsModel);
-
+    model_->classifier()->printScale();
+    {
+        std::vector<at::Tensor> kolbosa;
+        for (const at::Tensor& t: representationsModel->parameters(true)) {
+            if (!t.dim())
+                continue;
+            kolbosa.push_back(t.flatten());
+        }
+        at::Tensor currentX = torch::cat(kolbosa, 0).clone();
+        std::cout << "Optimization step length: " << (currentX - prevX).norm(2) << " total CNN parameters count: " << currentX.sizes() << std::endl;
+    };
 }
 experiments::ModelPtr CatBoostNN::trainFinalDecision(TensorPairDataset& learn, const TensorPairDataset& test) {
     throw std::runtime_error("TODO");

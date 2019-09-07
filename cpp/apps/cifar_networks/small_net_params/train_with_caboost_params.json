@@ -8,13 +8,8 @@
       "main": {
         "model_arch": "Polynom",
         "lambda": 1.0,
-        "monom_type": "ExpProbMonom",
-        "device": "GPU"
-      },
-      "baseline": {
-        "model_arch": "MLP",
-        "dims": [512, 2],
-        "device": "GPU"
+        "monom_type": "SigmoidProbMonom",
+        "device": "CPU"
       }
     }
   },
@@ -25,6 +20,7 @@
   "n_iterations": [10, 5, 1],
   "sgd_step": 0.1,
   "dropout": 0.0,
+  "auto_train_scale": true,
 
   "dataset": {
     "name": "cifar-10",
@@ -36,33 +32,36 @@
   "catboost_params": {
     "init_params": {
       "boosting_type": "Plain",
-      "iterations" : 300,
-      "depth" : 10,
+      "iterations" : 10,
+      "depth" : 6,
       "devices": "0",
       "task_type": "GPU",
       "gpu_ram_part": 0.5,
       "eval_metric": "Accuracy",
       "od_type": "IncToDec",
       "loss_function": "MultiClass",
-      "learning_rate" : 0.01,
+      "learning_rate" : 0.00001,
       "use_best_model": false,
       "feature_border_type": "Uniform",
-      "rsm": 0.25,
+      "rsm": 0.01,
       "logging_level" : "Debug",
-      "random_strength": 1
+      "random_strength": 1,
+      "subsample": 0.1,
+      "bootstrap_type": "Bernoulli"
     },
     "intermediate_params": {
       "boosting_type": "Plain",
       "iterations" : 300,
       "task_type": "GPU",
       "devices": "0",
-      "depth" : 10,
+      "depth" : 6,
       "gpu_ram_part": 0.75,
       "od_type": "IncToDec",
       "logging_level" : "Verbose",
       "loss_function": "MultiClass",
       "learning_rate" : 0.07,
       "feature_border_type": "Uniform",
+      "metric_period": 10,
       "rsm": 0.1,
       "use_best_model": false,
       "random_strength": 1

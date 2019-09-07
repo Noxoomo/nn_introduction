@@ -78,7 +78,8 @@ public:
             }
 
             torch::Tensor value(const torch::Tensor& outputs, const torch::Tensor& targets) const override {
-                return loss_->value(model_->forward(outputs), targets);
+                const torch::Tensor& outs = model_->forward(outputs);
+                return loss_->value(outs, targets);
             }
 
         private:

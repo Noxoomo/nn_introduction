@@ -68,7 +68,7 @@ void experiments::ConvModel::train(bool on) {
 torch::Tensor experiments::Classifier::forward(torch::Tensor x) {
     x = x.view({x.size(0), -1});
     auto result = classifier_->forward(x);
-    result *= classifierScale_;
+    result = scaleModel_->forward(result);
     if (baseline_) {
         result = correctDevice(result, baseline_->device());
         result += baseline_->forward(x);
@@ -140,7 +140,7 @@ ModelPtr createConvLayers(const std::vector<int>& inputShape, const json& params
     return model;
 }
 
-static ModelPtr _createClassifier(int numClasses, const json& params) {
+static ModelPtr _createInnerModel(int numClasses, const json& params) {
     std::string archType = params[ModelArchKey];
 
     if (archType == "MLP") {
@@ -156,7 +156,8 @@ static ModelPtr _createClassifier(int numClasses, const json& params) {
             emptyMonom->Values_.resize(numClasses);
             polynom->Ensemble_.push_back(std::move(emptyMonom));
         }
-        return std::make_shared<PolynomModel>(std::move(polynom));
+        const std::shared_ptr<PolynomModel> &result = std::make_shared<PolynomModel>(std::move(polynom));
+        return result;
     }
 
     std::string errMsg("Unsupported baseline classifier type");
@@ -168,7 +169,7 @@ ClassifierPtr createClassifier(int numClasses, const json& params) {
     ModelPtr baselineClassifier{nullptr};
 
     if (params.count(ClassifierMainKey)) {
-        mainClassifier = _createClassifier(numClasses, params[ClassifierMainKey]);
+        mainClassifier = _createInnerModel(numClasses, params[ClassifierMainKey]);
         auto device = getDevice(params[ClassifierMainKey][DeviceKey]);
         mainClassifier->to(device);
     } else {
@@ -176,7 +177,7 @@ ClassifierPtr createClassifier(int numClasses, const json& params) {
     }
 
     if (params.count(ClassifierBaselineKey)) {
-        baselineClassifier = _createClassifier(numClasses, params[ClassifierBaselineKey]);
+        baselineClassifier = _createInnerModel(numClasses, params[ClassifierBaselineKey]);
         auto device = getDevice(params[ClassifierBaselineKey][DeviceKey]);
         baselineClassifier->to(device);
     }
@@ -188,4 +189,30 @@ ClassifierPtr createClassifier(int numClasses, const json& params) {
     }
 }
 
+    void ScaleModel::printScale()  {
+        std::cout << "classifier scale = " << classifierScale_.norm(1) << std::endl;
+        std::cout << "classifier scale requires grad = " << classifierScale_.requires_grad() << std::endl;
+    }
+
+    torch::Tensor ScaleModel::forward(torch::Tensor x) {
+        const int batchSize = x.size(0);
+        auto tmp = torch::zeros({batchSize}, torch::kFloat32).to(x.device());
+        auto tmp2 = torch::ones({batchSize}, torch::kFloat32).to(x.device());
+
+        auto res = torch::cat({tmp2 * classifierScale_, tmp}, 0).reshape({2, batchSize}).transpose(0, 1).contiguous();
+//        std::cout << res.clone() << std::endl;
+        return res;
+//        return  x * classifierScale_;
+    }
+
+    ScaleModel::ScaleModel(torch::Device device)  {
+        torch::TensorOptions opts;
+        opts = opts.dtype(torch::kFloat32);
+        opts = opts.requires_grad(true);
+//        classifierScale_ = torch::ones({1}, opts).to(baseline_->device());
+        classifierScale_ = torch::ones({1}, opts).to(device) * 100;
+        classifierScale_ = register_parameter("scale_", classifierScale_);
+        VERIFY(classifierScale_.is_variable(), "wtf. here should be autograd");
+
+    }
 }
