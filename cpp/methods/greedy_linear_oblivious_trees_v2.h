@@ -5,196 +5,40 @@
 #include <memory>
 
 #include "optimizer.h"
+#include "correlation_bin_stats.h"
 
 #include <models/model.h>
 #include <models/bin_optimized_model.h>
 
 #include <data/grid.h>
 
+#include <core/multi_dim_array.h>
+
 #include <eigen3/Eigen/Core>
 #include <eigen3/Eigen/LU>
+//#include <eigen3/unsupported/Eigen/CXX11/Tensor>
+
 
 
 class GreedyLinearObliviousTreeLearnerV2;
-
-
-class BinStat {
-public:
-    explicit BinStat(int size, int filledSize)
-            : size_(size)
-            , filledSize_(filledSize) {
-        XTX_.resize(size * (size + 1) / 2, 0.0);
-        XTy_ = std::vector<float>(size, 0.0);
-        cnt_ = 0;
-        trace_ = 0.0;
-        maxUpdatedPos_ = filledSize_;
-    }
-
-    void reset() {
-        cnt_ = 0;
-        trace_ = 0;
-        int pos = 0;
-        for (int i = 0; i <= filledSize_; ++i) {
-            for (int j = 0; j < i + 1; ++j) {
-                XTX_[pos + j] = 0;
-            }
-            pos += i + 1;
-            XTy_[i] = 0;
-        }
-        filledSize_ = 0;
-    }
-
-    void setFilledSize(int filledSize) {
-        filledSize_ = filledSize;
-    }
-
-    int filledSize() {
-        return filledSize_;
-    }
-
-    void addNewCorrelation(const std::vector<float>& xtx, float xty, int shift = 0) {
-        assert(xtx.size() >= filledSize_ + shift + 1);
-
-        const int corPos = filledSize_ + shift;
-
-        int pos = corPos * (corPos + 1) / 2;
-        for (int i = 0; i <= corPos; ++i) {
-            XTX_[pos + i] += xtx[i];
-        }
-        XTy_[corPos] += xty;
-        trace_ += xtx[corPos];
-        maxUpdatedPos_ = std::max(maxUpdatedPos_, corPos + 1);
-    }
-
-    void addFullCorrelation(const std::vector<float>& x, float y) {
-        assert(x.size() >= filledSize_);
-
-        for (int i = 0; i < filledSize_; ++i) {
-            XTy_[i] += x[i] * y;
-        }
-
-        int pos = 0;
-        for (int i = 0; i < filledSize_; ++i) {
-            for (int j = 0; j < i + 1; ++j) {
-                XTX_[pos + j] += x[i] * x[j];
-            }
-            pos += i + 1;
-        }
-
-        cnt_ += 1;
-    }
-
-    [[nodiscard]] Eigen::MatrixXd getXTX() const {
-        Eigen::MatrixXd res(maxUpdatedPos_, maxUpdatedPos_);
-
-        int basePos = 0;
-        for (int i = 0; i < maxUpdatedPos_; ++i) {
-            for (int j = 0; j < i + 1; ++j) {
-                res(i, j) = XTX_[basePos + j];
-                res(j, i) = XTX_[basePos + j];
-            }
-            basePos += i + 1;
-        }
-
-        return res;
-    }
-
-    [[nodiscard]] Eigen::MatrixXd getXTy() const {
-        Eigen::MatrixXd res(maxUpdatedPos_, 1);
-
-        for (int i = 0; i < maxUpdatedPos_; ++i) {
-            res(i, 0) = XTy_[i];
-        }
-
-        return res;
-    }
-
-    uint32_t getCnt() {
-        return cnt_;
-    }
-
-    double getTrace() {
-        return trace_;
-    }
-
-    // This one DOES NOT add up new correlations
-    BinStat& operator+=(const BinStat& s) {
-        cnt_ += s.cnt_;
-        trace_ += s.trace_;
-
-        int size = std::min(filledSize_, s.filledSize_);
-
-        int pos = 0;
-        for (int i = 0; i < size; ++i) {
-            for (int j = 0; j < i + 1; ++j) {
-                XTX_[pos + j] += s.XTX_[pos + j];
-            }
-            pos += i + 1;
-            XTy_[i] += s.XTy_[i];
-        }
-    }
-
-    // This one DOES NOT subtract new correlations
-    BinStat& operator-=(const BinStat& s) {
-        cnt_ -= s.cnt_;
-        trace_ -= s.trace_;
-
-        int size = std::min(filledSize_, s.filledSize_);
-
-        int pos = 0;
-        for (int i = 0; i < size; ++i) {
-            for (int j = 0; j < i + 1; ++j) {
-                XTX_[pos + j] -= s.XTX_[pos + j];
-            }
-            pos += i + 1;
-            XTy_[i] -= s.XTy_[i];
-        }
-    }
-
-private:
-    friend BinStat operator+(const BinStat& lhs, const BinStat& rhs);
-    friend BinStat operator-(const BinStat& lhs, const BinStat& rhs);
-
-private:
-    int size_;
-    int filledSize_;
-    int maxUpdatedPos_;
-
-    std::vector<float> XTX_;
-    std::vector<float> XTy_;
-    uint32_t cnt_;
-    double trace_;
-};
-
-inline BinStat operator+(const BinStat& lhs, const BinStat& rhs) {
-    BinStat res(lhs);
-    res += rhs;
-    return res;
-}
-
-inline BinStat operator-(const BinStat& lhs, const BinStat& rhs) {
-    BinStat res(lhs);
-    res -= rhs;
-    return res;
-}
-
 
 
 
 
 class HistogramV2 {
 public:
-    HistogramV2(BinarizedDataSet& bds, GridPtr grid, unsigned int nUsedFeatures, int lastUsedFeatureId);
+    HistogramV2(BinarizedDataSet& bds, GridPtr grid, unsigned int nUsedFeatures, int lastUsedFeatureId,
+            BinStat* hist);
 
 //    void addFullCorrelation(int bin, Vec x, double y);
-    void addNewCorrelation(int bin, const std::vector<float>& xtx, float xty, int shift = 0);
+    void addNewCorrelation(int bin, const float* xtx, float xty, int shift = 0);
     void prefixSumBins();
 
     void addBinStat(int bin, const BinStat& stats);
 
     std::pair<double, double> splitScore(int fId, int condId, double l2reg, double traceReg);
 
-    std::shared_ptr<Eigen::MatrixXd> getW(double l2reg);
+    std::shared_ptr<Eigen::MatrixXf> getW(double l2reg);
 
     void printEig(double l2reg);
     void printCnt();
@@ -204,10 +48,10 @@ public:
     HistogramV2& operator-=(const HistogramV2& h);
 
 private:
-    static double computeScore(Eigen::MatrixXd& XTX, Eigen::MatrixXd& XTy, double XTX_trace, uint32_t cnt, double l2reg,
+    static double computeScore(Eigen::MatrixXf& XTX, Eigen::MatrixXf& XTy, double XTX_trace, uint32_t cnt, double l2reg,
                                double traceReg);
 
-    static void printEig(Eigen::MatrixXd& M);
+    static void printEig(Eigen::MatrixXf& M);
 
     friend HistogramV2 operator-(const HistogramV2& lhs, const HistogramV2& rhs);
     friend HistogramV2 operator+(const HistogramV2& lhs, const HistogramV2& rhs);
@@ -216,10 +60,12 @@ private:
     BinarizedDataSet& bds_;
     GridPtr grid_;
 
-    std::vector<BinStat> hist_;
+    BinStat* hist_;
 
     int lastUsedFeatureId_ = -1;
     unsigned int nUsedFeatures_;
+
+
 
     friend class GreedyLinearObliviousTreeLearnerV2;
 };
@@ -229,13 +75,30 @@ class LinearObliviousTreeLeafV2;
 class GreedyLinearObliviousTreeLearnerV2 final
         : public Optimizer {
 public:
-    explicit GreedyLinearObliviousTreeLearnerV2(GridPtr grid, int32_t maxDepth = 6, int biasCol = -1,
+    // Please, don't even ask me why...
+    GreedyLinearObliviousTreeLearnerV2(GridPtr grid, int32_t maxDepth = 6, int biasCol = -1,
                                               double l2reg = 0.0, double traceReg = 0.0)
             : grid_(std::move(grid))
             , biasCol_(biasCol)
             , maxDepth_(maxDepth)
             , l2reg_(l2reg)
-            , traceReg_(traceReg) {
+            , traceReg_(traceReg)
+            , totalBins_(grid_->totalBins())
+            , fCount_(grid_->nzFeaturesCount())
+            , totalCond_(totalBins_ - fCount_)
+            , binOffsets_(grid_->binOffsets())
+            , nThreads_((int)GlobalThreadPool<0>().numThreads())
+            , h_XTX_(torch::zeros({nThreads_, 1 << maxDepth_, totalBins_, maxDepth_ + 2}, torch::kFloat))
+            , h_XTy_(torch::zeros({nThreads_, 1 << maxDepth_, totalBins_}, torch::kFloat))
+            , statsData_XTX_(torch::zeros({nThreads_ + 2, 1 << maxDepth_, totalBins_, (maxDepth_ + 2) * (maxDepth_ + 3) / 2}, torch::kFloat))
+            , statsData_XTy_(torch::zeros({nThreads_ + 2, 1 << maxDepth_, totalBins_, maxDepth_ + 2}, torch::kFloat))
+            , statsData_cnt_(torch::zeros({nThreads_ + 2, 1 << maxDepth_, totalBins_}, torch::kInt))
+            , h_XTX_ref_(h_XTX_.accessor<float, 4>())
+            , h_XTy_ref_(h_XTy_.accessor<float, 3>())
+            , statsData_XTX_ref_(statsData_XTX_.accessor<float, 4>())
+            , statsData_XTy_ref_(statsData_XTy_.accessor<float, 4>())
+            , statsData_cnt_ref_(statsData_cnt_.accessor<int, 3>()) {
+
     }
 
     GreedyLinearObliviousTreeLearnerV2(const GreedyLinearObliviousTreeLearnerV2& other) = default;
@@ -263,20 +126,41 @@ private:
     std::set<int> usedFeatures_;
     std::vector<int> usedFeaturesOrdered_;
 
-    // thread      leaf         bin         coordinate
-    std::vector<std::vector<std::vector<std::vector<float>>>> h_XTX_;
-    std::vector<std::vector<std::vector<float>>> h_XTy_;
-    std::vector<std::vector<std::vector<BinStat>>> stats_;
-
     std::vector<bool> fullUpdate_;
     std::vector<int> samplesLeavesCnt_;
 
     ConstVecRef<int32_t> binOffsets_;
     int nThreads_;
     int totalBins_;
-    int totalCond_;
     int fCount_;
+    int totalCond_;
     int nSamples_;
+
+    // thread      leaf         bin         coordinate
+//    std::vector<std::vector<std::vector<std::vector<float>>>> h_XTX_;
+//    std::vector<std::vector<std::vector<float>>> h_XTy_;
+//    std::vector<std::vector<std::vector<BinStat>>> stats_;
+
+    // This one are used to update new correlations
+    torch::Tensor h_XTX_;
+    torch::Tensor h_XTy_;
+
+    // This ones are used in bin stats
+    torch::Tensor statsData_XTX_;
+    torch::Tensor statsData_XTy_;
+    torch::Tensor statsData_cnt_;
+
+    torch::TensorAccessor<float, 4> h_XTX_ref_;
+    torch::TensorAccessor<float, 3> h_XTy_ref_;
+    torch::TensorAccessor<float, 4> statsData_XTX_ref_;
+    torch::TensorAccessor<float, 4> statsData_XTy_ref_;
+    torch::TensorAccessor<int, 3> statsData_cnt_ref_;
+
+    int curLeavesCoord_;
+
+    std::vector<BinStat> statsV_;
+    multi_dim_array_idxs statsIdxs_;
+    MultiDimArray<3, BinStat> stats_;
 };
 
 class LinearObliviousTreeV2 final

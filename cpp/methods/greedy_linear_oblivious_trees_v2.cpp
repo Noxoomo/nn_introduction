@@ -4,6 +4,7 @@
 #include <set>
 #include <stdexcept>
 #include <chrono>
+#include <cstring>
 
 #include <core/vec_factory.h>
 #include <core/matrix.h>
@@ -13,8 +14,8 @@
 
 
 namespace {
-    [[nodiscard]] Eigen::MatrixXd DiagMx(int dim, double v) {
-        Eigen::MatrixXd mx(dim, dim);
+    [[nodiscard]] Eigen::MatrixXf DiagMx(int dim, double v) {
+        Eigen::MatrixXf mx(dim, dim);
         for (int i = 0; i < dim; ++i) {
             for (int j = 0; j < dim; ++j) {
                 if (j == i) {
@@ -29,21 +30,23 @@ namespace {
 }
 
 
-HistogramV2::HistogramV2(BinarizedDataSet& bds, GridPtr grid, unsigned int nUsedFeatures, int lastUsedFeatureId)
+HistogramV2::HistogramV2(BinarizedDataSet& bds, GridPtr grid, unsigned int nUsedFeatures, int lastUsedFeatureId,
+        BinStat* stats)
         : bds_(bds)
         , grid_(std::move(grid))
         , nUsedFeatures_(nUsedFeatures)
         , lastUsedFeatureId_(lastUsedFeatureId) {
-    for (int i = 0; i < (int)grid_->totalBins(); ++i) {
-        hist_.emplace_back(nUsedFeatures + 1, nUsedFeatures);
-    }
+    hist_ = stats;
+//    for (int i = 0; i < (int)grid_->totalBins(); ++i) {
+//        hist_.emplace_back(nUsedFeatures + 1, nUsedFeatures);
+//    }
 }
 
 //void HistogramV2::addFullCorrelation(int bin, Vec x, double y) {
 //    hist_[bin].addFullCorrelation(x, y);
 //}
 
-void HistogramV2::addNewCorrelation(int bin, const std::vector<float>& xtx, float xty, int shift) {
+void HistogramV2::addNewCorrelation(int bin, const float* xtx, float xty, int shift) {
     hist_[bin].addNewCorrelation(xtx, xty, shift);
 }
 
@@ -53,7 +56,6 @@ void HistogramV2::addBinStat(int bin, const BinStat& stats) {
 
 void HistogramV2::prefixSumBins() {
     parallelFor<1>(0, (int)grid_->nzFeaturesCount(), [&](int fId) {
-//    for (int fId = 0; fId < (int)grid_->nzFeaturesCount(); ++fId) {
         int offset = grid_->binOffsets()[fId];
         for (int localBinId = 1; localBinId <= grid_->conditionsCount(fId); ++localBinId) {
             int bin = offset + localBinId;
@@ -62,7 +64,7 @@ void HistogramV2::prefixSumBins() {
     });
 }
 
-std::shared_ptr<Eigen::MatrixXd> HistogramV2::getW(double l2reg) {
+std::shared_ptr<Eigen::MatrixXf> HistogramV2::getW(double l2reg) {
     if (lastUsedFeatureId_ == -1) {
         throw std::runtime_error("No features are used");
     }
@@ -73,40 +75,40 @@ std::shared_ptr<Eigen::MatrixXd> HistogramV2::getW(double l2reg) {
     auto XTX = hist_[lastPos].getXTX();
     auto XTy = hist_[lastPos].getXTy();
 
-    Eigen::MatrixXd XTX_r = XTX + DiagMx(XTX.rows(), l2reg);
+    Eigen::MatrixXf XTX_r = XTX + DiagMx(XTX.rows(), l2reg);
 
-    try {
+//    try {
         auto fullW = XTX_r.inverse() * XTy;
-        return std::make_shared<Eigen::MatrixXd>(std::move(fullW));
-    } catch (...) {
-        std::cout << "No inverse" << std::endl;
-        return std::make_shared<Eigen::MatrixXd>((int64_t)XTX.rows(), (int64_t)XTX.cols());
-    }
+        return std::make_shared<Eigen::MatrixXf>(std::move(fullW));
+//    } catch (...) {
+//        std::cout << "No inverse" << std::endl;
+//        return std::make_shared<Eigen::MatrixXf>((int64_t)XTX.rows(), (int64_t)XTX.cols());
+//    }
 }
 
-double HistogramV2::computeScore(Eigen::MatrixXd& XTX, Eigen::MatrixXd& XTy, double XTX_trace, uint32_t cnt, double l2reg,
+double HistogramV2::computeScore(Eigen::MatrixXf& XTX, Eigen::MatrixXf& XTy, double XTX_trace, uint32_t cnt, double l2reg,
                                double traceReg) {
-    try {
-        Eigen::MatrixXd w = XTX.inverse() * XTy;
+//    try {
+        Eigen::MatrixXf w = XTX.inverse() * XTy;
 //    std::cout << "w is " << w << std::endl;
 
-        Eigen::MatrixXd c1(XTy.transpose() * w);
+        Eigen::MatrixXf c1(XTy.transpose() * w);
         c1 *= -2;
         assert(c1.rows() == 1 && c1.cols() == 1);
 
-        Eigen::MatrixXd c2(w.transpose() * XTX * w);
+        Eigen::MatrixXf c2(w.transpose() * XTX * w);
         assert(c2.rows() == 1 && c2.cols() == 1);
 
-        Eigen::MatrixXd reg = w.transpose() * w * l2reg;
+        Eigen::MatrixXf reg = w.transpose() * w * l2reg;
         assert(reg.rows() == 1 && reg.cols() == 1);
 
-        Eigen::MatrixXd res = c1 + c2 + reg;
+        Eigen::MatrixXf res = c1 + c2 + reg;
 
         return res(0, 0) + traceReg * XTX_trace / XTX.rows();
-    } catch (...) {
-        std::cout << "No inverse" << std::endl;
-        return 0;
-    }
+//    } catch (...) {
+//        std::cout << "No inverse" << std::endl;
+//        return 0;
+//    }
 }
 
 std::pair<double, double> HistogramV2::splitScore(int fId, int condId, double l2reg,
@@ -135,11 +137,11 @@ std::pair<double, double> HistogramV2::splitScore(int fId, int condId, double l2
 
     auto ydim = XTX_binPos.rows();
 
-    Eigen::MatrixXd left_XTX = XTX_binPos + DiagMx(ydim, l2reg);
-    Eigen::MatrixXd right_XTX = XTX_lastPos - XTX_binPos + DiagMx(ydim, l2reg);
+    Eigen::MatrixXf left_XTX = XTX_binPos + DiagMx(ydim, l2reg);
+    Eigen::MatrixXf right_XTX = XTX_lastPos - XTX_binPos + DiagMx(ydim, l2reg);
 
-    Eigen::MatrixXd left_XTy = XTy_binPos;
-    Eigen::MatrixXd right_XTy = XTy_lastPos - XTy_binPos;
+    Eigen::MatrixXf left_XTy = XTy_binPos;
+    Eigen::MatrixXf right_XTy = XTy_lastPos - XTy_binPos;
 
     uint32_t left_cnt = cnt_binPos;
     uint32_t right_cnt = cnt_lastPos - cnt_binPos;
@@ -167,7 +169,7 @@ void HistogramV2::printCnt() {
     std::cout << "cnt: " << hist_[lastPos].getCnt() << std::endl;
 }
 
-void HistogramV2::printEig(Eigen::MatrixXd& M) {
+void HistogramV2::printEig(Eigen::MatrixXf& M) {
 //    auto eigs = torch::eig(M.data().view({M.rows(), M.cols()}), false);
 //    auto vals = std::get<0>(eigs);
 //    for (int i = 0; i < (int)vals.size(0); ++i) {
@@ -256,7 +258,7 @@ HistogramV2 operator+(const HistogramV2& lhs, const HistogramV2& rhs) {
 class LinearObliviousTreeLeafV2 : std::enable_shared_from_this<LinearObliviousTreeLeafV2> {
 public:
     LinearObliviousTreeLeafV2(BinarizedDataSet& bds, GridPtr grid, double l2reg, double traceReg, unsigned int maxDepth,
-            unsigned int nUsedFeatures, int lastUsedFeatureId)
+            unsigned int nUsedFeatures, int lastUsedFeatureId, BinStat* stats)
             : bds_(bds)
             , grid_(std::move(grid))
             , l2reg_(l2reg)
@@ -264,7 +266,7 @@ public:
             , maxDepth_(maxDepth)
             , nUsedFeatures_(nUsedFeatures)
             , lastUsedFeatureId_(lastUsedFeatureId) {
-        hist_ = std::make_unique<HistogramV2>(bds_, grid_, nUsedFeatures, lastUsedFeatureId);
+        hist_ = std::make_unique<HistogramV2>(bds_, grid_, nUsedFeatures, lastUsedFeatureId, stats);
         id_ = 0;
     }
 
@@ -286,18 +288,16 @@ public:
         }
 
         auto x_ref = x.arrayRef();
-        Eigen::MatrixXd X(1, usedFeaturesInOrder_.size());
+
+        float res = 0.0;
 
         int i = 0;
-        std::vector<double> tmp;
         for (auto f : usedFeaturesInOrder_) {
-            X(0, i) = x_ref[f];
-            i += 1;
+            res += x_ref[f] * (*w_)(i, 0);
+            ++i;
         }
 
-        Eigen::MatrixXd res = X * (*w_);
-
-        return res(0, 0);
+        return res;
     }
 
     bool isInRegion(const Vec& x) {
@@ -319,17 +319,18 @@ public:
     }
 
     std::pair<std::shared_ptr<LinearObliviousTreeLeafV2>, std::shared_ptr<LinearObliviousTreeLeafV2>>
-    split(int32_t fId, int32_t condId) {
+    split(int32_t fId, int32_t condId, BinStat* stats) {
         int origFId = grid_->origFeatureIndex(fId);
         unsigned int nUsedFeatures = nUsedFeatures_ + (1 - usedFeatures_.count(origFId));
 //        std::cout << "new nUsedFeatures: " << nUsedFeatures << std::endl;
 
+        auto skip = grid_->totalBins();
         auto left = std::make_shared<LinearObliviousTreeLeafV2>(bds_, grid_,
                 l2reg_, traceReg_,
-                maxDepth_, nUsedFeatures, fId);
+                maxDepth_, nUsedFeatures, fId, stats + 2 * id_ * skip);
         auto right = std::make_shared<LinearObliviousTreeLeafV2>(bds_, grid_,
                 l2reg_, traceReg_,
-                maxDepth_, nUsedFeatures, fId);
+                maxDepth_, nUsedFeatures, fId, stats + (2 * id_ + 1) * skip);
 
         initChildren(left, right, fId, condId);
 
@@ -396,7 +397,7 @@ private:
     GridPtr grid_;
     std::set<int32_t> usedFeatures_;
     std::vector<int32_t> usedFeaturesInOrder_;
-    std::shared_ptr<Eigen::MatrixXd> w_;
+    std::shared_ptr<Eigen::MatrixXf> w_;
     std::vector<std::tuple<int32_t, int32_t, bool>> splits_;
 
     double l2reg_;
@@ -441,7 +442,8 @@ ModelPtr GreedyLinearObliviousTreeLearnerV2::fit(const DataSet& ds, const Target
 
 
 
-    auto root = std::make_shared<LinearObliviousTreeLeafV2>(bds, this->grid_, l2reg_, traceReg_, maxDepth_ + 1, 1, -1);
+    auto root = std::make_shared<LinearObliviousTreeLeafV2>(bds, this->grid_, l2reg_, traceReg_, maxDepth_ + 1, 1, -1,
+            stats_[curLeavesCoord_].data());
     root->usedFeatures_.insert(biasCol_);
     root->usedFeaturesInOrder_.push_back(biasCol_);
 
@@ -455,21 +457,23 @@ ModelPtr GreedyLinearObliviousTreeLearnerV2::fit(const DataSet& ds, const Target
         for (int fId = 0; fId < fCount_; ++fId) {
             int offset = (int)binOffsets_[fId];
             int bin = offset + bins[fId];
-            stats_[blockId][0][bin].addFullCorrelation(x, y);
+            stats_[2 + blockId][0][bin].addFullCorrelation(x.data(), y);
         }
     });
 
     parallelFor(0, totalBins_, [&](int bin) {
         for (int blockId = 1; blockId < nThreads_; ++blockId) {
-            stats_[0][0][bin] += stats_[blockId][0][bin];
+            stats_[2][0][bin] += stats_[2 + blockId][0][bin];
         }
     });
 
     parallelFor(0, totalBins_, [&](int bin) {
-        root->hist_->addBinStat(bin, stats_[0][0][bin]);
+        root->hist_->addBinStat(bin, stats_[2][0][bin]);
     });
 
     root->hist_->prefixSumBins();
+
+//    root->hist_->print();
 
     leaves.emplace_back(std::move(root));
 
@@ -489,29 +493,29 @@ ModelPtr GreedyLinearObliviousTreeLearnerV2::fit(const DataSet& ds, const Target
 
         auto nUsedFeatures = leaves[0]->nUsedFeatures_;
 
-        parallelFor(0, nThreads_, [&](int i) {
-            for (int j = 0; j < (int)leaves.size(); ++j) {
-                for (int k = 0; k < totalBins_; ++k) {
-                    for (int l = 0; l <= (int)nUsedFeatures; ++l) {
-                        h_XTX_[i][j][k][l] = 0;
-                    }
-                    h_XTy_[i][j][k] = 0;
-                }
-            }
-        });
+        memset(h_XTX_.data_ptr(), 0, h_XTX_.nbytes());
+        memset(h_XTy_.data_ptr(), 0, h_XTy_.nbytes());
 
         std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
         auto time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
         std::cout << "1 in " << time_ms << " [ms]" << std::endl;
 
         begin = std::chrono::steady_clock::now();
-//        std::cout << 2 << std::endl;
+
+        std::cout << 2 << std::endl;
 
         parallelFor(0, nSamples_, [&](int blockId, int sampleId) {
+//        for (int sampleId = 0, blockId = 0; sampleId < ds.samplesCount(); ++sampleId) {
+//            std::cout << "a" << std::endl;
             auto bins = bds.sampleBins(sampleId);
+//            std::cout << "b" << std::endl;
             auto& x = curX_[blockId];
+//            std::cout << "c" << std::endl;
             ds.fillSample(sampleId, usedFeaturesOrdered_, x);
+//            std::cout << "d" << std::endl;
             unsigned int lId = leafId_[sampleId];
+
+//            std::cout << "sampleId = " << sampleId << std::endl;
 
             for (int fId = 0; fId < fCount_; ++fId) {
                 auto origFId = grid_->origFeatureIndex(fId);
@@ -521,14 +525,18 @@ ModelPtr GreedyLinearObliviousTreeLearnerV2::fit(const DataSet& ds, const Target
 
                 double fVal = ds.fVal(sampleId, origFId);
 
+//                std::cout << "bin = " << bin << ", fId = " << fId << ", lId = " << lId << std::endl;
+
                 for (unsigned int i = 0; i < nUsedFeatures; ++i) {
-                    h_XTX_[blockId][lId][bin][i] += x[i] * fVal;
+                    h_XTX_ref_[blockId][lId][bin][i] += x[i] * fVal;
                 }
-                h_XTX_[blockId][lId][bin][nUsedFeatures] += fVal * fVal;
-                h_XTy_[blockId][lId][bin] += fVal * ys[sampleId];
+                h_XTX_ref_[blockId][lId][bin][nUsedFeatures] += fVal * fVal;
+                h_XTy_ref_[blockId][lId][bin] += fVal * ys[sampleId];
             }
 //        }
         });
+
+        std::cout << 2.5 << std::endl;
 
         // todo change order?
         parallelFor(0, fCount_, [&](int fId) {
@@ -541,11 +549,11 @@ ModelPtr GreedyLinearObliviousTreeLearnerV2::fit(const DataSet& ds, const Target
                     for (int thId = 0; thId < nThreads_; ++thId) {
                         if (localBinId != 0) {
                             for (unsigned int i = 0; i <= nUsedFeatures; ++i) {
-                                h_XTX_[thId][lId][bin][i] += h_XTX_[thId][lId][bin - 1][i];
+                                h_XTX_ref_[thId][lId][bin][i] += h_XTX_ref_[thId][lId][bin - 1][i];
                             }
-                            h_XTy_[thId][lId][bin] += h_XTy_[thId][lId][bin - 1];
+                            h_XTy_ref_[thId][lId][bin] += h_XTy_ref_[thId][lId][bin - 1];
                         }
-                        leaves[lId]->hist_->addNewCorrelation(bin, h_XTX_[thId][lId][bin], h_XTy_[thId][lId][bin]);
+                        leaves[lId]->hist_->addNewCorrelation(bin, h_XTX_ref_[thId][lId][bin].data(), h_XTy_ref_[thId][lId][bin]);
                     }
                 }
             }
@@ -555,7 +563,7 @@ ModelPtr GreedyLinearObliviousTreeLearnerV2::fit(const DataSet& ds, const Target
         time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
         std::cout << "2 in " << time_ms << " [ms]" << std::endl;
 
-
+//        leaves[0]->hist_->print();
 
         // Find best split
 
@@ -599,7 +607,7 @@ ModelPtr GreedyLinearObliviousTreeLearnerV2::fit(const DataSet& ds, const Target
         time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
         std::cout << "Best split found in " << time_ms << "[ms], splitting" << std::endl;
 
-
+        std::cout << "splitFid=" << splitFId << ", splitCond=" << splitCond << ", sScore=" << bestSplitScore << std::endl;
 
 
 
@@ -609,9 +617,11 @@ ModelPtr GreedyLinearObliviousTreeLearnerV2::fit(const DataSet& ds, const Target
 
 
 
-        begin = std::chrono::steady_clock::now();
+        auto beginSP = std::chrono::steady_clock::now();
 
         // 1) find new leaf ids
+
+        begin = std::chrono::steady_clock::now();
 
         double border = grid_->borders(splitFId).at(splitCond);
         auto fColumnRef = fColumnsRefs_[splitFId];
@@ -635,7 +645,13 @@ ModelPtr GreedyLinearObliviousTreeLearnerV2::fit(const DataSet& ds, const Target
             fullUpdate_[2 * i + 1] = !fullUpdate_[2 * i];
         }
 
+        end = std::chrono::steady_clock::now();
+        time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
+        std::cout << "1) done in" << time_ms << "[ms]" << std::endl;
+
         // 2) init new leaves
+
+        begin = std::chrono::steady_clock::now();
 
         std::vector<std::shared_ptr<LinearObliviousTreeLeafV2>> newLeaves;
         for (int i = 0; i < (int)leaves.size() * 2; ++i) {
@@ -644,12 +660,18 @@ ModelPtr GreedyLinearObliviousTreeLearnerV2::fit(const DataSet& ds, const Target
 
         parallelFor(0, leaves.size(), [&](int lId) {
             auto& l = leaves[lId];
-            auto splits = l->split(splitFId, splitCond);
+            auto splits = l->split(splitFId, splitCond, stats_[curLeavesCoord_ ^ 1].data());
             newLeaves[splits.first->id_] = std::move(splits.first);
             newLeaves[splits.second->id_] = std::move(splits.second);
         });
 
+        end = std::chrono::steady_clock::now();
+        time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
+        std::cout << "2) done in" << time_ms << "[ms]" << std::endl;
+
         // 3) update current ds, reset stats
+
+        begin = std::chrono::steady_clock::now();
 
         int32_t splitOrigFId = grid_->origFeatureIndex(splitFId);
         if (usedFeatures_.count(splitOrigFId) == 0) {
@@ -661,20 +683,38 @@ ModelPtr GreedyLinearObliviousTreeLearnerV2::fit(const DataSet& ds, const Target
 
 //        std::cout << 3.4 << std::endl;
 
-        parallelFor(0, nThreads_, [&](int blockId) {
-            for (int lId = 0; lId < (int)newLeaves.size(); ++lId) {
+        memset(h_XTX_.data_ptr(), 0, h_XTX_.nbytes());
+        memset(h_XTy_.data_ptr(), 0, h_XTy_.nbytes());
+
+        end = std::chrono::steady_clock::now();
+        time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
+        std::cout << "3.1) done in" << time_ms << "[ms]" << std::endl;
+
+        begin = std::chrono::steady_clock::now();
+
+        // TODO parallel
+//        for (int thId = 0; thId < nThreads_ + 2; ++thId) {
+        parallelFor(0, nThreads_ + 2, [&](int thId) {
+            if (thId == curLeavesCoord_) return;
+            for (int lId = 0; lId < (int) newLeaves.size(); ++lId) {
                 for (int bin = 0; bin < totalBins_; ++bin) {
-                    for (int f = 0; f <= (int)oldNUsedFeatures; ++f) {
-                        h_XTX_[blockId][lId][bin][f] = 0;
-                    }
-                    h_XTy_[blockId][lId][bin] = 0;
-                    stats_[blockId][lId][bin].reset();
-                    stats_[blockId][lId][bin].setFilledSize(nUsedFeatures);
+                    stats_[thId][lId][bin].reset();
+                    stats_[thId][lId][bin].setFilledSize(nUsedFeatures);
+//                    BinStat* stat = stats_(thId, lId, bin);
+//                    stat->reset();
+//                    stat->setFilledSize(nUsedFeatures);
                 }
             }
         });
+//        }
+
+        end = std::chrono::steady_clock::now();
+        time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
+        std::cout << "3.2) done in" << time_ms << "[ms]" << std::endl;
 
         // 4) build full correlations only for left children, update new correlations for right ones
+
+        begin = std::chrono::steady_clock::now();
 
         parallelFor(0, nSamples_, [&](int blockId, int i) {
             auto& x = curX_[blockId];
@@ -686,7 +726,7 @@ ModelPtr GreedyLinearObliviousTreeLearnerV2::fit(const DataSet& ds, const Target
             if (fullUpdate_[lId]) {
                 for (int fId = 0; fId < fCount_; ++fId) {
                     int bin = (int) binOffsets_[fId] + bins[fId];
-                    stats_[blockId][lId][bin].addFullCorrelation(x, y);
+                    stats_[2 + blockId][lId][bin].addFullCorrelation(x.data(), y);
                 }
             } else {
                 if (nUsedFeatures > oldNUsedFeatures) {
@@ -695,14 +735,20 @@ ModelPtr GreedyLinearObliviousTreeLearnerV2::fit(const DataSet& ds, const Target
                         int bin = (int) binOffsets_[fId] + bins[fId];
 
                         for (unsigned int f = 0; f < oldNUsedFeatures; ++f) {
-                            h_XTX_[blockId][lId][bin][f] += x[f] * fVal;
+                            h_XTX_ref_[blockId][lId][bin][f] += x[f] * fVal;
                         }
-                        h_XTX_[blockId][lId][bin][oldNUsedFeatures] += fVal * fVal;
-                        h_XTy_[blockId][lId][bin] += fVal * ys[i];
+                        h_XTX_ref_[blockId][lId][bin][oldNUsedFeatures] += fVal * fVal;
+                        h_XTy_ref_[blockId][lId][bin] += fVal * ys[i];
                     }
                 }
             }
         });
+
+        end = std::chrono::steady_clock::now();
+        time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
+        std::cout << "4.1) done in" << time_ms << "[ms]" << std::endl;
+
+        begin = std::chrono::steady_clock::now();
 
         // for right leaves, prefix sum new correlations
         if (nUsedFeatures > oldNUsedFeatures) {
@@ -715,12 +761,12 @@ ModelPtr GreedyLinearObliviousTreeLearnerV2::fit(const DataSet& ds, const Target
                             for (int thId = 0; thId < nThreads_; ++thId) {
                                 if (localBinId != 0) {
                                     for (unsigned int i = 0; i <= oldNUsedFeatures; ++i) {
-                                        h_XTX_[thId][lId][bin][i] += h_XTX_[thId][lId][bin - 1][i];
+                                        h_XTX_ref_[thId][lId][bin][i] += h_XTX_ref_[thId][lId][bin - 1][i];
                                     }
-                                    h_XTy_[thId][lId][bin] += h_XTy_[thId][lId][bin - 1];
+                                    h_XTy_ref_[thId][lId][bin] += h_XTy_ref_[thId][lId][bin - 1];
                                 }
-                                newLeaves[lId]->hist_->addNewCorrelation(bin, h_XTX_[thId][lId][bin],
-                                                                          h_XTy_[thId][lId][bin], -1);
+                                newLeaves[lId]->hist_->addNewCorrelation(bin, h_XTX_ref_[thId][lId][bin].data(),
+                                                                          h_XTy_ref_[thId][lId][bin], -1);
                             }
                         }
                     }
@@ -728,16 +774,28 @@ ModelPtr GreedyLinearObliviousTreeLearnerV2::fit(const DataSet& ds, const Target
             });
         }
 
+        end = std::chrono::steady_clock::now();
+        time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
+        std::cout << "4.2) done in" << time_ms << "[ms]" << std::endl;
+
+        begin = std::chrono::steady_clock::now();
+
         // For left leaves, sum up stats and then compute prefix sums
         parallelFor(0, totalBins_, [&](int bin) {
             for (int lId = 0; lId < (int)newLeaves.size(); ++lId) {
                 if (fullUpdate_[lId]) {
                     for (int blockId = 0; blockId < nThreads_; ++blockId) {
-                        newLeaves[lId]->hist_->addBinStat(bin, stats_[blockId][lId][bin]);
+                        newLeaves[lId]->hist_->addBinStat(bin, stats_[2 + blockId][lId][bin]);
                     }
                 }
             }
         });
+
+        end = std::chrono::steady_clock::now();
+        time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
+        std::cout << "4.3) done in" << time_ms << "[ms]" << std::endl;
+
+        begin = std::chrono::steady_clock::now();
 
         parallelFor(0, newLeaves.size(), [&](int lId) {
             if (fullUpdate_[lId]) {
@@ -745,7 +803,13 @@ ModelPtr GreedyLinearObliviousTreeLearnerV2::fit(const DataSet& ds, const Target
             }
         });
 
+        end = std::chrono::steady_clock::now();
+        time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
+        std::cout << "4.4) done in" << time_ms << "[ms]" << std::endl;
+
         // subtract lefts from parents to obtain inner parts of right children
+
+        begin = std::chrono::steady_clock::now();
 
         parallelFor(0, leaves.size(), [&](int lId) {
             auto& parent = leaves[lId];
@@ -762,12 +826,17 @@ ModelPtr GreedyLinearObliviousTreeLearnerV2::fit(const DataSet& ds, const Target
             }
         });
 
+        end = std::chrono::steady_clock::now();
+        time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
+        std::cout << "4.5) done in" << time_ms << "[ms]" << std::endl;
+
 //        std::cout << 4.6 << std::endl;
 
         leaves = std::move(newLeaves);
+        curLeavesCoord_ ^= 1;
 
-        end = std::chrono::steady_clock::now();
-        time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
+        auto endSP = std::chrono::steady_clock::now();
+        time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(endSP - beginSP).count();
         std::cout << "Split done in" << time_ms << "[ms]" << std::endl;
     }
 
@@ -780,7 +849,7 @@ ModelPtr GreedyLinearObliviousTreeLearnerV2::fit(const DataSet& ds, const Target
 
     auto endAll = std::chrono::steady_clock::now();
     auto time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(endAll - beginAll).count();
-    std::cout << "ALl fit done in " << time_ms << "[ms]" << std::endl;
+    std::cout << "All fit done in " << time_ms << "[ms]" << std::endl;
 
     return tree;
 }
@@ -804,27 +873,7 @@ void GreedyLinearObliviousTreeLearnerV2::cacheDs(const DataSet &ds) {
         fColumnsRefs_[fId] = fColumns_[fId].arrayRef();
     });
 
-    totalBins_ = grid_->totalBins();
-    fCount_ = grid_->nzFeaturesCount();
-    totalCond_ = totalBins_ - fCount_;
-    binOffsets_ = grid_->binOffsets();
-    nThreads_ = (int)GlobalThreadPool<0>().numThreads();
     nSamples_ = ds.samplesCount();
-
-    for (int i = 0; i < nThreads_; ++i) { // threads
-        h_XTX_.emplace_back();
-        h_XTy_.emplace_back();
-        stats_.emplace_back();
-        for (int j = 0; j < (1 << maxDepth_); ++j) { // leaves
-            h_XTy_[i].emplace_back(totalBins_, 0.0);
-            stats_[i].emplace_back();
-            h_XTX_[i].emplace_back();
-            for (int k = 0; k < totalBins_; ++k) { // bins
-                h_XTX_[i][j].emplace_back(grid_->nzFeaturesCount() + 2, 0.0);
-                stats_[i][j].emplace_back(BinStat((int)grid_->nzFeaturesCount() + 2, 1));
-            }
-        }
-    }
 
     fullUpdate_.resize(1 << maxDepth_, false);
     samplesLeavesCnt_.resize(1 << maxDepth_, 0);
@@ -837,10 +886,52 @@ void GreedyLinearObliviousTreeLearnerV2::cacheDs(const DataSet &ds) {
 }
 
 void GreedyLinearObliviousTreeLearnerV2::resetState() {
+    std::cout << "reset 1" << std::endl;
+
     usedFeatures_.clear();
     usedFeaturesOrdered_.clear();
     leafId_.clear();
     leafId_.resize(nSamples_, 0);
+
+    std::cout << "reset 2" << std::endl;
+
+    memset(statsData_XTX_ref_.data(), 0, statsData_XTX_.nbytes());
+    memset(statsData_XTy_ref_.data(), 0, statsData_XTy_.nbytes());
+    memset(statsData_cnt_ref_.data(), 0, statsData_cnt_.nbytes());
+
+    curLeavesCoord_ = 0;
+
+    std::cout << "reset 3" << std::endl;
+
+    // TODO only reset filled size?
+
+    std::cout << "contig: " << h_XTX_.is_contiguous() << ", " << h_XTy_.is_contiguous() << std::endl;
+    std::cout << nThreads_ << ", " << (1 << maxDepth_) << ", " << totalBins_ << std::endl;
+
+    std::cout << "statsData_XTX size = " << statsData_XTX_.nbytes() / sizeof(float) << std::endl;
+    std::cout << "statsData_XTy size = " << statsData_XTy_.nbytes() / sizeof(float) << std::endl;
+    std::cout << "statsData_cnt size = " << statsData_cnt_.nbytes() / sizeof(int) << std::endl;
+
+    statsV_.resize(0);
+
+    for (int thId = 0; thId < nThreads_ + 2; ++thId) {
+        for (int lId = 0; lId < 1 << maxDepth_; ++lId) {
+            for (int bin = 0; bin < totalBins_; ++bin) {
+                float* xtxPos = statsData_XTX_ref_[thId][lId][bin].data();
+                float* xtyPos = statsData_XTy_ref_[thId][lId][bin].data();
+                int* cntPos = statsData_cnt_ref_[thId][lId].data() + bin;
+                statsV_.emplace_back(BinStat(xtxPos, xtyPos, cntPos, maxDepth_ + 2, 1));
+            }
+        }
+    }
+
+    std::cout << "reset 4" << std::endl;
+
+    statsIdxs_ = multi_dim_array_idxs({nThreads_ + 2, 1 << maxDepth_, totalBins_});
+    std::cout << "reset 4.5" << std::endl;
+    stats_ = MultiDimArray<3, BinStat>(statsV_.data(), &statsIdxs_, 0);
+
+    std::cout << "reset 5" << std::endl;
 }
 
 double LinearObliviousTreeV2::value(const Vec& x) const {

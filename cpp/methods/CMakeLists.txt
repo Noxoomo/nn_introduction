@@ -15,6 +15,7 @@ add_library(methods
         greedy_linear_oblivious_trees.cpp
         greedy_linear_oblivious_trees_v2.h
         greedy_linear_oblivious_trees_v2.cpp
+        correlation_bin_stats.h
 )
 
 #add_library(trees_kernels

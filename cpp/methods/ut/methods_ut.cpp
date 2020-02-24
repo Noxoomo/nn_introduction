@@ -296,7 +296,9 @@ TEST(BoostingSimple, V2) {
     BoostingConfig boostingConfig;
     boostingConfig.iterations_ = 1;
     boostingConfig.step_ = 1.0;
+    std::cout << "creating boosting" << std::endl;
     Boosting boosting(boostingConfig, createWeakTarget(), createWeakLinearLearnerV2(4, 0, 1e-5, 0.0, grid));
+    std::cout << "creating boosting done" << std::endl;
 
     auto trainMetricsCalcer = std::make_shared<BoostingMetricsCalcer>(ds);
     trainMetricsCalcer->addMetric(L2(ds), "l2-train");
