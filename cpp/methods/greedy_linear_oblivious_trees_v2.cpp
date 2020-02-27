@@ -282,26 +282,23 @@ public:
         w_ = hist_->getW(l2reg_);
     }
 
-    double value(const Vec& x) {
-        if (!w_) {
-            throw std::runtime_error("Not fitted");
-        }
-
-        auto x_ref = x.arrayRef();
+    double value(const ConstVecRef<float>& x) {
+//        if (!w_) {
+//            throw std::runtime_error("Not fitted");
+//        }
 
         float res = 0.0;
 
         int i = 0;
         for (auto f : usedFeaturesInOrder_) {
-            res += x_ref[f] * (*w_)(i, 0);
+            res += x[f] * (*w_)(i, 0);
             ++i;
         }
 
         return res;
     }
 
-    bool isInRegion(const Vec& x) {
-        auto xRef = x.arrayRef();
+    bool isInRegion(const ConstVecRef<float>& x) {
         for (auto& s : splits_) {
             int32_t fId = std::get<0>(s);
             int32_t condId = std::get<1>(s);
@@ -310,7 +307,7 @@ public:
             int32_t origFId = grid_->nzFeatures().at(fId).origFeatureId_;
             float border = grid_->borders(fId).at(condId);
 
-            if ((xRef[origFId] <= border) ^ isLeft) {
+            if ((x[origFId] <= border) ^ isLeft) {
                 return false;
             }
         }
@@ -391,6 +388,7 @@ private:
 
 private:
     friend class GreedyLinearObliviousTreeLearnerV2;
+    friend class LinearObliviousTreeV2;
 
     BinarizedDataSet& bds_;
 
@@ -607,7 +605,7 @@ ModelPtr GreedyLinearObliviousTreeLearnerV2::fit(const DataSet& ds, const Target
         time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
         std::cout << "Best split found in " << time_ms << "[ms], splitting" << std::endl;
 
-        std::cout << "splitFid=" << splitFId << ", splitCond=" << splitCond << ", sScore=" << bestSplitScore << std::endl;
+        tree->splits_.emplace_back(std::make_tuple(splitFId, splitCond));
 
 
 
@@ -660,7 +658,7 @@ ModelPtr GreedyLinearObliviousTreeLearnerV2::fit(const DataSet& ds, const Target
 
         parallelFor(0, leaves.size(), [&](int lId) {
             auto& l = leaves[lId];
-            auto splits = l->split(splitFId, splitCond, stats_[curLeavesCoord_ ^ 1].data());
+            auto splits = l->split(splitFId, splitCond, stats_[curLeavesCoord_ ^ 1U].data());
             newLeaves[splits.first->id_] = std::move(splits.first);
             newLeaves[splits.second->id_] = std::move(splits.second);
         });
@@ -833,7 +831,7 @@ ModelPtr GreedyLinearObliviousTreeLearnerV2::fit(const DataSet& ds, const Target
 //        std::cout << 4.6 << std::endl;
 
         leaves = std::move(newLeaves);
-        curLeavesCoord_ ^= 1;
+        curLeavesCoord_ ^= 1U;
 
         auto endSP = std::chrono::steady_clock::now();
         time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(endSP - beginSP).count();
@@ -934,22 +932,59 @@ void GreedyLinearObliviousTreeLearnerV2::resetState() {
     std::cout << "reset 5" << std::endl;
 }
 
-double LinearObliviousTreeV2::value(const Vec& x) const {
-    for (auto& l : leaves_) {
-        if (l->isInRegion(x)) {
-            return scale_ * l->value(x);
+double LinearObliviousTreeV2::value(const ConstVecRef<float>& x) const {
+    unsigned int lId = 0;
+
+    for (int i = 0; i < splits_.size(); ++i) {
+        const auto &s = splits_[i];
+        auto fId = std::get<0>(s);
+        auto condId = std::get<1>(s);
+
+        const auto border = grid_->condition(fId, condId);
+        const auto val = x[grid_->origFeatureIndex(fId)];
+        if (val > border) {
+            lId |= 1U << (splits_.size() - i - 1);
         }
     }
 
-    throw std::runtime_error("given x does not belong to any region O_o");
+    return scale_ * leaves_[lId]->value(x);
+}
+
+void LinearObliviousTreeV2::applyToBds(const BinarizedDataSet& bds, Mx to, ApplyType type) const {
+    const auto& ds = bds.owner();
+    const uint64_t sampleDim = ds.featuresCount();
+    const uint64_t targetDim = to.xdim();
+
+    ConstVecRef<float> dsRef = ds.samplesMx().arrayRef();
+    VecRef<float> toRef = to.arrayRef();
+
+    uint64_t xSliceStart = 0;
+    uint64_t toSliceStart = 0;
+
+    for (uint64_t i = 0; i < ds.samplesCount(); ++i) {
+        ConstVecRef<float> x = dsRef.slice(xSliceStart, sampleDim);
+        VecRef<float> y = toRef.slice(toSliceStart, targetDim);
+
+        switch (type) {
+        case ApplyType::Append:
+            y[0] += value(x);
+            break;
+        case ApplyType::Set:
+        default:
+            y[0] = value(x);
+        }
+
+        xSliceStart += sampleDim;
+        toSliceStart += targetDim;
+    }
 }
 
 void LinearObliviousTreeV2::appendTo(const Vec &x, Vec to) const {
-    to += static_cast<const LinearObliviousTreeV2*>(this)->value(x);
+    to += value(x.arrayRef());
 }
 
 double LinearObliviousTreeV2::value(const Vec &x) {
-    return static_cast<const LinearObliviousTreeV2*>(this)->value(x);
+    return value(x.arrayRef());
 }
 
 void LinearObliviousTreeV2::grad(const Vec &x, Vec to) {

@@ -116,6 +116,11 @@ public:
     int32_t totalBins() const {
         return grid_->totalBins();
     }
+
+    const DataSet& owner() const {
+        return owner_;
+    }
+
 private:
     VecRef<uint8_t> group(int64_t groupIdx) {
         return VecRef<uint8_t>(data_.arrayRef().data() + groups_[groupIdx].groupOffset_ * samplesCount_,
@@ -153,10 +158,6 @@ private:
                 groupToFeatures[groupIdx].push_back(f);
             }
         }
-    }
-
-    const DataSet& owner() const {
-        return owner_;
     }
 
     friend BinarizedDataSetPtr binarize(const DataSet& ds, GridPtr& grid, int32_t maxGroupSize);

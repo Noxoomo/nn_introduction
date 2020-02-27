@@ -156,7 +156,7 @@ private:
     torch::TensorAccessor<float, 4> statsData_XTy_ref_;
     torch::TensorAccessor<int, 3> statsData_cnt_ref_;
 
-    int curLeavesCoord_;
+    unsigned int curLeavesCoord_;
 
     std::vector<BinStat> statsV_;
     multi_dim_array_idxs statsIdxs_;
@@ -164,26 +164,27 @@ private:
 };
 
 class LinearObliviousTreeV2 final
-        : public Stub<Model, LinearObliviousTreeV2>
+        : public Stub<BinOptimizedModel, LinearObliviousTreeV2>
         , std::enable_shared_from_this<LinearObliviousTreeV2> {
 public:
 
     LinearObliviousTreeV2(const LinearObliviousTreeV2& other, double scale)
-            : Stub<Model, LinearObliviousTreeV2>(other.gridPtr()->origFeaturesCount(), 1) {
+            : Stub<BinOptimizedModel, LinearObliviousTreeV2>(other.gridPtr()->origFeaturesCount(), 1) {
         grid_ = other.grid_;
         scale_ = scale;
         leaves_ = other.leaves_;
+        splits_ = other.splits_;
     }
 
     LinearObliviousTreeV2(GridPtr grid, std::vector<std::shared_ptr<LinearObliviousTreeLeafV2>> leaves)
-            : Stub<Model, LinearObliviousTreeV2>(grid->origFeaturesCount(), 1)
+            : Stub<BinOptimizedModel, LinearObliviousTreeV2>(grid->origFeaturesCount(), 1)
             , grid_(std::move(grid))
             , leaves_(std::move(leaves)) {
         scale_ = 1;
     }
 
     explicit LinearObliviousTreeV2(GridPtr grid)
-            : Stub<Model, LinearObliviousTreeV2>(grid->origFeaturesCount(), 1)
+            : Stub<BinOptimizedModel, LinearObliviousTreeV2>(grid->origFeaturesCount(), 1)
             , grid_(std::move(grid)) {
 
     }
@@ -196,13 +197,13 @@ public:
         return grid_;
     }
 
-    // I have now idea what this function should do...
-    // For now just adding value(x) to @param to.
     void appendTo(const Vec& x, Vec to) const override;
 
-//    void applyToBds(const BinarizedDataSet& ds, Mx to, ApplyType type) const override;
+    void applyToBds(const BinarizedDataSet& ds, Mx to, ApplyType type) const;
 
-//    void applyBinarizedRow(const Buffer<uint8_t>& x, Vec to) const;
+    void applyBinarizedRow(const Buffer<uint8_t>& x, Vec to) const {
+        throw std::runtime_error("Unsupported");
+    }
 
     double value(const Vec& x) override;
 
@@ -211,11 +212,13 @@ public:
 private:
     friend class GreedyLinearObliviousTreeLearnerV2;
 
-    double value(const Vec& x) const;
+    double value(const ConstVecRef<float>& x) const;
 
 private:
     GridPtr grid_;
     double scale_ = 1;
+
+    std::vector<std::tuple<int32_t, int32_t>> splits_;
 
     std::vector<std::shared_ptr<LinearObliviousTreeLeafV2>> leaves_;
 };
