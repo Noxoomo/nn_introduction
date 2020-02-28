@@ -6,6 +6,8 @@
 #include <vec_tools/distance.h>
 #include <vec_tools/stats.h>
 #include <util/parallel_executor.h>
+#include <core/vec_factory.h>
+#include <vec_tools/fill.h>
 
 struct L2Stat {
     using Numeric = double;
@@ -99,13 +101,13 @@ public:
     L2(const DataSet& ds,
        Vec target,
        Vec weights,
-       Buffer<int32_t> indices,
+       const Buffer<int32_t>& indices,
        ScoreFunction scoreFunction = ScoreFunction()
        )
         :  Stub<Target, L2>(ds)
         , nzTargets_(std::move(target))
         , nzWeights_(std::move(weights))
-        , nzIndices_(std::move(indices))
+        , nzIndices_(indices)
         , scoreFunction_(scoreFunction) {
 
     }
@@ -155,7 +157,41 @@ public:
     }
 
     Vec targets() const override {
-        return nzTargets_;
+        if (nzIndices_.size() == 0) {
+            return nzTargets_;
+        }
+
+        auto targets = VecFactory::create(ComputeDeviceType::Cpu, ds_.samplesCount());
+        auto tRef = targets.arrayRef();
+        auto indicesRef = nzIndices_.arrayRef();
+        auto nzTRef = nzTargets_.arrayRef();
+
+        for (int64_t i = 0; i < nzIndices_.size(); ++i) {
+            auto idx = indicesRef[i];
+            tRef[idx] += nzTRef[i];
+        }
+
+        return targets;
+    }
+
+    Vec weights() const override {
+        auto weights = VecFactory::create(ComputeDeviceType::Cpu, ds_.samplesCount());
+
+        if (nzIndices_.size() == 0) {
+            VecTools::fill(1.0, weights);
+            return weights;
+        }
+
+        auto wRef = weights.arrayRef();
+        auto indicesRef = nzIndices_.arrayRef();
+        auto nzWRef = nzWeights_.arrayRef();
+
+        for (int64_t i = 0; i < nzIndices_.size(); ++i) {
+            auto idx = indicesRef[i];
+            wRef[idx] += nzWRef[i];
+        }
+
+        return weights;
     }
 
 private:

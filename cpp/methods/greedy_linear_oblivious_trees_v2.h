@@ -16,7 +16,6 @@
 
 #include <eigen3/Eigen/Core>
 #include <eigen3/Eigen/LU>
-//#include <eigen3/unsupported/Eigen/CXX11/Tensor>
 
 
 
@@ -30,7 +29,6 @@ public:
     HistogramV2(BinarizedDataSet& bds, GridPtr grid, unsigned int nUsedFeatures, int lastUsedFeatureId,
             BinStat* hist);
 
-//    void addFullCorrelation(int bin, Vec x, double y);
     void addNewCorrelation(int bin, const float* xtx, float xty, int shift = 0);
     void prefixSumBins();
 
@@ -48,7 +46,7 @@ public:
     HistogramV2& operator-=(const HistogramV2& h);
 
 private:
-    static double computeScore(Eigen::MatrixXf& XTX, Eigen::MatrixXf& XTy, double XTX_trace, uint32_t cnt, double l2reg,
+    static double computeScore(Eigen::MatrixXf& XTX, Eigen::MatrixXf& XTy, double XTX_trace, float weight, double l2reg,
                                double traceReg);
 
     static void printEig(Eigen::MatrixXf& M);
@@ -92,12 +90,12 @@ public:
             , h_XTy_(torch::zeros({nThreads_, 1 << maxDepth_, totalBins_}, torch::kFloat))
             , statsData_XTX_(torch::zeros({nThreads_ + 2, 1 << maxDepth_, totalBins_, (maxDepth_ + 2) * (maxDepth_ + 3) / 2}, torch::kFloat))
             , statsData_XTy_(torch::zeros({nThreads_ + 2, 1 << maxDepth_, totalBins_, maxDepth_ + 2}, torch::kFloat))
-            , statsData_cnt_(torch::zeros({nThreads_ + 2, 1 << maxDepth_, totalBins_}, torch::kInt))
+            , statsData_weight_(torch::zeros({nThreads_ + 2, 1 << maxDepth_, totalBins_}, torch::kFloat))
             , h_XTX_ref_(h_XTX_.accessor<float, 4>())
             , h_XTy_ref_(h_XTy_.accessor<float, 3>())
             , statsData_XTX_ref_(statsData_XTX_.accessor<float, 4>())
             , statsData_XTy_ref_(statsData_XTy_.accessor<float, 4>())
-            , statsData_cnt_ref_(statsData_cnt_.accessor<int, 3>()) {
+            , statsData_weight_ref_(statsData_weight_.accessor<float, 3>()) {
 
     }
 
@@ -136,11 +134,6 @@ private:
     int totalCond_;
     int nSamples_;
 
-    // thread      leaf         bin         coordinate
-//    std::vector<std::vector<std::vector<std::vector<float>>>> h_XTX_;
-//    std::vector<std::vector<std::vector<float>>> h_XTy_;
-//    std::vector<std::vector<std::vector<BinStat>>> stats_;
-
     // This one are used to update new correlations
     torch::Tensor h_XTX_;
     torch::Tensor h_XTy_;
@@ -148,13 +141,13 @@ private:
     // This ones are used in bin stats
     torch::Tensor statsData_XTX_;
     torch::Tensor statsData_XTy_;
-    torch::Tensor statsData_cnt_;
+    torch::Tensor statsData_weight_;
 
     torch::TensorAccessor<float, 4> h_XTX_ref_;
     torch::TensorAccessor<float, 3> h_XTy_ref_;
     torch::TensorAccessor<float, 4> statsData_XTX_ref_;
     torch::TensorAccessor<float, 4> statsData_XTy_ref_;
-    torch::TensorAccessor<int, 3> statsData_cnt_ref_;
+    torch::TensorAccessor<float, 3> statsData_weight_ref_;
 
     unsigned int curLeavesCoord_;
 

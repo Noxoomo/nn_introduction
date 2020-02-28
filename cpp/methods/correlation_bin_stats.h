@@ -10,10 +10,10 @@ class BinStat {
 public:
     BinStat() = default;
 
-    explicit BinStat(float* XTX_data, float* XTy_data, int* cnt_data, int size, int filledSize)
+    explicit BinStat(float* XTX_data, float* XTy_data, float* weight_data, int size, int filledSize)
             : XTX_(XTX_data)
             , XTy_(XTy_data)
-            , cnt_(cnt_data)
+            , weight_(weight_data)
             , size_(size)
             , filledSize_(filledSize) {
 //        XTX_.resize(size * (size + 1) / 2, 0.0);
@@ -24,7 +24,7 @@ public:
     }
 
     void reset() {
-        *cnt_ = 0;
+        *weight_ = 0;
         trace_ = 0;
         filledSize_ = 0;
         maxUpdatedPos_ = 0;
@@ -57,20 +57,20 @@ public:
         maxUpdatedPos_ = std::max(maxUpdatedPos_, corPos + 1);
     }
 
-    void addFullCorrelation(const float* x, float y) {
+    void addFullCorrelation(const float* x, float y, float weight) {
         for (int i = 0; i < filledSize_; ++i) {
-            XTy_[i] += x[i] * y;
+            XTy_[i] += x[i] * y * weight;
         }
 
         int pos = 0;
         for (int i = 0; i < filledSize_; ++i) {
             for (int j = 0; j < i + 1; ++j) {
-                XTX_[pos + j] += x[i] * x[j];
+                XTX_[pos + j] += x[i] * x[j] * weight;
             }
             pos += i + 1;
         }
 
-        *cnt_ += 1;
+        *weight_ += weight;
     }
 
     void fillXTX(Eigen::MatrixXf& XTX) const {
@@ -102,8 +102,8 @@ public:
         return res;
     }
 
-    int getCnt() {
-        return *cnt_;
+    float getWeight() {
+        return *weight_;
     }
 
     double getTrace() {
@@ -112,7 +112,7 @@ public:
 
     // This one DOES NOT add up new correlations
     BinStat& operator+=(const BinStat& s) {
-        *cnt_ += *s.cnt_;
+        *weight_ += *s.weight_;
         trace_ += s.trace_;
 
         int size = std::min(filledSize_, s.filledSize_);
@@ -129,7 +129,7 @@ public:
 
     // This one DOES NOT subtract new correlations
     BinStat& operator-=(const BinStat& s) {
-        *cnt_ -= *s.cnt_;
+        *weight_ -= *s.weight_;
         trace_ -= s.trace_;
 
         int size = std::min(filledSize_, s.filledSize_);
@@ -155,7 +155,7 @@ private:
 
     float* XTX_;
     float* XTy_;
-    int* cnt_;
+    float* weight_;
 
     double trace_;
 };

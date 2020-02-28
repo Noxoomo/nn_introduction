@@ -12,6 +12,8 @@ public:
     virtual const DataSet& owner() const = 0;
 
     virtual Vec targets() const = 0;
+
+    virtual Vec weights() const = 0;
 };
 
 class PointwiseTarget : public Object {
@@ -49,7 +51,7 @@ public:
     const DataSet& owner() const override {
         return ds_;
     }
-private:
+protected:
     const DataSet& ds_;
 
 };

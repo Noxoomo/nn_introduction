@@ -37,9 +37,6 @@ HistogramV2::HistogramV2(BinarizedDataSet& bds, GridPtr grid, unsigned int nUsed
         , nUsedFeatures_(nUsedFeatures)
         , lastUsedFeatureId_(lastUsedFeatureId) {
     hist_ = stats;
-//    for (int i = 0; i < (int)grid_->totalBins(); ++i) {
-//        hist_.emplace_back(nUsedFeatures + 1, nUsedFeatures);
-//    }
 }
 
 //void HistogramV2::addFullCorrelation(int bin, Vec x, double y) {
@@ -86,7 +83,7 @@ std::shared_ptr<Eigen::MatrixXf> HistogramV2::getW(double l2reg) {
 //    }
 }
 
-double HistogramV2::computeScore(Eigen::MatrixXf& XTX, Eigen::MatrixXf& XTy, double XTX_trace, uint32_t cnt, double l2reg,
+double HistogramV2::computeScore(Eigen::MatrixXf& XTX, Eigen::MatrixXf& XTy, double XTX_trace, float weight, double l2reg,
                                double traceReg) {
 //    try {
         Eigen::MatrixXf w = XTX.inverse() * XTy;
@@ -117,11 +114,11 @@ std::pair<double, double> HistogramV2::splitScore(int fId, int condId, double l2
     uint32_t binPos = offset + condId;
     uint32_t lastPos = offset + grid_->conditionsCount(fId);
 
-    auto cnt_binPos = hist_[binPos].getCnt();
-    auto cnt_lastPos = hist_[lastPos].getCnt();
+    auto weight_binPos = hist_[binPos].getWeight();
+    auto weight_lastPos = hist_[lastPos].getWeight();
 
     if (condId != 0) {
-        if (cnt_binPos - hist_[binPos - 1].getCnt() == 0) {
+        if (weight_binPos - hist_[binPos - 1].getWeight() < 1e-7) {
             return std::make_pair(1e6, 1e6);
         }
     }
@@ -143,16 +140,14 @@ std::pair<double, double> HistogramV2::splitScore(int fId, int condId, double l2
     Eigen::MatrixXf left_XTy = XTy_binPos;
     Eigen::MatrixXf right_XTy = XTy_lastPos - XTy_binPos;
 
-    uint32_t left_cnt = cnt_binPos;
-    uint32_t right_cnt = cnt_lastPos - cnt_binPos;
+    float left_weight = weight_binPos;
+    float right_weight = weight_lastPos - weight_binPos;
 
     double left_XTX_trace = trace_binPos;
     double right_XTX_trace = trace_lastPos - trace_binPos;
 
-//    std::cout << "split fId: " << fId << ", cond: " << condId << ". XTX_left:" << left_XTX << "XTX_right: " << right_XTX << std::endl;
-
-    auto resLeft = computeScore(left_XTX, left_XTy, left_XTX_trace, left_cnt, l2reg, traceReg);
-    auto resRight = computeScore(right_XTX, right_XTy, right_XTX_trace, right_cnt, l2reg, traceReg);
+    auto resLeft = computeScore(left_XTX, left_XTy, left_XTX_trace, left_weight, l2reg, traceReg);
+    auto resRight = computeScore(right_XTX, right_XTy, right_XTX_trace, right_weight, l2reg, traceReg);
 
     return std::make_pair(resLeft, resRight);
 }
@@ -166,7 +161,7 @@ void HistogramV2::printCnt() {
     uint32_t offset = grid_->binOffsets().at(lastUsedFeatureId_);
     uint32_t lastPos = offset + grid_->conditionsCount(lastUsedFeatureId_);
 
-    std::cout << "cnt: " << hist_[lastPos].getCnt() << std::endl;
+    std::cout << "weight: " << hist_[lastPos].getWeight() << std::endl;
 }
 
 void HistogramV2::printEig(Eigen::MatrixXf& M) {
@@ -218,7 +213,7 @@ void HistogramV2::print() {
             uint32_t bin = offset + cond;
             std::cout << "fId: " << fId << ", cond: " << cond << ", XTX: " << hist_[bin].getXTX()
                     << ", XTy: " << hist_[bin].getXTy()
-                    << ", cnt: " << hist_[bin].getCnt() << std::endl;
+                    << ", weight: " << hist_[bin].getWeight() << std::endl;
         }
     }
     std::cout << "}" << std::endl;
@@ -425,7 +420,11 @@ ModelPtr GreedyLinearObliviousTreeLearnerV2::fit(const DataSet& ds, const Target
 
     std::vector<std::shared_ptr<LinearObliviousTreeLeafV2>> leaves;
 
-    auto ys = target.targets().arrayRef();
+    auto ysVec = target.targets();
+    auto ys = ysVec.arrayRef();
+
+    auto wsVec = target.weights();
+    auto ws = wsVec.arrayRef();
 
     usedFeatures_.insert(biasCol_);
     usedFeaturesOrdered_.push_back(biasCol_);
@@ -437,6 +436,16 @@ ModelPtr GreedyLinearObliviousTreeLearnerV2::fit(const DataSet& ds, const Target
 
     std::cout << "start" << std::endl;
 
+    float totalW = 0;
+    for (int i = 0; i < ds.samplesCount(); ++i) {
+        totalW += ws[i];
+    }
+    std::cout << "total w = " << totalW << std::endl;
+
+//    std::cout << "t,w" << std::endl;
+//    for (int i = 0; i < 1000; ++i) {
+//        std::cout << ys[i] << "," << ws[i] << std::endl;
+//    }
 
 
 
@@ -451,11 +460,12 @@ ModelPtr GreedyLinearObliviousTreeLearnerV2::fit(const DataSet& ds, const Target
 
         auto bins = bds.sampleBins(i); // todo cache it somehow?
         float y = ys[i];
+        float w = ws[i];
 
         for (int fId = 0; fId < fCount_; ++fId) {
             int offset = (int)binOffsets_[fId];
             int bin = offset + bins[fId];
-            stats_[2 + blockId][0][bin].addFullCorrelation(x.data(), y);
+            stats_[2 + blockId][0][bin].addFullCorrelation(x.data(), y, w);
         }
     });
 
@@ -504,16 +514,13 @@ ModelPtr GreedyLinearObliviousTreeLearnerV2::fit(const DataSet& ds, const Target
 
         parallelFor(0, nSamples_, [&](int blockId, int sampleId) {
 //        for (int sampleId = 0, blockId = 0; sampleId < ds.samplesCount(); ++sampleId) {
-//            std::cout << "a" << std::endl;
             auto bins = bds.sampleBins(sampleId);
-//            std::cout << "b" << std::endl;
             auto& x = curX_[blockId];
-//            std::cout << "c" << std::endl;
             ds.fillSample(sampleId, usedFeaturesOrdered_, x);
-//            std::cout << "d" << std::endl;
             unsigned int lId = leafId_[sampleId];
 
-//            std::cout << "sampleId = " << sampleId << std::endl;
+            float y = ys[sampleId];
+            float w = ws[sampleId];
 
             for (int fId = 0; fId < fCount_; ++fId) {
                 auto origFId = grid_->origFeatureIndex(fId);
@@ -523,13 +530,11 @@ ModelPtr GreedyLinearObliviousTreeLearnerV2::fit(const DataSet& ds, const Target
 
                 double fVal = ds.fVal(sampleId, origFId);
 
-//                std::cout << "bin = " << bin << ", fId = " << fId << ", lId = " << lId << std::endl;
-
                 for (unsigned int i = 0; i < nUsedFeatures; ++i) {
-                    h_XTX_ref_[blockId][lId][bin][i] += x[i] * fVal;
+                    h_XTX_ref_[blockId][lId][bin][i] += x[i] * fVal * w;
                 }
-                h_XTX_ref_[blockId][lId][bin][nUsedFeatures] += fVal * fVal;
-                h_XTy_ref_[blockId][lId][bin] += fVal * ys[sampleId];
+                h_XTX_ref_[blockId][lId][bin][nUsedFeatures] += fVal * fVal * w;
+                h_XTy_ref_[blockId][lId][bin] += fVal * y * w;
             }
 //        }
         });
@@ -607,7 +612,7 @@ ModelPtr GreedyLinearObliviousTreeLearnerV2::fit(const DataSet& ds, const Target
 
         tree->splits_.emplace_back(std::make_tuple(splitFId, splitCond));
 
-
+        std::cout << "splitFId=" << splitFId << std::endl;
 
         // Split
 
@@ -698,9 +703,6 @@ ModelPtr GreedyLinearObliviousTreeLearnerV2::fit(const DataSet& ds, const Target
                 for (int bin = 0; bin < totalBins_; ++bin) {
                     stats_[thId][lId][bin].reset();
                     stats_[thId][lId][bin].setFilledSize(nUsedFeatures);
-//                    BinStat* stat = stats_(thId, lId, bin);
-//                    stat->reset();
-//                    stat->setFilledSize(nUsedFeatures);
                 }
             }
         });
@@ -720,11 +722,12 @@ ModelPtr GreedyLinearObliviousTreeLearnerV2::fit(const DataSet& ds, const Target
             int lId = leafId_[i];
             auto bins = bds.sampleBins(i); // todo cache
             float y = ys[i];
+            float w = ws[i];
 
             if (fullUpdate_[lId]) {
                 for (int fId = 0; fId < fCount_; ++fId) {
                     int bin = (int) binOffsets_[fId] + bins[fId];
-                    stats_[2 + blockId][lId][bin].addFullCorrelation(x.data(), y);
+                    stats_[2 + blockId][lId][bin].addFullCorrelation(x.data(), y, w);
                 }
             } else {
                 if (nUsedFeatures > oldNUsedFeatures) {
@@ -733,10 +736,10 @@ ModelPtr GreedyLinearObliviousTreeLearnerV2::fit(const DataSet& ds, const Target
                         int bin = (int) binOffsets_[fId] + bins[fId];
 
                         for (unsigned int f = 0; f < oldNUsedFeatures; ++f) {
-                            h_XTX_ref_[blockId][lId][bin][f] += x[f] * fVal;
+                            h_XTX_ref_[blockId][lId][bin][f] += x[f] * fVal * w;
                         }
-                        h_XTX_ref_[blockId][lId][bin][oldNUsedFeatures] += fVal * fVal;
-                        h_XTy_ref_[blockId][lId][bin] += fVal * ys[i];
+                        h_XTX_ref_[blockId][lId][bin][oldNUsedFeatures] += fVal * fVal * w;
+                        h_XTy_ref_[blockId][lId][bin] += fVal * y * w;
                     }
                 }
             }
@@ -895,7 +898,7 @@ void GreedyLinearObliviousTreeLearnerV2::resetState() {
 
     memset(statsData_XTX_ref_.data(), 0, statsData_XTX_.nbytes());
     memset(statsData_XTy_ref_.data(), 0, statsData_XTy_.nbytes());
-    memset(statsData_cnt_ref_.data(), 0, statsData_cnt_.nbytes());
+    memset(statsData_weight_ref_.data(), 0, statsData_weight_.nbytes());
 
     curLeavesCoord_ = 0;
 
@@ -908,7 +911,7 @@ void GreedyLinearObliviousTreeLearnerV2::resetState() {
 
     std::cout << "statsData_XTX size = " << statsData_XTX_.nbytes() / sizeof(float) << std::endl;
     std::cout << "statsData_XTy size = " << statsData_XTy_.nbytes() / sizeof(float) << std::endl;
-    std::cout << "statsData_cnt size = " << statsData_cnt_.nbytes() / sizeof(int) << std::endl;
+    std::cout << "statsData_weight size = " << statsData_weight_.nbytes() / sizeof(float) << std::endl;
 
     statsV_.resize(0);
 
@@ -917,8 +920,8 @@ void GreedyLinearObliviousTreeLearnerV2::resetState() {
             for (int bin = 0; bin < totalBins_; ++bin) {
                 float* xtxPos = statsData_XTX_ref_[thId][lId][bin].data();
                 float* xtyPos = statsData_XTy_ref_[thId][lId][bin].data();
-                int* cntPos = statsData_cnt_ref_[thId][lId].data() + bin;
-                statsV_.emplace_back(BinStat(xtxPos, xtyPos, cntPos, maxDepth_ + 2, 1));
+                float* weightPos = statsData_weight_ref_[thId][lId].data() + bin;
+                statsV_.emplace_back(BinStat(xtxPos, xtyPos, weightPos, maxDepth_ + 2, 1));
             }
         }
     }

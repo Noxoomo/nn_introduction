@@ -2,6 +2,8 @@
 
 #include "target.h"
 #include <util/parallel_executor.h>
+#include <core/vec_factory.h>
+#include <vec_tools/fill.h>
 
 class CrossEntropy :  public Stub<Target, CrossEntropy>,
                       public  PointwiseTarget {
@@ -39,6 +41,12 @@ public:
 
     Vec targets() const override {
         return target_;
+    }
+
+    Vec weights() const override {
+        auto w = VecFactory::create(ComputeDeviceType::Cpu, target_.size());
+        VecTools::fill(1.0, w);
+        return w;
     }
 
 private:

@@ -312,7 +312,37 @@ TEST(BoostingSimple, V2) {
     }
 }
 
-TEST(Boosting, LinearV2) {
+TEST(BoostingSimple, V2Bootstrap) {
+    auto ds = simpleDs();
+
+    std::vector<int32_t> indices({0, 1, 2, 3, 4, 5, 6});
+
+    ds.addBiasColumn();
+
+    BinarizationConfig config;
+    config.bordersCount_ = 32;
+    auto grid = buildGrid(ds, config);
+
+    BoostingConfig boostingConfig;
+    boostingConfig.iterations_ = 10;
+    boostingConfig.step_ = 1.0;
+    std::cout << "creating boosting" << std::endl;
+    Boosting boosting(boostingConfig, createBootstrapWeakTarget(), createWeakLinearLearnerV2(4, 0, 1e-5, 0.0, grid));
+    std::cout << "creating boosting done" << std::endl;
+
+    auto trainMetricsCalcer = std::make_shared<BoostingMetricsCalcer>(ds);
+    trainMetricsCalcer->addMetric(L2(ds), "l2-train");
+    boosting.addListener(trainMetricsCalcer);
+
+    L2 target(ds);
+    auto ensemble = boosting.fit(ds, target);
+
+    for (int i = 0; i < ds.samplesCount(); ++i) {
+        std::cout << "y = " << ds.target()(i) << ", y^ = " << ensemble->value(ds.sample(i)) << std::endl;
+    }
+}
+
+TEST(Boosting, LinearV2FeaturesTxt) {
     auto ds = loadFeaturesTxt(PATH_PREFIX "test_data/featuresTxt/train");
     auto test = loadFeaturesTxt(PATH_PREFIX "test_data/featuresTxt/test");
     EXPECT_EQ(ds.samplesCount(), 12465);
@@ -340,4 +370,31 @@ TEST(Boosting, LinearV2) {
 
     L2 target(ds);
     auto ensemble = boosting.fit(ds, target);
+}
+
+TEST(Boosting, LinearV2FeaturesTxtBootstrap) {
+    auto ds = loadFeaturesTxt(PATH_PREFIX "test_data/featuresTxt/train");
+    auto test = loadFeaturesTxt(PATH_PREFIX "test_data/featuresTxt/test");
+    EXPECT_EQ(ds.samplesCount(), 12465);
+    EXPECT_EQ(ds.featuresCount(), 50);
+
+    BinarizationConfig config;
+    config.bordersCount_ = 32;
+    auto grid = buildGrid(ds, config);
+
+    BoostingConfig boostingConfig;
+    boostingConfig.iterations_ = 200;
+    Boosting boosting(boostingConfig, createBootstrapWeakTarget(), createWeakLinearLearnerV2(6, 0, 0.5, 0.00, grid));
+
+    auto testMetricsCalcer = std::make_shared<BoostingMetricsCalcer>(test);
+    testMetricsCalcer->addMetric(L2(test), "l2-test");
+    boosting.addListener(testMetricsCalcer);
+
+    auto trainMetricsCalcer = std::make_shared<BoostingMetricsCalcer>(ds);
+    trainMetricsCalcer->addMetric(L2(ds), "l2-train");
+    boosting.addListener(trainMetricsCalcer);
+
+    L2 target(ds);
+    auto ensemble = boosting.fit(ds, target);
+
 }
