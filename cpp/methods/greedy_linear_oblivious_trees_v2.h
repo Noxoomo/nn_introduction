@@ -26,39 +26,33 @@ class GreedyLinearObliviousTreeLearnerV2;
 
 class HistogramV2 {
 public:
-    HistogramV2(BinarizedDataSet& bds, GridPtr grid, unsigned int nUsedFeatures, int lastUsedFeatureId,
-            BinStat* hist);
+    HistogramV2(BinarizedDataSet& bds, GridPtr grid, unsigned int nUsedFeatures, int lastUsedFeatureId/*,
+            BinStat* hist*/);
+
+    HistogramV2(const HistogramV2& other) = delete;
 
     void addNewCorrelation(int bin, const float* xtx, float xty, int shift = 0);
     void prefixSumBins();
 
     void addBinStat(int bin, const BinStat& stats);
 
-    std::pair<double, double> splitScore(int fId, int condId, double l2reg, double traceReg);
+    std::pair<BinStat::fType, BinStat::fType> splitScore(int fId, int condId, double l2reg, double traceReg);
 
-    std::shared_ptr<Eigen::MatrixXf> getW(double l2reg);
+    std::shared_ptr<BinStat::EMx> getW(double l2reg);
 
-    void printEig(double l2reg);
-    void printCnt();
     void print();
 
     HistogramV2& operator+=(const HistogramV2& h);
     HistogramV2& operator-=(const HistogramV2& h);
 
 private:
-    static double computeScore(Eigen::MatrixXf& XTX, Eigen::MatrixXf& XTy, double XTX_trace, float weight, double l2reg,
-                               double traceReg);
-
-    static void printEig(Eigen::MatrixXf& M);
-
-    friend HistogramV2 operator-(const HistogramV2& lhs, const HistogramV2& rhs);
-    friend HistogramV2 operator+(const HistogramV2& lhs, const HistogramV2& rhs);
+    static void printEig(BinStat::EMx& M);
 
 private:
     BinarizedDataSet& bds_;
     GridPtr grid_;
 
-    BinStat* hist_;
+    std::vector<BinStat> hist_;
 
     int lastUsedFeatureId_ = -1;
     unsigned int nUsedFeatures_;
@@ -74,7 +68,7 @@ class GreedyLinearObliviousTreeLearnerV2 final
         : public Optimizer {
 public:
     // Please, don't even ask me why...
-    GreedyLinearObliviousTreeLearnerV2(GridPtr grid, int32_t maxDepth = 6, int biasCol = -1,
+    explicit GreedyLinearObliviousTreeLearnerV2(GridPtr grid, int32_t maxDepth = 6, int biasCol = -1,
                                               double l2reg = 0.0, double traceReg = 0.0)
             : grid_(std::move(grid))
             , biasCol_(biasCol)
@@ -86,16 +80,22 @@ public:
             , totalCond_(totalBins_ - fCount_)
             , binOffsets_(grid_->binOffsets())
             , nThreads_((int)GlobalThreadPool<0>().numThreads())
-            , h_XTX_(torch::zeros({nThreads_, 1 << maxDepth_, totalBins_, maxDepth_ + 2}, torch::kFloat))
-            , h_XTy_(torch::zeros({nThreads_, 1 << maxDepth_, totalBins_}, torch::kFloat))
-            , statsData_XTX_(torch::zeros({nThreads_ + 2, 1 << maxDepth_, totalBins_, (maxDepth_ + 2) * (maxDepth_ + 3) / 2}, torch::kFloat))
-            , statsData_XTy_(torch::zeros({nThreads_ + 2, 1 << maxDepth_, totalBins_, maxDepth_ + 2}, torch::kFloat))
-            , statsData_weight_(torch::zeros({nThreads_ + 2, 1 << maxDepth_, totalBins_}, torch::kFloat))
+            , h_XTX_(torch::zeros({nThreads_, 1U << maxDepth_, totalBins_, maxDepth_ + 2}, torch::kFloat))
+            , h_XTy_(torch::zeros({nThreads_, 1U << maxDepth_, totalBins_}, torch::kFloat))
             , h_XTX_ref_(h_XTX_.accessor<float, 4>())
-            , h_XTy_ref_(h_XTy_.accessor<float, 3>())
-            , statsData_XTX_ref_(statsData_XTX_.accessor<float, 4>())
-            , statsData_XTy_ref_(statsData_XTy_.accessor<float, 4>())
-            , statsData_weight_ref_(statsData_weight_.accessor<float, 3>()) {
+            , h_XTy_ref_(h_XTy_.accessor<float, 3>()) {
+//            , statsData_XTX_(torch::zeros({nThreads_ + 2, 1U << maxDepth_, totalBins_, (maxDepth_ + 2) * (maxDepth_ + 3) / 2}, torch::kFloat))
+//            , statsData_XTy_(torch::zeros({nThreads_ + 2, 1U << maxDepth_, totalBins_, maxDepth_ + 2}, torch::kFloat))
+//            , statsData_weight_(torch::zeros({nThreads_ + 2, 1U << maxDepth_, totalBins_}, torch::kFloat))
+//            , statsData_sumY_(torch::zeros({nThreads_ + 2, 1U << maxDepth_, totalBins_}, torch::kFloat))
+//            , statsData_sumY2_(torch::zeros({nThreads_ + 2, 1U << maxDepth_, totalBins_}, torch::kFloat))
+//            , statsData_sumX_(torch::zeros({nThreads_ + 2, 1U << maxDepth_, totalBins_, maxDepth_ + 2}, torch::kFloat))
+//            , statsData_XTX_ref_(statsData_XTX_.accessor<float, 4>())
+//            , statsData_XTy_ref_(statsData_XTy_.accessor<float, 4>())
+//            , statsData_weight_ref_(statsData_weight_.accessor<float, 3>())
+//            , statsData_sumY_ref_(statsData_sumY_.accessor<float, 3>())
+//            , statsData_sumY2_ref_(statsData_sumY2_.accessor<float, 3>())
+//            , statsData_sumX_ref_(statsData_sumX_.accessor<float, 4>()) {
 
     }
 
@@ -106,6 +106,10 @@ public:
 private:
     void cacheDs(const DataSet& ds);
     void resetState();
+
+    void computeNewCorrelations(const DataSet& ds, BinarizedDataSet& bds, VecRef<float> ys, VecRef<float> ws, int nUsedFeatures);
+    std::shared_ptr<LinearObliviousTreeLeafV2> initRoot(const DataSet& ds, BinarizedDataSet& bds, VecRef<float> ys, VecRef<float> ws);
+    std::tuple<int, int, BinStat::fType> findBestSplit();
 
 private:
     GridPtr grid_;
@@ -120,6 +124,8 @@ private:
     std::vector<std::vector<float>> curX_;
 
     std::vector<int32_t> leafId_;
+
+    std::vector<std::shared_ptr<LinearObliviousTreeLeafV2>> leaves_;
 
     std::set<int> usedFeatures_;
     std::vector<int> usedFeaturesOrdered_;
@@ -139,15 +145,21 @@ private:
     torch::Tensor h_XTy_;
 
     // This ones are used in bin stats
-    torch::Tensor statsData_XTX_;
-    torch::Tensor statsData_XTy_;
-    torch::Tensor statsData_weight_;
-
+//    torch::Tensor statsData_XTX_;
+//    torch::Tensor statsData_XTy_;
+//    torch::Tensor statsData_weight_;
+//    torch::Tensor statsData_sumY_;
+//    torch::Tensor statsData_sumY2_;
+//    torch::Tensor statsData_sumX_;
+//
     torch::TensorAccessor<float, 4> h_XTX_ref_;
     torch::TensorAccessor<float, 3> h_XTy_ref_;
-    torch::TensorAccessor<float, 4> statsData_XTX_ref_;
-    torch::TensorAccessor<float, 4> statsData_XTy_ref_;
-    torch::TensorAccessor<float, 3> statsData_weight_ref_;
+//    torch::TensorAccessor<float, 4> statsData_XTX_ref_;
+//    torch::TensorAccessor<float, 4> statsData_XTy_ref_;
+//    torch::TensorAccessor<float, 3> statsData_weight_ref_;
+//    torch::TensorAccessor<float, 3> statsData_sumY_ref_;
+//    torch::TensorAccessor<float, 3> statsData_sumY2_ref_;
+//    torch::TensorAccessor<float, 4> statsData_sumX_ref_;
 
     unsigned int curLeavesCoord_;
 
@@ -186,13 +198,13 @@ public:
         return *grid_.get();
     }
 
-    GridPtr gridPtr() const {
+    GridPtr gridPtr() const override {
         return grid_;
     }
 
     void appendTo(const Vec& x, Vec to) const override;
 
-    void applyToBds(const BinarizedDataSet& ds, Mx to, ApplyType type) const;
+    void applyToBds(const BinarizedDataSet& ds, Mx to, ApplyType type) const override;
 
     void applyBinarizedRow(const Buffer<uint8_t>& x, Vec to) const {
         throw std::runtime_error("Unsupported");

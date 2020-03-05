@@ -9,7 +9,7 @@
 #include <data/dataset.h>
 
 struct BoostingConfig {
-    double step_ = 0.05;
+    double step_ = 0.01;
     int64_t iterations_ = 1000;
 
 };
