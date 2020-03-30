@@ -68,3 +68,27 @@ TEST(MatrixTest, Inverse) {
         }
     }
 }
+
+TEST(MatrixTest, AddColumn) {
+    Vec tmp = VecFactory::fromVector({1, 2, 3, 4, 5, 6});
+    Mx A(tmp, 3, 2);
+
+    Vec col = VecFactory::fromVector({0.1, 0.2, 0.3});
+    A.addColumn(col);
+
+    EXPECT_EQ(3, A.ydim());
+    EXPECT_EQ(3, A.xdim());
+
+    int cnt = 0;
+
+    for (int i = 0; i < A.ydim(); ++i) {
+        for (int j = 0; j < A.xdim(); ++j) {
+            if (j != 0) {
+                ++cnt;
+                EXPECT_DOUBLE_EQ(cnt, A.get(j, i));
+            } else {
+                EXPECT_DOUBLE_EQ((i + 1) * 0.1, A.get(j, i));
+            }
+        }
+    }
+}

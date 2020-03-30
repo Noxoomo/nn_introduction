@@ -25,6 +25,7 @@ add_library(core
         matrix.cpp
         buffer.h
         cache.h
+        multi_dim_array.h
         )
 
 #add_library(core_kernels

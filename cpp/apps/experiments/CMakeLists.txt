@@ -14,6 +14,9 @@ target_link_libraries(train_default_em "${TORCH_LIBRARIES}" experiments)
 add_executable(train_with_catboost train_with_catboost.cpp common.h common.cpp catboost_nn.h catboost_nn.cpp)
 target_link_libraries(train_with_catboost "${TORCH_LIBRARIES}" experiments polynom ${CATBOOST})
 
+add_executable(train_cnn_linear train_cnn_linear_trees.cpp common.h common.cpp)
+target_link_libraries(train_cnn_linear "${TORCH_LIBRARIES}" experiments methods)
+
 # misc
 
 add_executable(check_cuda_libtorch check_cuda_libtorch.cpp)

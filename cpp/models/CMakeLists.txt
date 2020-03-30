@@ -9,6 +9,8 @@ add_library(models
         model.h
         oblivious_tree.h
         oblivious_tree.cpp
+        linear_oblivious_tree.h
+        linear_oblivious_tree.cpp
 )
 
 

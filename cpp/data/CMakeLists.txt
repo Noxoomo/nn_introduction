@@ -14,6 +14,8 @@ add_library(data
         histogram.cpp
         load_data.h
         load_data.cpp
+        aggregate.h
+        aggregate.cpp
         )
 
 

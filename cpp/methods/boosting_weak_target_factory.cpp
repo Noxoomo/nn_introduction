@@ -1,5 +1,6 @@
 #include "boosting_weak_target_factory.h"
 #include <core/vec_factory.h>
+#include <targets/linear_l2.h>
 
 SharedPtr<Target> GradientBoostingWeakTargetFactory::create(
     const DataSet& ds,
@@ -8,7 +9,7 @@ SharedPtr<Target> GradientBoostingWeakTargetFactory::create(
     const Vec cursor = startPoint;
     Vec der(cursor.dim());
     target.gradientTo(cursor, der);
-    return std::static_pointer_cast<Target>(std::make_shared<L2>(ds, der));
+    return std::static_pointer_cast<Target>(std::make_shared<LinearL2>(ds, der));
 }
 
 template <class Rand>
@@ -57,5 +58,5 @@ SharedPtr<Target> GradientBoostingBootstrappedWeakTargetFactory::create(
     Buffer<int32_t> indices = Buffer<int32_t>::fromVector(nzIndices);
     const auto& pointwiseTarget = dynamic_cast<const PointwiseTarget&>(target);
     pointwiseTarget.subsetDer(startPoint, indices, der);
-    return std::static_pointer_cast<Target>(std::make_shared<L2>(ds, der, weights, indices));
+    return std::static_pointer_cast<Target>(std::make_shared<LinearL2>(ds, der, weights, indices));
 }

@@ -1,4 +1,7 @@
 #include <memory>
+#include <stdlib.h>
+#include <time.h>
+#include <random>
 
 #include <data/dataset.h>
 #include <data/load_data.h>
@@ -9,9 +12,9 @@
 #include <methods/boosting.h>
 #include <methods/greedy_oblivious_tree.h>
 #include <methods/greedy_linear_oblivious_trees.h>
-#include <methods/greedy_linear_oblivious_trees_v2.h>
 #include <methods/boosting_weak_target_factory.h>
 #include <targets/cross_entropy.h>
+#include <targets/linear_l2.h>
 #include <metrics/accuracy.h>
 
 #define EPS 1e-5
@@ -27,26 +30,18 @@ inline std::unique_ptr<GreedyLinearObliviousTreeLearner> createWeakLinearLearner
         int32_t depth,
         int biasCol,
         double l2reg,
-        double traceReg,
         GridPtr grid) {
-    return std::make_unique<GreedyLinearObliviousTreeLearner>(std::move(grid), depth, biasCol, l2reg, traceReg);
-}
-
-inline std::unique_ptr<GreedyLinearObliviousTreeLearnerV2> createWeakLinearLearnerV2(
-        int32_t depth,
-        int biasCol,
-        double l2reg,
-        double traceReg,
-        GridPtr grid) {
-    return std::make_unique<GreedyLinearObliviousTreeLearnerV2>(std::move(grid), depth, biasCol, l2reg, traceReg);
+    return std::make_unique<GreedyLinearObliviousTreeLearner>(std::move(grid), depth, biasCol, l2reg);
 }
 
 inline std::unique_ptr<EmpiricalTargetFactory> createWeakTarget() {
     return std::make_unique<GradientBoostingWeakTargetFactory>();
 }
 
-inline std::unique_ptr<EmpiricalTargetFactory>  createBootstrapWeakTarget() {
+inline std::unique_ptr<EmpiricalTargetFactory> createBootstrapWeakTarget() {
     BootstrapOptions options;
+//    srand(time(NULL));
+//    options.seed_ = std::rand() % 10000;
     options.seed_ = 42;
     return std::make_unique<GradientBoostingBootstrappedWeakTargetFactory>(options);
 }
@@ -93,9 +88,6 @@ TEST(FeaturesTxt, TestTrainWithBootstrapMseFeaturesTxt) {
 
 }
 
-
-
-
 TEST(FeaturesTxt, TestTrainWithBootstrapLogLikelihoodFeaturesTxt) {
     auto ds = loadFeaturesTxt(PATH_PREFIX "test_data/featuresTxt/train");
 
@@ -119,7 +111,6 @@ TEST(FeaturesTxt, TestTrainWithBootstrapLogLikelihoodFeaturesTxt) {
     auto ensemble = boosting.fit(ds, target);
 
 }
-
 
 //run it from root
 TEST(FeaturesTxt, TestTrainMseMoscow) {
@@ -163,7 +154,7 @@ TEST(Boosting, FeaturesTxtLinearTrees) {
     auto grid = buildGrid(ds, config);
 
     BoostingConfig boostingConfig;
-    Boosting boosting(boostingConfig, createWeakTarget(), createWeakLinearLearner(6, 0, 1.0, 0.01, grid));
+    Boosting boosting(boostingConfig, createWeakTarget(), createWeakLinearLearner(6, 0, 1.0, grid));
 
     auto testMetricsCalcer = std::make_shared<BoostingMetricsCalcer>(test);
     testMetricsCalcer->addMetric(L2(test), "l2-test");
@@ -200,61 +191,7 @@ DataSet simpleDs() {
     return DataSet(Mx(dsDataVec, 7, 4), target);
 }
 
-//TEST(HistV2, Simple) {
-//    auto ds = simpleDs();
-//
-//    std::vector<int32_t> indices({0, 1, 2, 3, 4, 5, 6});
-//    std::set<int> usedFeatures({});
-//
-//    BinarizationConfig config;
-//    config.bordersCount_ = 32;
-//    GridPtr grid = buildGrid(ds, config);
-//    BinarizedDataSetPtr bds = binarize(ds, grid, 4);
-//
-//    std::set<int> features = {0, 1, 2};
-//
-//    std::cout << "bds.totalBins = " << bds->totalBins() << std::endl;
-//
-//    HistogramV2 h(*bds, grid, 5, features.size(), 0);
-//
-//    std::cout << "add bias column" << std::endl;
-//    ds.addBiasColumn();
-//
-//    std::cout << "subDs" << std::endl;
-//    auto curDs = ds.subDs(features);
-//    std::cout << curDs.samplesMx() << std::endl;
-//
-//    std::cout << "h.build" << std::endl;
-//    h.build(curDs, indices);
-//    h.print();
-//    std::cout << "h.prefixSumBins" << std::endl;
-//    h.prefixSumBins();
-//    h.print();
-//
-//    Vec newCol(ds.samplesCount());
-//    ds.copyColumn(4, &newCol);
-//    auto newCol_ref = newCol.arrayRef();
-//
-//    auto ys = ds.target().arrayRef();
-//
-//    std::cout << "update bins" << std::endl;
-//
-//    for (int32_t fId = 0; fId < grid->nzFeaturesCount(); ++fId) {
-//        bds->visitFeature(fId, indices, [&](int blockId, int i, int8_t localBinId) {
-//            Vec x = curDs.sample(i);
-//            double fVal = newCol_ref[i];
-//            h.updateBin(fId, localBinId, x, ys[i], fVal, 0);
-//        });
-//    }
-//
-//    std::cout << "prefix sum last f" << std::endl;
-//
-//    h.prefixSumBinsLastFeature(0);
-//
-//    h.print();
-//}
-
-TEST(BoostingSimpleV1, V1) {
+TEST(BoostingLinearTrees, SimpleDs) {
     auto ds = simpleDs();
 
     std::vector<int32_t> indices({0, 1, 2, 3, 4, 5, 6});
@@ -267,14 +204,14 @@ TEST(BoostingSimpleV1, V1) {
 
     BoostingConfig boostingConfig;
     boostingConfig.iterations_ = 1;
-    boostingConfig.step_ = 1.0;
-    Boosting boosting(boostingConfig, createWeakTarget(), createWeakLinearLearner(4, 0, 1e-5, 0.0, grid));
+    boostingConfig.step_ = 1;
+    Boosting boosting(boostingConfig, createWeakTarget(), createWeakLinearLearner(6, 0, 1e-5, grid));
 
     auto trainMetricsCalcer = std::make_shared<BoostingMetricsCalcer>(ds);
     trainMetricsCalcer->addMetric(L2(ds), "l2-train");
     boosting.addListener(trainMetricsCalcer);
 
-    L2 target(ds);
+    LinearL2 target(ds);
     auto ensemble = boosting.fit(ds, target);
 
     for (int i = 0; i < ds.samplesCount(); ++i) {
@@ -282,35 +219,7 @@ TEST(BoostingSimpleV1, V1) {
     }
 }
 
-TEST(BoostingSimple, V2) {
-    auto ds = simpleDs();
-
-    std::vector<int32_t> indices({0, 1, 2, 3, 4, 5, 6});
-
-    ds.addBiasColumn();
-
-    BinarizationConfig config;
-    config.bordersCount_ = 32;
-    auto grid = buildGrid(ds, config);
-
-    BoostingConfig boostingConfig;
-    boostingConfig.iterations_ = 1;
-    boostingConfig.step_ = 1.0;
-    Boosting boosting(boostingConfig, createWeakTarget(), createWeakLinearLearnerV2(4, 0, 1e-5, 0.0, grid));
-
-    auto trainMetricsCalcer = std::make_shared<BoostingMetricsCalcer>(ds);
-    trainMetricsCalcer->addMetric(L2(ds), "l2-train");
-    boosting.addListener(trainMetricsCalcer);
-
-    L2 target(ds);
-    auto ensemble = boosting.fit(ds, target);
-
-    for (int i = 0; i < ds.samplesCount(); ++i) {
-        std::cout << "y = " << ds.target()(i) << ", y^ = " << ensemble->value(ds.sample(i)) << std::endl;
-    }
-}
-
-TEST(Boosting, LinearV2) {
+TEST(BoostingLinearTrees, FeaturesTxt) {
     auto ds = loadFeaturesTxt(PATH_PREFIX "test_data/featuresTxt/train");
     auto test = loadFeaturesTxt(PATH_PREFIX "test_data/featuresTxt/test");
     EXPECT_EQ(ds.samplesCount(), 12465);
@@ -326,7 +235,7 @@ TEST(Boosting, LinearV2) {
     BoostingConfig boostingConfig;
     boostingConfig.iterations_ = 1000;
     boostingConfig.step_ = 0.05;
-    Boosting boosting(boostingConfig, createWeakTarget(), createWeakLinearLearnerV2(6, 0, 0.5, 0.00, grid));
+    Boosting boosting(boostingConfig, createWeakTarget(), createWeakLinearLearner(6, 0, 1.0, grid));
 
     auto testMetricsCalcer = std::make_shared<BoostingMetricsCalcer>(test);
     testMetricsCalcer->addMetric(L2(test), "l2-test");
@@ -340,7 +249,7 @@ TEST(Boosting, LinearV2) {
     auto ensemble = boosting.fit(ds, target);
 }
 
-TEST(Boosting, LinearV2FeaturesTxtBootstrap) {
+TEST(BoostingLinearTrees, FeaturesTxtBootsrap) {
     auto ds = loadFeaturesTxt(PATH_PREFIX "test_data/featuresTxt/train");
     auto test = loadFeaturesTxt(PATH_PREFIX "test_data/featuresTxt/test");
     EXPECT_EQ(ds.samplesCount(), 12465);
@@ -351,8 +260,9 @@ TEST(Boosting, LinearV2FeaturesTxtBootstrap) {
     auto grid = buildGrid(ds, config);
 
     BoostingConfig boostingConfig;
-    boostingConfig.iterations_ = 200;
-    Boosting boosting(boostingConfig, createBootstrapWeakTarget(), createWeakLinearLearnerV2(6, 0, 1, 0.00, grid));
+    boostingConfig.iterations_ = 500;
+    boostingConfig.step_ = 0.05;
+    Boosting boosting(boostingConfig, createBootstrapWeakTarget(), createWeakLinearLearner(6, 0, 2.0, grid));
 
     auto testMetricsCalcer = std::make_shared<BoostingMetricsCalcer>(test);
     testMetricsCalcer->addMetric(L2(test), "l2-test");

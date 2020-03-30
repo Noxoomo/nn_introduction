@@ -20,16 +20,15 @@ ModelPtr Boosting::fit(const DataSet& dataSet, const Target& target)  {
         std::cout << "Fit on iter " << iter << ": finished in " << duration << " [ms]" << std::endl;
 
 
-        begin = std::chrono::steady_clock::now();
         model = model->scale(config_.step_);
-        end = std::chrono::steady_clock::now();
-        duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
-        std::cout << "scale on iter " << iter << ": finished in " << duration << " [ms]" << std::endl;
-
         models.push_back(model);
 
         invoke(*models.back());
         models.back()->append(dataSet, cursor);
+
+        end = std::chrono::steady_clock::now();
+        duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
+        std::cout << "Iter " << iter << ": finished in " << duration << " [ms]" << std::endl;
     }
     std::cout << "fit time " <<  std::chrono::duration<double>(std::chrono::system_clock::now() - start).count() << std::endl;
 

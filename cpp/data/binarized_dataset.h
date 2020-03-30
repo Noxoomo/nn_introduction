@@ -50,7 +50,7 @@ public:
         return samplesCount_;
     }
 
-    std::vector<uint8_t> sampleBins(int64_t sampleId) {
+    std::vector<uint8_t> sampleBins(int64_t sampleId) const {
         std::vector<uint8_t> res;
         for (int fId = 0; fId < (int)grid_->nzFeaturesCount(); ++fId) {
             int64_t groupIdx = featureToGroup_.at(fId);

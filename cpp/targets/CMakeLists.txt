@@ -9,9 +9,15 @@ add_library(targets
         l2.cpp
         stat_based_loss.h
 
-
         cross_entropy.cpp
         cross_entropy.h
+
+        additive_statistics.h
+
+        linear_l2.h
+        linear_l2.cpp
+        linear_l2_stat.h
+        linear_l2_stat.cpp
 )
 
 
@@ -21,7 +27,9 @@ add_library(targets
 enable_cxx17(targets)
 #maybe_enable_cuda(trees)
 
-target_link_libraries(targets "${TORCH_LIBRARIES}" core util data vec_tools trans funcs)
+find_package(Eigen3 REQUIRED NO_MODULE)
+
+target_link_libraries(targets "${TORCH_LIBRARIES}" core util data vec_tools trans funcs Eigen3::Eigen)
 #target_link_libraries(trees_kernels util)
 
 

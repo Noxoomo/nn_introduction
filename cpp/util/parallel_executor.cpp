@@ -6,6 +6,6 @@
 
 
 ThreadPool::ThreadPool()
-    : pool_(std::thread::hardware_concurrency()) {
+    : pool_(8) {
 
 }
