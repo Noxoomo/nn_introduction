@@ -17,8 +17,7 @@ ModelPtr Boosting::fit(const DataSet& dataSet, const Target& target)  {
         auto model = weak_learner_->fit(dataSet, *weakTarget);
         std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
-        std::cout << "Fit on iter " << iter << ": finished in " << duration << " [ms]" << std::endl;
-
+        std::cout << "fit on iter " << iter << ": finished in " << duration << " [ms]" << std::endl;
 
         model = model->scale(config_.step_);
         models.push_back(model);

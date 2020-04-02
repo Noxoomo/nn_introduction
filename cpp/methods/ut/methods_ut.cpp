@@ -274,5 +274,4 @@ TEST(BoostingLinearTrees, FeaturesTxtBootsrap) {
 
     L2 target(ds);
     auto ensemble = boosting.fit(ds, target);
-
 }
