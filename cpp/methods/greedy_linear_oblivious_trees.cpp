@@ -13,6 +13,9 @@
 #include <eigen3/Eigen/Core>
 
 
+//#define TIME_BLOCK_START(name)
+//#define TIME_BLOCK_END(name)
+
 #define TIME_BLOCK_START(name) \
     auto begin##name = std::chrono::steady_clock::now(); \
     std::cout << "Starting " << #name << std::endl;
@@ -50,22 +53,9 @@ public:
         w_ = stats_[grid_->totalBins() - 1].getWHat(l2reg);
     }
 
-    double value(const ConstVecRef<float>& x) const {
-        float res = 0.0;
-
-        int i = 0;
-        for (auto f : usedFeaturesInOrder_) {
-            res += x[f] * (float)w_(i, 0);
-            ++i;
-        }
-
-        return res;
-    }
-
     std::pair<std::shared_ptr<LinearObliviousTreeLeafLearner>, std::shared_ptr<LinearObliviousTreeLeafLearner>>
-    split(int32_t fId, int32_t condId) {
+    split(int32_t fId, int32_t condId, int nUsedFeatures) {
         int origFId = grid_->origFeatureIndex(fId);
-        unsigned int nUsedFeatures = nUsedFeatures_ + (1 - usedFeatures_.count(origFId));
 
         auto left = std::make_shared<LinearObliviousTreeLeafLearner>(grid_, nUsedFeatures);
         auto right = std::make_shared<LinearObliviousTreeLeafLearner>(grid_, nUsedFeatures);
@@ -113,28 +103,14 @@ private:
                       int32_t splitFId, int32_t condId) {
         left->id_ = 2 * id_;
         right->id_ = 2 * id_ + 1;
-
-        left->usedFeatures_ = usedFeatures_;
-        right->usedFeatures_ = usedFeatures_;
-        left->usedFeaturesInOrder_ = usedFeaturesInOrder_;
-        right->usedFeaturesInOrder_ = usedFeaturesInOrder_;
-
-        int32_t origFeatureId = grid_->origFeatureIndex(splitFId);
-
-        if (usedFeatures_.count(origFeatureId) == 0) {
-            left->usedFeatures_.insert(origFeatureId);
-            right->usedFeatures_.insert(origFeatureId);
-            left->usedFeaturesInOrder_.push_back(origFeatureId);
-            right->usedFeaturesInOrder_.push_back(origFeatureId);
-        }
     }
 
 private:
     friend class GreedyLinearObliviousTreeLearner;
 
     GridPtr grid_;
-    std::set<int32_t> usedFeatures_;
-    std::vector<int32_t> usedFeaturesInOrder_;
+//    std::set<int32_t> usedFeatures_;
+//    std::vector<int32_t> usedFeaturesInOrder_;
     LinearL2Stat::EMx w_;
     MultiDimArray<1, LinearL2Stat> stats_;
 
@@ -279,9 +255,6 @@ void GreedyLinearObliviousTreeLearner::buildRoot(
         ConstVecRef<float> ys,
         ConstVecRef<float> ws) {
     auto root = std::make_shared<LinearObliviousTreeLeafLearner>(this->grid_, 1);
-    root->usedFeatures_.insert(biasCol_);
-    root->usedFeaturesInOrder_.push_back(biasCol_);
-
     usedFeatures_.insert(biasCol_);
     usedFeaturesOrdered_.push_back(biasCol_);
 
@@ -328,7 +301,8 @@ void GreedyLinearObliviousTreeLearner::updateNewCorrelations(
         LinearL2StatOpParams params = {};
         for (int lId = 0; lId < leaves_.size(); ++lId) {
             leaves_[lId]->stats_[bin].append(stats[lId][bin].xxt.data(),
-                                             stats[lId][bin].xy, /*unused*/1.0, params);
+                                             stats[lId][bin].xy,
+                                             stats[lId][bin].sumX, params);
         }
     });
 }
@@ -376,7 +350,7 @@ void GreedyLinearObliviousTreeLearner::initNewLeaves(GreedyLinearObliviousTreeLe
     newLeaves_.clear();
 
     for (auto& l : leaves_) {
-        auto newLeavesPair = l->split(split.first, split.second);
+        auto newLeavesPair = l->split(split.first, split.second, usedFeatures_.size());
         newLeaves_.emplace_back(newLeavesPair.first);
         newLeaves_.emplace_back(newLeavesPair.second);
     }

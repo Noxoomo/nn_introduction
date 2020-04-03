@@ -34,6 +34,7 @@ struct LinearL2CorStat : public AdditiveStatistics<LinearL2CorStat,
     int size_;
     std::vector<float> xxt;
     float xy;
+    float sumX;
 };
 
 
@@ -74,7 +75,8 @@ struct LinearL2Stat : public AdditiveStatistics<LinearL2Stat, LinearL2StatTypeTr
 //        return maxUpdatedPos_;
 //    }
 //
-    void addNewCorrelation(SampleType xtx, TargetType xty, WeightType w, int shift = 0);
+    // TODO: using y as xty and w as sumX. Bad interface :/
+    void addNewCorrelation(SampleType xtx, TargetType xty, WeightType sumX, int shift = 0);
     void addFullCorrelation(SampleType x, TargetType y, WeightType w);
 
     LinearL2Stat& appendImpl(const LinearL2Stat& other, const LinearL2StatOpParams& opParams);
@@ -83,8 +85,8 @@ struct LinearL2Stat : public AdditiveStatistics<LinearL2Stat, LinearL2StatTypeTr
     LinearL2Stat& appendImpl(SampleType x, TargetType y, WeightType weight, const LinearL2StatOpParams& opParams);
     LinearL2Stat& removeImpl(SampleType x, TargetType y, WeightType weight, const LinearL2StatOpParams& opParams);
 
-    void fillXTX(EMx& XTX) const;
-    [[nodiscard]] EMx getXTX() const;
+    void fillXTX(EMx& XTX, double l2reg = 0.) const;
+    [[nodiscard]] EMx getXTX(double l2reg = 0.) const;
 
     void fillXTy(EMx& XTy) const;
     [[nodiscard]] EMx getXTy() const;
@@ -99,7 +101,6 @@ struct LinearL2Stat : public AdditiveStatistics<LinearL2Stat, LinearL2StatTypeTr
     int maxUpdatedPos_;
 
     float w_;
-    float trace_;
     float sumY_;
     float sumY2_;
     std::vector<float> xtx_;

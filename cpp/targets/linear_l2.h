@@ -30,11 +30,11 @@ public:
     [[nodiscard]] double score(const LinearL2Stat& s) const {
         LinearL2Stat::EMx XTX = s.getXTX();
         LinearL2Stat::EMx XTy = s.getXTy();
-        LinearL2Stat::EMx w = s.getWHat(lambda_);
+        LinearL2Stat::EMx wHat = s.getWHat(lambda_);
 
-        LinearL2Stat::EMx c1 = -2 * (XTy.transpose() * w);
-        LinearL2Stat::EMx c2 = w.transpose() * XTX * w;
-        LinearL2Stat::EMx reg = lambda_ * w.transpose() * w;
+        LinearL2Stat::EMx c1 = -2 * (XTy.transpose() * wHat);
+        LinearL2Stat::EMx c2 = wHat.transpose() * XTX * wHat;
+        LinearL2Stat::EMx reg = lambda_ * wHat.transpose() * wHat;
         LinearL2Stat::EMx res = c1 + c2 + reg;
 
         return res(0, 0);
@@ -130,7 +130,7 @@ public:
 
         for (int64_t i = 0; i < indices.size(); ++i) {
             const int32_t idx = indicesArrayRef[i];
-            destArrayRef[i] =  targetArrayRef[idx]  -  sourceArrayRef[idx];
+            destArrayRef[i] = targetArrayRef[idx] - sourceArrayRef[idx];
         }
     }
 

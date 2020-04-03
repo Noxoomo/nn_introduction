@@ -1,21 +1,5 @@
 #include "linear_l2_stat.h"
 
-namespace {
-    [[nodiscard]] inline Eigen::MatrixXd DiagMx(int dim, double v) {
-        Eigen::MatrixXd mx(dim, dim);
-        for (int i = 0; i < dim; ++i) {
-            for (int j = 0; j < dim; ++j) {
-                if (j == i) {
-                    mx(i, j) = v;
-                } else {
-                    mx(i, j) = 0;
-                }
-            }
-        }
-        return mx;
-    }
-}
-
 
 // LinearL2CorStat
 
@@ -24,6 +8,7 @@ LinearL2CorStat::LinearL2CorStat(int size)
         : size_(size) {
     xxt.resize(size_, 0.);
     xy = 0.;
+    sumX = 0.;
 }
 
 LinearL2CorStat& LinearL2CorStat::appendImpl(const LinearL2CorStat &other,
@@ -32,6 +17,7 @@ LinearL2CorStat& LinearL2CorStat::appendImpl(const LinearL2CorStat &other,
         xxt[i] += other.xxt[i];
     }
     xy += other.xy;
+    sumX += other.sumX;
 }
 
 LinearL2CorStat& LinearL2CorStat::removeImpl(const LinearL2CorStat &other,
@@ -40,6 +26,7 @@ LinearL2CorStat& LinearL2CorStat::removeImpl(const LinearL2CorStat &other,
         xxt[i] -= other.xxt[i];
     }
     xy -= other.xy;
+    sumX -= other.sumX;
 }
 
 LinearL2CorStat& LinearL2CorStat::appendImpl(const float* x, float y, float weight,
@@ -50,6 +37,7 @@ LinearL2CorStat& LinearL2CorStat::appendImpl(const float* x, float y, float weig
     }
     xxt[size_ - 1] += opParams.fVal * wf;
     xy += y * wf;
+    sumX += wf;
 }
 
 LinearL2CorStat& LinearL2CorStat::removeImpl(const float* x, float y, float weight,
@@ -60,6 +48,7 @@ LinearL2CorStat& LinearL2CorStat::removeImpl(const float* x, float y, float weig
     }
     xxt[size_ - 1] -= opParams.fVal * wf;
     xy -= y * wf;
+    sumX -= wf;
 }
 
 
@@ -74,7 +63,6 @@ LinearL2Stat::LinearL2Stat(int size, int filledSize)
     w_ = 0;
     sumY_ = 0;
     sumY2_ = 0;
-    trace_ = 0;
     xtx_.resize(size * (size + 1) / 2, 0.);
     xty_.resize(size, 0.);
     sumX_.resize(size, 0.);
@@ -84,7 +72,6 @@ void LinearL2Stat::reset() {
     w_ = 0;
     sumY_ = 0;
     sumY2_ = 0;
-    trace_ = 0;
     memset(xtx_.data(), 0, (maxUpdatedPos_ * (maxUpdatedPos_ + 1) / 2) * sizeof(float));
     memset(xty_.data(), 0, maxUpdatedPos_ * sizeof(float));
     memset(sumX_.data(), 0, maxUpdatedPos_ * sizeof(float));
@@ -93,10 +80,8 @@ void LinearL2Stat::reset() {
     maxUpdatedPos_ = 0;
 }
 
-void LinearL2Stat::addNewCorrelation(const float* xtx, float xty, float w, int shift)  {
-    // don't use w for new correlations, it should be already calculated
-    // TODO add an option
-    (void)sizeof(w);
+void LinearL2Stat::addNewCorrelation(const float* xtx, float xty, float sumX, int shift)  {
+    // TODO: using y as xty and w as sumX. Bad interface :/
 
     const int corPos = filledSize_ + shift;
 
@@ -105,6 +90,7 @@ void LinearL2Stat::addNewCorrelation(const float* xtx, float xty, float w, int s
         xtx_[pos + i] += xtx[i];
     }
     xty_[corPos] += xty;
+    sumX_[corPos] += sumX;
     maxUpdatedPos_ = std::max(maxUpdatedPos_, corPos + 1);
 }
 
@@ -130,7 +116,6 @@ LinearL2Stat& LinearL2Stat::appendImpl(const LinearL2Stat &other, const LinearL2
     w_ += other.w_;
     sumY_ += other.sumY_;
     sumY2_ += other.sumY2_;
-    trace_ += other.trace_;
 
     int size = opParams.opSize;
     if (size < 0) {
@@ -154,7 +139,6 @@ LinearL2Stat& LinearL2Stat::removeImpl(const LinearL2Stat &other, const LinearL2
     w_ -= other.w_;
     sumY_ -= other.sumY_;
     sumY2_ -= other.sumY2_;
-    trace_ -= other.trace_;
 
     int size = opParams.opSize;
     if (size < 0) {
@@ -195,20 +179,21 @@ LinearL2Stat& LinearL2Stat::removeImpl(const float* x, float y, float weight,
     appendImpl(x, y, -1 * weight, opParams);
 }
 
-void LinearL2Stat::fillXTX(LinearL2Stat::EMx &XTX) const {
+void LinearL2Stat::fillXTX(LinearL2Stat::EMx& XTX, double l2reg) const {
     int basePos = 0;
     for (int i = 0; i < maxUpdatedPos_; ++i) {
         for (int j = 0; j < i + 1; ++j) {
             XTX(i, j) = xtx_[basePos + j];
             XTX(j, i) = xtx_[basePos + j];
         }
+        XTX(i, i) += l2reg;
         basePos += i + 1;
     }
 }
 
-LinearL2Stat::EMx LinearL2Stat::getXTX() const {
+LinearL2Stat::EMx LinearL2Stat::getXTX(double l2reg) const {
     EMx res(maxUpdatedPos_, maxUpdatedPos_);
-    fillXTX(res);
+    fillXTX(res, l2reg);
     return res;
 }
 
@@ -237,18 +222,16 @@ LinearL2Stat::EMx LinearL2Stat::getSumX() const {
 }
 
 LinearL2Stat::EMx LinearL2Stat::getWHat(double l2reg) const {
-    EMx XTX = getXTX();
-
     if (w_ < 1e-6) {
-        auto w = EMx(XTX.rows(), 1);
+        auto w = EMx(maxUpdatedPos_, 1);
         for (int i = 0; i < w.rows(); ++i) {
             w(i, 0) = 0;
         }
         return w;
     }
 
-    EMx XTX_r = XTX + DiagMx(XTX.rows(), l2reg);
-    return XTX_r.inverse() * getXTy();
+    EMx XTX = getXTX(l2reg);
+    return XTX.inverse() * getXTy();
 }
 
 

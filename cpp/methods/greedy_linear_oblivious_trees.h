@@ -67,8 +67,13 @@ private:
         int nUsedFeatures = usedFeaturesOrdered_.size();
         std::set<int> usedFeaturesSet(usedFeaturesOrdered_.begin(), usedFeaturesOrdered_.end());
 
-        MultiDimArray<3, Stat> stats({nThreads_, nLeaves, totalBins_}, defaultVal);
-        MultiDimArray<1, std::vector<float>> curX({nThreads_}, std::vector<float>(nUsedFeatures, 0.));
+        MultiDimArray<1, MultiDimArray<2, Stat>> stats({nThreads_});
+        MultiDimArray<1, std::vector<float>> curX({nThreads_});
+
+        parallelFor(0, nThreads_, [&](int thId) {
+            curX[thId] = std::vector<float>(nUsedFeatures, 0.);
+            stats[thId] = MultiDimArray<2, Stat>({nLeaves, totalBins_}, defaultVal);
+        });
 //        std::vector<std::vector<float>> curX(nThreads_, std::vector<float>(nUsedFeatures, 0.));
 
         // compute stats per [thread Id][leaf Id]

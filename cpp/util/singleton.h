@@ -4,7 +4,7 @@
 //the most straightforward way...
 namespace Private {
 
-    template <int N, class T>
+    template <class T, int N = 0>
     class SingletonImpl {
     public:
         T* operator->() {
@@ -33,12 +33,12 @@ namespace Private {
         friend TC& Instance();
     };
 
-    template <int N, class T>
+    template <class T, int N = 0>
     inline T& Instance() {
-        return *Private::SingletonImpl<N, T>();
+        return *Private::SingletonImpl<T, N>();
     }
 
-    template <int N, class T>
+    template <class T, int N = 0>
     class TlsSingletonImpl {
     public:
         T* operator->() {
@@ -67,18 +67,18 @@ namespace Private {
         friend TC& TlsInstance();
     };
 
-    template <int N, class T>
+    template <class T, int N = 0>
     inline T& TlsInstance() {
-        return *Private::TlsSingletonImpl<N, T>();
+        return *Private::TlsSingletonImpl<T, N>();
     }
 }
 
-template <int N, class T>
+template <class T, int N = 0>
 inline T& Singleton() {
-    return Private::Instance<N, T>();
+    return Private::Instance<T, N>();
 };
 
-template <int N, class T>
+template <class T, int N = 0>
 inline T& TlsSingleton() {
     return Private::TlsInstance<T>();
 };

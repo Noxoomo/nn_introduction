@@ -140,33 +140,6 @@ TEST(FeaturesTxt, TestTrainMseMoscow) {
 
 }
 
-TEST(Boosting, FeaturesTxtLinearTrees) {
-    auto ds = loadFeaturesTxt(PATH_PREFIX "test_data/featuresTxt/train");
-    auto test = loadFeaturesTxt(PATH_PREFIX "test_data/featuresTxt/test");
-    EXPECT_EQ(ds.samplesCount(), 12465);
-    EXPECT_EQ(ds.featuresCount(), 50);
-
-    ds.addBiasColumn();
-    test.addBiasColumn();
-
-    BinarizationConfig config;
-    config.bordersCount_ = 32;
-    auto grid = buildGrid(ds, config);
-
-    BoostingConfig boostingConfig;
-    Boosting boosting(boostingConfig, createWeakTarget(), createWeakLinearLearner(6, 0, 1.0, grid));
-
-    auto testMetricsCalcer = std::make_shared<BoostingMetricsCalcer>(test);
-    testMetricsCalcer->addMetric(L2(test), "l2-test");
-    boosting.addListener(testMetricsCalcer);
-
-    auto trainMetricsCalcer = std::make_shared<BoostingMetricsCalcer>(ds);
-    trainMetricsCalcer->addMetric(L2(ds), "l2-train");
-    boosting.addListener(trainMetricsCalcer);
-
-    L2 target(ds);
-    auto ensemble = boosting.fit(ds, target);
-}
 
 DataSet simpleDs() {
     Vec dsDataVec = VecFactory::fromVector({
@@ -235,7 +208,7 @@ TEST(BoostingLinearTrees, FeaturesTxt) {
     BoostingConfig boostingConfig;
     boostingConfig.iterations_ = 1000;
     boostingConfig.step_ = 0.05;
-    Boosting boosting(boostingConfig, createWeakTarget(), createWeakLinearLearner(6, 0, 1.0, grid));
+    Boosting boosting(boostingConfig, createWeakTarget(), createWeakLinearLearner(6, 0, 1., grid));
 
     auto testMetricsCalcer = std::make_shared<BoostingMetricsCalcer>(test);
     testMetricsCalcer->addMetric(L2(test), "l2-test");
@@ -245,7 +218,7 @@ TEST(BoostingLinearTrees, FeaturesTxt) {
     trainMetricsCalcer->addMetric(L2(ds), "l2-train");
     boosting.addListener(trainMetricsCalcer);
 
-    L2 target(ds);
+    LinearL2 target(ds);
     auto ensemble = boosting.fit(ds, target);
 }
 
@@ -262,7 +235,7 @@ TEST(BoostingLinearTrees, FeaturesTxtBootsrap) {
     BoostingConfig boostingConfig;
     boostingConfig.iterations_ = 500;
     boostingConfig.step_ = 0.05;
-    Boosting boosting(boostingConfig, createBootstrapWeakTarget(), createWeakLinearLearner(6, 0, 2.0, grid));
+    Boosting boosting(boostingConfig, createBootstrapWeakTarget(), createWeakLinearLearner(6, 0, 50.0, grid));
 
     auto testMetricsCalcer = std::make_shared<BoostingMetricsCalcer>(test);
     testMetricsCalcer->addMetric(L2(test), "l2-test");
@@ -272,6 +245,6 @@ TEST(BoostingLinearTrees, FeaturesTxtBootsrap) {
     trainMetricsCalcer->addMetric(L2(ds), "l2-train");
     boosting.addListener(trainMetricsCalcer);
 
-    L2 target(ds);
+    LinearL2 target(ds);
     auto ensemble = boosting.fit(ds, target);
 }

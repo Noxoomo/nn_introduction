@@ -31,9 +31,9 @@ private:
     c10::ThreadPool pool_;
 };
 
-template <int N>
+template <int N = 0>
 inline ThreadPool& GlobalThreadPool() {
-    return Singleton<N, ThreadPool>();
+    return Singleton<ThreadPool, N>();
 }
 
 template <class Task>

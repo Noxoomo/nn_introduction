@@ -26,10 +26,10 @@ namespace {
 }
 
 const ComputeDevice& CurrentDevice() {
-    return Singleton<0, Context>().device();
+    return Singleton<Context>().device();
 }
 
 void SetDevice(const ComputeDevice& device) {
-    Singleton<0, Context>().setDevice(device);
+    Singleton<Context>().setDevice(device);
 }
 
