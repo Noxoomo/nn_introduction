@@ -13,19 +13,19 @@
 #include <eigen3/Eigen/Core>
 
 
-//#define TIME_BLOCK_START(name)
-//#define TIME_BLOCK_END(name)
+#define TIME_BLOCK_START(name)
+#define TIME_BLOCK_END(name)
 
-#define TIME_BLOCK_START(name) \
-    auto begin##name = std::chrono::steady_clock::now(); \
-    std::cout << "Starting " << #name << std::endl;
-
-#define TIME_BLOCK_END(name) \
-    do { \
-        auto end##name = std::chrono::steady_clock::now(); \
-        auto time_ms##name = std::chrono::duration_cast<std::chrono::milliseconds>(end##name - begin##name).count(); \
-        std::cout << #name << " done in " << time_ms##name << " [ms]" << std::endl; \
-    } while (false);
+//#define TIME_BLOCK_START(name) \
+//    auto begin##name = std::chrono::steady_clock::now(); \
+//    std::cout << "Starting " << #name << std::endl;
+//
+//#define TIME_BLOCK_END(name) \
+//    do { \
+//        auto end##name = std::chrono::steady_clock::now(); \
+//        auto time_ms##name = std::chrono::duration_cast<std::chrono::milliseconds>(end##name - begin##name).count(); \
+//        std::cout << #name << " done in " << time_ms##name << " [ms]" << std::endl; \
+//    } while (false);
 
 
 class LinearObliviousTreeLeafLearner : std::enable_shared_from_this<LinearObliviousTreeLeafLearner> {
@@ -341,7 +341,7 @@ GreedyLinearObliviousTreeLearner::TSplit GreedyLinearObliviousTreeLearner::findB
         throw std::runtime_error("Failed to find the best split");
     }
 
-    std::cout << "best split: " << splitFId << " " << splitCond <<  std::endl;
+//    std::cout << "best split: " << splitFId << " " << splitCond <<  std::endl;
 
     return std::make_pair(splitFId, splitCond);
 }
@@ -444,7 +444,8 @@ void GreedyLinearObliviousTreeLearner::updateNewLeaves(
                 for (int bin = 0; bin < totalBins_; ++bin) {
                     auto &partialStat = partialStats[lId / 2][bin];
                     newLeaves_[lId]->stats_[bin].append(partialStat.xxt.data(),
-                                                        partialStat.xy, /*unused*/1.0, params);
+                                                        partialStat.xy,
+                                                        partialStat.sumX, params);
                 }
             }
         });
@@ -462,13 +463,16 @@ void GreedyLinearObliviousTreeLearner::updateNewLeaves(
         // This - and += ops will only update inner correlations -- exactly what we need
         // new feature correlation will stay the same
 
+        LinearL2StatOpParams params;
+        params.opSize = oldNUsedFeatures;
+
         if (fullUpdate_[left->id_]) {
             for (int bin = 0; bin < totalBins_; ++bin) {
-                right->stats_[bin] += parent->stats_[bin] - left->stats_[bin];
+                right->stats_[bin].append(parent->stats_[bin] - left->stats_[bin], params);
             }
         } else {
             for (int bin = 0; bin < totalBins_; ++bin) {
-                left->stats_[bin] += parent->stats_[bin] - right->stats_[bin];
+                left->stats_[bin].append(parent->stats_[bin] - right->stats_[bin], params);
             }
         }
     });

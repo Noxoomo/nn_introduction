@@ -74,6 +74,7 @@ private:
     double lambda_ = 1;
 };
 
+
 using LinearL2ScoreFunction = LinearL2LogScore;
 
 class LinearL2 : public Stub<Target, LinearL2>,

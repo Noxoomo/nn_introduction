@@ -119,7 +119,7 @@ LinearL2Stat& LinearL2Stat::appendImpl(const LinearL2Stat &other, const LinearL2
 
     int size = opParams.opSize;
     if (size < 0) {
-        size = std::min(filledSize_, other.filledSize_); // TODO filled or updated?
+        size = std::min(maxUpdatedPos_, other.maxUpdatedPos_); // TODO filled or updated?
     }
 
     int pos = 0;
@@ -142,7 +142,7 @@ LinearL2Stat& LinearL2Stat::removeImpl(const LinearL2Stat &other, const LinearL2
 
     int size = opParams.opSize;
     if (size < 0) {
-        size = std::min(filledSize_, other.filledSize_); // TODO filled or updated?
+        size = std::min(maxUpdatedPos_, other.maxUpdatedPos_); // TODO filled or updated?
     }
 
     int pos = 0;

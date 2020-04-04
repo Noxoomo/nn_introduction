@@ -66,7 +66,6 @@ TEST(FeaturesTxt, TestTrainMseFeaturesTxt) {
     auto ensemble = boosting.fit(ds, target);
 }
 
-
 TEST(FeaturesTxt, TestTrainWithBootstrapMseFeaturesTxt) {
     auto ds = loadFeaturesTxt(PATH_PREFIX "test_data/featuresTxt/train");
     auto test = loadFeaturesTxt(PATH_PREFIX "test_data/featuresTxt/test");
@@ -85,7 +84,6 @@ TEST(FeaturesTxt, TestTrainWithBootstrapMseFeaturesTxt) {
     boosting.addListener(metricsCalcer);
     L2 target(ds);
     auto ensemble = boosting.fit(ds, target);
-
 }
 
 TEST(FeaturesTxt, TestTrainWithBootstrapLogLikelihoodFeaturesTxt) {
@@ -184,7 +182,7 @@ TEST(BoostingLinearTrees, SimpleDs) {
     trainMetricsCalcer->addMetric(L2(ds), "l2-train");
     boosting.addListener(trainMetricsCalcer);
 
-    LinearL2 target(ds);
+    L2 target(ds);
     auto ensemble = boosting.fit(ds, target);
 
     for (int i = 0; i < ds.samplesCount(); ++i) {
@@ -206,9 +204,9 @@ TEST(BoostingLinearTrees, FeaturesTxt) {
     auto grid = buildGrid(ds, config);
 
     BoostingConfig boostingConfig;
-    boostingConfig.iterations_ = 1000;
+    boostingConfig.iterations_ = 500;
     boostingConfig.step_ = 0.05;
-    Boosting boosting(boostingConfig, createWeakTarget(), createWeakLinearLearner(6, 0, 1., grid));
+    Boosting boosting(boostingConfig, createWeakTarget(), createWeakLinearLearner(6, 0, 2., grid));
 
     auto testMetricsCalcer = std::make_shared<BoostingMetricsCalcer>(test);
     testMetricsCalcer->addMetric(L2(test), "l2-test");
@@ -218,7 +216,7 @@ TEST(BoostingLinearTrees, FeaturesTxt) {
     trainMetricsCalcer->addMetric(L2(ds), "l2-train");
     boosting.addListener(trainMetricsCalcer);
 
-    LinearL2 target(ds);
+    L2 target(ds);
     auto ensemble = boosting.fit(ds, target);
 }
 
@@ -233,9 +231,9 @@ TEST(BoostingLinearTrees, FeaturesTxtBootsrap) {
     auto grid = buildGrid(ds, config);
 
     BoostingConfig boostingConfig;
-    boostingConfig.iterations_ = 500;
-    boostingConfig.step_ = 0.05;
-    Boosting boosting(boostingConfig, createBootstrapWeakTarget(), createWeakLinearLearner(6, 0, 50.0, grid));
+    boostingConfig.iterations_ = 2000;
+    boostingConfig.step_ = 0.005;
+    Boosting boosting(boostingConfig, createBootstrapWeakTarget(), createWeakLinearLearner(6, 0, 2.0, grid));
 
     auto testMetricsCalcer = std::make_shared<BoostingMetricsCalcer>(test);
     testMetricsCalcer->addMetric(L2(test), "l2-test");
