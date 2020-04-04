@@ -6,20 +6,29 @@
 
 struct TestStruct {
     TestStruct() {
+        std::cout << "created " << this << std::endl;
         x.resize(size, 0.);
         for (int i = 0; i < size; ++i) {
             x[i] = i;
         }
     }
 
-    TestStruct(const TestStruct& other) = default;
+    TestStruct(const TestStruct& other) {
+        std::cout << "copy-created " << this << std::endl;
+        size = other.size;
+        x = other.x;
+    };
 
     TestStruct(TestStruct&& other) {
         std::cout << "move" << std::endl;
     }
 
     TestStruct(const TestStruct&& other) {
-        std::cout << "move" << std::endl;
+        std::cout << "const move" << std::endl;
+    }
+
+    ~TestStruct() {
+        std::cout << "deleted " << this << std::endl;
     }
 
     int size = 10;
@@ -55,7 +64,8 @@ TEST(MultiDimArray, Base) {
 
     std::cout << 0 << std::endl;
     TestStruct defaultVal;
-    MultiDimArray<5, TestStruct> arrCheck({51, 13, 3, 22, 5}, defaultVal);
+//    MultiDimArray<5, TestStruct> arrCheck({51, 13, 3, 22, 5}, defaultVal);
+    MultiDimArray<5, TestStruct> arrCheck({4, 4, 3, 3, 4}, defaultVal);
     std::cout << 1 << std::endl;
     auto arr2 = arrCheck[2][2][2][2].copy();
     std::cout << 2 << std::endl;
@@ -65,4 +75,5 @@ TEST(MultiDimArray, Base) {
     for (int k = 0; k < arr3[2].size; ++k) {
         std::cout << std::setw(3) << arr3[2].x[k] << " ";
     }
+    std::cout << std::endl;
 }

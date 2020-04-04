@@ -25,7 +25,7 @@ struct multi_dim_array_idxs {
         return shifts_[pos] * sizes_[pos];
     }
 
-    multi_dim_array_idxs copyFrom(int from) {
+    multi_dim_array_idxs copyFrom(int from) const {
         std::vector<int> newSizes(sizes_.begin() + from, sizes_.end());
         return multi_dim_array_idxs(newSizes);
     }
@@ -65,19 +65,28 @@ public:
     }
 
     MultiDimArray<N, T>& operator=(MultiDimArray<N, T>&& other) noexcept {
+        data_ = nullptr;
+        idxs_ = nullptr;
+        shift_pos_ = 0;
         std::swap(data_, other.data_);
         std::swap(idxs_, other.idxs_);
-        shift_pos_ = other.shift_pos_;
+        std::swap(shift_pos_, other.shift_pos_);
     }
 
     MultiDimArray(const MultiDimArray<N, T>& other) = delete;
-    MultiDimArray(MultiDimArray<N, T>&& other) noexcept = default;
+    MultiDimArray(MultiDimArray<N, T>&& other) noexcept {
+        data_ = nullptr;
+        idxs_ = nullptr;
+        shift_pos_ = 0;
+        std::swap(data_, other.data_);
+        std::swap(idxs_, other.idxs_);
+        std::swap(shift_pos_, other.shift_pos_);
+    };
 
     MultiDimArray<N, T> copy() const {
-        int size = idxs_->nElem(shift_pos_);
-        void* rawData = operator new[](size * sizeof(T));
+        void* rawData = operator new[](size() * sizeof(T));
         auto newData = static_cast<T*>(rawData);
-        for (int i = 0; i < size; ++i) {
+        for (int i = 0; i < size(); ++i) {
             new(newData + i) T(data_[i]);
         }
         auto* newIdxs = new multi_dim_array_idxs(idxs_->copyFrom(shift_pos_));
@@ -88,13 +97,16 @@ public:
         return data_;
     }
 
-    int size() const {
+    [[nodiscard]] int size() const {
         return idxs_->nElem(shift_pos_);
     }
 
     ~MultiDimArray() {
-        if (shift_pos_ == 0) {
-            delete data_;
+        if (shift_pos_ == 0 && data_) {
+            for (int i = 0; i < size(); ++i) {
+                (data_ + i)->~T();
+            }
+            operator delete[](data_);
             delete idxs_;
         }
     }
@@ -129,31 +141,40 @@ public:
     }
 
     MultiDimArray(const MultiDimArray<1, T>& other) = delete;
-    MultiDimArray(MultiDimArray<1, T>&& other) noexcept = default;
+    MultiDimArray(MultiDimArray<1, T>&& other) noexcept {
+        data_ = nullptr;
+        idxs_ = nullptr;
+        shift_pos_ = 0;
+        std::swap(data_, other.data_);
+        std::swap(idxs_, other.idxs_);
+        std::swap(shift_pos_, other.shift_pos_);
+    };
 
-    T& operator[](int idx) {
+    T& operator[](int idx) const {
         return data_[idx];
     }
 
     MultiDimArray<1, T>& operator=(MultiDimArray<1, T>&& other) noexcept {
+        data_ = nullptr;
+        idxs_ = nullptr;
+        shift_pos_ = 0;
         std::swap(data_, other.data_);
         std::swap(idxs_, other.idxs_);
-        shift_pos_ = other.shift_pos_;
+        std::swap(shift_pos_, other.shift_pos_);
     }
 
     T* data() const {
         return data_;
     }
 
-    int size() const {
+    [[nodiscard]] int size() const {
         return idxs_->nElem(shift_pos_);
     }
 
     MultiDimArray<1, T> copy() const {
-        int size = idxs_->nElem(shift_pos_);
-        void* rawData = operator new[](size * sizeof(T));
+        void* rawData = operator new[](size() * sizeof(T));
         auto newData = static_cast<T*>(rawData);
-        for (int i = 0; i < size; ++i) {
+        for (int i = 0; i < size(); ++i) {
             new(newData + i) T(data_[i]);
         }
         auto* newIdxs = new multi_dim_array_idxs(idxs_->copyFrom(shift_pos_));
@@ -161,14 +182,17 @@ public:
     }
 
     ~MultiDimArray() {
-        if (shift_pos_ == 0) {
-            delete data_;
+        if (shift_pos_ == 0 && data_) {
+            for (int i = 0; i < size(); ++i) {
+                (data_ + i)->~T();
+            }
+            operator delete[](data_);
             delete idxs_;
         }
     }
 
 private:
-    T* data_;
-    multi_dim_array_idxs* idxs_;
-    int shift_pos_;
+    T* data_ = nullptr;
+    multi_dim_array_idxs* idxs_ = nullptr;
+    int shift_pos_ = 0;
 };
