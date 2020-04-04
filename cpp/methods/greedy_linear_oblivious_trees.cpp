@@ -295,7 +295,8 @@ void GreedyLinearObliviousTreeLearner::updateNewCorrelations(
 
     // update stats with this correlations
     parallelFor(0, totalBins_, [&](int bin) {
-        int origFId = absBinToFId_[bin];
+        int fId = absBinToFId_[bin];
+        int origFId = grid_->origFeatureIndex(fId);
         if (usedFeatures_.count(origFId)) return;
 
         LinearL2StatOpParams params = {};
