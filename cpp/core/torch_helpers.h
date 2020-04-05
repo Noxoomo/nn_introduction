@@ -30,7 +30,7 @@ namespace TorchHelpers {
 
     inline torch::TensorOptions tensorOptionsOnDevice(
         const ComputeDevice device,
-        torch::ScalarType dtype = torch::ScalarType::Float) {
+        torch::ScalarType dtype = torch::ScalarType::Double) {
         torch::TensorOptions baseOptions = [&]() {
             return torch::device(torchDevice(device));
         }();

@@ -8,9 +8,9 @@ namespace {
     using AdditiveStatisticsOpEmptyParams = struct {};
 
     struct AdditiveStatisticsDefaultTypeTraits {
-        using ImplSampleType = const float*;
-        using ImplTargetType = float;
-        using ImplWeightType = float;
+        using ImplSampleType = const double*;
+        using ImplTargetType = double;
+        using ImplWeightType = double;
     };
 }
 

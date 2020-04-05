@@ -12,9 +12,9 @@
 #include <functional>
 #include <util/array_ref.h>
 
-class Vec : public Buffer<float> {
+class Vec : public Buffer<double> {
 public:
-    explicit Vec(int64_t dim, float value = 0);
+    explicit Vec(int64_t dim, double value = 0);
 
     Vec()
     : Vec(0) {
@@ -25,16 +25,16 @@ public:
     Vec(Vec& other) = default;
 
     Vec(const Vec& other)
-        : Buffer<float>(other) {
+        : Buffer<double>(other) {
     }
 
     explicit Vec(int64_t dim, const ComputeDevice& device);
 
     explicit Vec(torch::Tensor impl)
-        : Buffer<float>(std::move(impl)) {
+        : Buffer<double>(std::move(impl)) {
     }
 
-    Vec append(float val) const;
+    Vec append(double val) const;
 
     void set(int64_t index, double value);
 

@@ -12,10 +12,10 @@
 #include <iostream>
 
 struct LinearL2CorStatTypeTraits {
-    using ImplFeatureType = float;
+    using ImplFeatureType = double;
     using ImplSampleType = const ImplFeatureType*;
-    using ImplTargetType = float;
-    using ImplWeightType = float;
+    using ImplTargetType = double;
+    using ImplWeightType = double;
 };
 
 struct LinearL2CorStatOpParams {
@@ -33,9 +33,9 @@ struct LinearL2CorStat : public AdditiveStatistics<LinearL2CorStat,
     LinearL2CorStat& removeImpl(SampleType x, TargetType y, WeightType weight, const LinearL2CorStatOpParams& opParams);
 
     int size_;
-    std::vector<float> xxt;
-    float xy;
-    float sumX;
+    std::vector<double> xxt;
+    double xy;
+    double sumX;
 };
 
 
@@ -50,9 +50,9 @@ struct LinearL2StatOpParams {
 };
 
 struct LinearL2StatTypeTraits {
-    using ImplSampleType = const float*; // TODO CorStat
-    using ImplTargetType = float;
-    using ImplWeightType = float;
+    using ImplSampleType = const double*; // TODO CorStat
+    using ImplTargetType = double;
+    using ImplWeightType = double;
 };
 
 struct LinearL2Stat : public AdditiveStatistics<LinearL2Stat, LinearL2StatTypeTraits, LinearL2StatOpParams> {
@@ -100,12 +100,12 @@ struct LinearL2Stat : public AdditiveStatistics<LinearL2Stat, LinearL2StatTypeTr
     int filledSize_;
     int maxUpdatedPos_;
 
-    float w_;
-    float sumY_;
-    float sumY2_;
-    std::vector<float> xtx_;
-    std::vector<float> xty_;
-    std::vector<float> sumX_;
+    double w_;
+    double sumY_;
+    double sumY2_;
+    std::vector<double> xtx_;
+    std::vector<double> xty_;
+    std::vector<double> sumX_;
 
     friend std::ostream& operator<<(std::ostream& os, const LinearL2Stat& s);
 };

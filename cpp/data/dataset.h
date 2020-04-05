@@ -27,8 +27,8 @@ public:
     void copyColumn(int fIndex, Vec* col) const {
         assert(col->dim() == samplesCount());
         assert(col->isContiguous());
-        VecRef<float> writeDst = col->arrayRef();
-        data_.iterateOverColumn(fIndex, [&](int64_t lineIdx, float val) {
+        VecRef<double> writeDst = col->arrayRef();
+        data_.iterateOverColumn(fIndex, [&](int64_t lineIdx, double val) {
             writeDst[lineIdx] = val;
         });
     }
@@ -49,7 +49,7 @@ public:
         data_.iterateOverColumn(fIndex, visitor);
     }
 
-    void fillSample(int64_t line, const std::vector<int>& indxs, std::vector<float>& x) const {
+    void fillSample(int64_t line, const std::vector<int>& indxs, std::vector<double>& x) const {
         int64_t basePos = featuresCount() * line;
 
         int i = 0;
@@ -59,7 +59,7 @@ public:
         }
     }
 
-    float fVal(int64_t line, int32_t fId) const {
+    double fVal(int64_t line, int32_t fId) const {
         return dataRef_[featuresCount() * line + fId];
     }
 
@@ -102,10 +102,10 @@ public:
         return target_;
     }
 
-    const float* samples() const {
+    const double* samples() const {
         return data_.arrayRef().data();
     }
-    const float* labels() const {
+    const double* labels() const {
         return target_.arrayRef().data();
     }
 
@@ -114,6 +114,6 @@ public:
     }
 private:
     Mx data_;
-    ConstVecRef<float> dataRef_;
+    ConstVecRef<double> dataRef_;
     Vec target_;
 };

@@ -12,8 +12,8 @@ DataSet loadFeaturesTxt(const std::string& file) {
         throw std::runtime_error("Failed to open file " + file);
     }
 
-    std::vector<float> pool;
-    std::vector<float> target;
+    std::vector<double> pool;
+    std::vector<double> target;
 
     int64_t linesCount = 0;
     int64_t fCount = 0;
@@ -22,7 +22,7 @@ DataSet loadFeaturesTxt(const std::string& file) {
 
     while (std::getline(in, line) && line.size()) {
         std::istringstream parseTokens(line);
-        float t = 0;
+        double t = 0;
 //qid
         parseTokens>>tempString;
 //target
@@ -51,7 +51,7 @@ DataSet loadFeaturesTxt(const std::string& file) {
     std::cout << "fCount  #" << fCount << std::endl;
 
     auto data = VecFactory::create(ComputeDeviceType::Cpu, pool.size());
-    VecRef<float> dst = data.arrayRef();
+    VecRef<double> dst = data.arrayRef();
     std::copy(pool.begin(), pool.end(), dst.begin());
 
 

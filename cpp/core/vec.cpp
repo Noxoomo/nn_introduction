@@ -5,20 +5,20 @@
 
 
 void Vec::set(int64_t index, double value) {
-    data().accessor<float, 1>()[index] = value;
+    data().accessor<double, 1>()[index] = value;
 }
 
 double Vec::get(int64_t index) const {
-    return data().accessor<float, 1>()[index];
+    return data().accessor<double, 1>()[index];
 }
 
 int64_t Vec::dim() const {
     return TorchHelpers::totalSize(data());
 }
 
-Vec Vec::append(float val) const {
+Vec Vec::append(double val) const {
     auto data = this->data();
-    auto valT = torch::ones({1}, torch::kFloat);
+    auto valT = torch::ones({1}, torch::kFloat64);
     valT *= val;
     auto newData = torch::cat({data, valT});
     auto res = Vec(0);
@@ -28,13 +28,13 @@ Vec Vec::append(float val) const {
 
 //
 ////TODO: should be placeholder
-Vec::Vec(int64_t dim, float value)
-    : Buffer<float>(torch::ones({dim}, TorchHelpers::tensorOptionsOnDevice(CurrentDevice())) * value) {
+Vec::Vec(int64_t dim, double value)
+    : Buffer<double>(torch::ones({dim}, TorchHelpers::tensorOptionsOnDevice(CurrentDevice())) * value) {
 
 }
 
 Vec::Vec(int64_t dim, const ComputeDevice& device)
-    : Buffer<float>(torch::zeros({dim}, TorchHelpers::tensorOptionsOnDevice(device))) {
+    : Buffer<double>(torch::zeros({dim}, TorchHelpers::tensorOptionsOnDevice(device))) {
 }
 
 Vec Vec::slice(int64_t from, int64_t size) {
@@ -144,25 +144,25 @@ Vec operator^(const Vec& left, const Vec& right) {
     return result;
 }
 Vec operator>(const Vec& left, Scalar right) {
-    return Vec(left.data().gt(right).to(torch::ScalarType::Float));
+    return Vec(left.data().gt(right).to(torch::ScalarType::Double));
 }
 Vec operator<(const Vec& left, Scalar right) {
-    return Vec(left.data().lt(right).to(torch::ScalarType::Float));
+    return Vec(left.data().lt(right).to(torch::ScalarType::Double));
 }
 Vec eq(const Vec& left, Scalar right) {
-    return Vec(left.data().eq(right).to(torch::ScalarType::Float));
+    return Vec(left.data().eq(right).to(torch::ScalarType::Double));
 }
 Vec eq(const Vec& left, const Vec& right) {
-    return Vec(left.data().eq(right).to(torch::ScalarType::Float));
+    return Vec(left.data().eq(right).to(torch::ScalarType::Double));
 }
 Vec operator!=(const Vec& left, Scalar right) {
-    return Vec(left.data().ne(right).to(torch::ScalarType::Float));
+    return Vec(left.data().ne(right).to(torch::ScalarType::Double));
 }
 
 double l2(const Vec& x) {
     double res = 0;
     auto xRef = x.arrayRef();
-    for (float i : xRef) {
+    for (double i : xRef) {
         res += i * i;
     }
     return res;

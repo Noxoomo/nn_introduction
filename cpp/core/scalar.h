@@ -41,7 +41,7 @@ public:
         } else {
             assert(value_.index() == 1);
             const torch::Tensor& result = std::get<1>(value_);
-            return result.data_ptr<float>()[0];
+            return result.data_ptr<double>()[0];
         }
     }
 

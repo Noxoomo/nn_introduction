@@ -19,8 +19,8 @@ public:
             , w_(std::move(w)) {
     }
 
-    double value(const ConstVecRef<float>& x) const {
-        float res = 0.0;
+    double value(const ConstVecRef<double>& x) const {
+        double res = 0.0;
 
         for (int i = 0; i < w_.size(); ++i) {
             int f = usedFeaturesInOrder_[i];
@@ -88,7 +88,7 @@ public:
 private:
     friend class GreedyLinearObliviousTreeLearner;
 
-    double value(const ConstVecRef<float>& x) const;
+    double value(const ConstVecRef<double>& x) const;
 
 private:
     GridPtr grid_;

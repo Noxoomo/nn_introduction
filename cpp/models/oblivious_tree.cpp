@@ -14,7 +14,7 @@ void ObliviousTree::applyBinarizedRow(const Buffer<uint8_t>& x, Vec to) const {
         }
     }
 
-    to.set(0, static_cast<float>(leaves_.get(bin)));
+    to.set(0, static_cast<double>(leaves_.get(bin)));
 }
 
 void ObliviousTree::applyToBds(const BinarizedDataSet& ds, Mx to, ApplyType type) const {
@@ -34,8 +34,8 @@ void ObliviousTree::applyToBds(const BinarizedDataSet& ds, Mx to, ApplyType type
     }
 
 
-    VecRef<float> dstArray = static_cast<Vec>(to).arrayRef();
-    ConstVecRef<float> leavesRef = leaves_.arrayRef();
+    VecRef<double> dstArray = static_cast<Vec>(to).arrayRef();
+    ConstVecRef<double> leavesRef = leaves_.arrayRef();
 
     if (type == ApplyType::Set) {
         //TODO(noxoomo): this is gather primitive

@@ -41,20 +41,20 @@ private:
 
     void buildRoot(const BinarizedDataSet& bds,
                    const DataSet& ds,
-                   ConstVecRef<float> ys,
-                   ConstVecRef<float> ws);
+                   ConstVecRef<double> ys,
+                   ConstVecRef<double> ws);
     void updateNewCorrelations(
             const BinarizedDataSet& bds,
             const DataSet& ds,
-            ConstVecRef<float> ys,
-            ConstVecRef<float> ws);
+            ConstVecRef<double> ys,
+            ConstVecRef<double> ws);
     TSplit findBestSplit(const Target& target);
     void initNewLeaves(TSplit split);
     void updateNewLeaves(const BinarizedDataSet& bds,
                          const DataSet& ds,
                          int oldNUsedFeatures,
-                         ConstVecRef<float> ys,
-                         ConstVecRef<float> ws);
+                         ConstVecRef<double> ys,
+                         ConstVecRef<double> ws);
 
     void resetState();
 
@@ -68,10 +68,10 @@ private:
         int nUsedFeatures = usedFeaturesOrdered_.size();
 
         MultiDimArray<1, MultiDimArray<2, Stat>> stats({nThreads_});
-        MultiDimArray<1, std::vector<float>> curX({nThreads_});
+        MultiDimArray<1, std::vector<double>> curX({nThreads_});
 
         parallelFor(0, nThreads_, [&](int thId) {
-            curX[thId] = std::vector<float>(nUsedFeatures, 0.);
+            curX[thId] = std::vector<double>(nUsedFeatures, 0.);
             stats[thId] = MultiDimArray<2, Stat>({nLeaves, totalBins_}, defaultVal);
         });
 
@@ -127,7 +127,7 @@ private:
 
     bool isDsCached_ = false;
     std::vector<Vec> fColumns_;
-    std::vector<ConstVecRef<float>> fColumnsRefs_;
+    std::vector<ConstVecRef<double>> fColumnsRefs_;
 
     std::vector<int32_t> leafId_;
     std::vector<std::shared_ptr<LinearObliviousTreeLeafLearner>> leaves_;
