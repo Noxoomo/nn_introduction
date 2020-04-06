@@ -50,17 +50,23 @@ public:
         return samplesCount_;
     }
 
-    std::vector<uint8_t> sampleBins(int64_t sampleId) const {
-        std::vector<uint8_t> res;
-        for (int fId = 0; fId < (int)grid_->nzFeaturesCount(); ++fId) {
-            int64_t groupIdx = featureToGroup_.at(fId);
-            const auto& groupInfo = groups_[groupIdx];
-            auto groupBundle = group(groupIdx);
-            const int64_t fIndexInGroup = fId - groupInfo.firstFeature_;
-
-            res.push_back(groupBundle[sampleId * groupInfo.groupSize() + fIndexInGroup]);
+    ConstVecRef<uint8_t> sampleBins(int64_t sampleId) const {
+        if (groups_.size() != 1) {
+            throw std::runtime_error("only 1 group is supported (for now)");
         }
-        return res;
+
+        return ConstVecRef<uint8_t>(data_.arrayRef().data() + groups_[0].groupOffset_ * samplesCount_ +
+                groups_[0].groupSize() * sampleId,grid_->nzFeaturesCount());
+//        std::vector<uint8_t> res;
+//        for (int fId = 0; fId < (int)grid_->nzFeaturesCount(); ++fId) {
+//            int64_t groupIdx = featureToGroup_.at(fId);
+//            const auto& groupInfo = groups_[groupIdx];
+//            auto groupBundle = group(groupIdx);
+//            const int64_t fIndexInGroup = fId - groupInfo.firstFeature_;
+//
+//            res.push_back(groupBundle[sampleId * groupInfo.groupSize() + fIndexInGroup]);
+//        }
+//        return res;
     }
 
     template <class Visitor>

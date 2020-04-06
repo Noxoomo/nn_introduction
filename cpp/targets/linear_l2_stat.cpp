@@ -176,7 +176,8 @@ LinearL2Stat& LinearL2Stat::appendImpl(const float* x, float y, float weight,
 
 LinearL2Stat& LinearL2Stat::removeImpl(const float* x, float y, float weight,
                                        const LinearL2StatOpParams &opParams) {
-    appendImpl(x, y, -1 * weight, opParams);
+    throw std::runtime_error("Unimplemented");
+//    appendImpl(x, y, -1 * weight, opParams);
 }
 
 void LinearL2Stat::fillXTX(LinearL2Stat::EMx& XTX, double l2reg) const {
@@ -234,6 +235,19 @@ LinearL2Stat::EMx LinearL2Stat::getWHat(double l2reg) const {
     return XTX.inverse() * getXTy();
 }
 
+LinearL2Stat::EMx LinearL2Stat::fit(double l2reg) const {
+    if (w_ < 1e-6) {
+        auto w = EMx(filledSize_, 1);
+        for (int i = 0; i < w.rows(); ++i) {
+            w(i, 0) = 0;
+        }
+        return w;
+    }
+
+    EMx XTX(filledSize_, filledSize_);
+    fillXTX(XTX, l2reg);
+    return XTX.inverse() * getXTy();
+}
 
 LinearL2GridStat::LinearL2GridStat(int nBins, int size, int filledSize)
         : nBins_(nBins)

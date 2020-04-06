@@ -60,8 +60,8 @@ public:
         const float weight = s.w_;
         if (weight < 2)
             return 0;
-        LinearL2Stat::EMx wHat = s.getWHat(lambda_);
-        LinearL2Stat::EMx xy = s.getXTy();
+        LinearL2Stat::EMx wHat = s.getWHat(lambda_); // n x 1 matrix
+        LinearL2Stat::EMx xy = s.getXTy(); // n x 1 matrix
         xy -= (s.sumY_ / weight) * s.getSumX();
         xy *= 1. / weight;
         float scoreFromLinear = weight * (wHat.transpose() * xy)(0, 0);
@@ -75,6 +75,7 @@ private:
 };
 
 
+//using LinearL2ScoreFunction = RegularizedLinearL2Score;
 using LinearL2ScoreFunction = LinearL2LogScore;
 
 class LinearL2 : public Stub<Target, LinearL2>,

@@ -37,7 +37,7 @@ public:
 private:
     void cacheDs(const DataSet& ds);
 
-    using TSplit = std::pair<int32_t, int32_t>;
+    using TSplit = std::tuple<double, int32_t, int32_t>;
 
     void buildRoot(const BinarizedDataSet& bds,
                    const DataSet& ds,
@@ -65,7 +65,6 @@ private:
             const Stat& defaultVal,
             UpdaterT updater) {
         int nUsedFeatures = usedFeaturesOrdered_.size();
-        std::set<int> usedFeaturesSet(usedFeaturesOrdered_.begin(), usedFeaturesOrdered_.end());
 
         MultiDimArray<1, MultiDimArray<2, Stat>> stats({nThreads_});
         MultiDimArray<1, std::vector<float>> curX({nThreads_});
@@ -74,7 +73,6 @@ private:
             curX[thId] = std::vector<float>(nUsedFeatures, 0.);
             stats[thId] = MultiDimArray<2, Stat>({nLeaves, totalBins_}, defaultVal);
         });
-//        std::vector<std::vector<float>> curX(nThreads_, std::vector<float>(nUsedFeatures, 0.));
 
         // compute stats per [thread Id][leaf Id]
         parallelFor(0, nSamples_, [&](int thId, int sampleId) {

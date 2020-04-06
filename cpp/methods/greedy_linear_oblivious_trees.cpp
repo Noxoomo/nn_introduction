@@ -49,7 +49,7 @@ public:
         return target.score(leftStat) + target.score(rightStat);
     }
 
-    void fit(float l2reg) {
+    void fit(double l2reg) {
         w_ = stats_[grid_->totalBins() - 1].getWHat(l2reg);
     }
 
@@ -147,6 +147,8 @@ ModelPtr GreedyLinearObliviousTreeLearner::fit(const DataSet& ds, const Target& 
     buildRoot(bds, ds, ys, ws);
     TIME_BLOCK_END(BUILDING_ROOT)
 
+    double currentScore = 1e+9;
+
     // Root is built
 
     for (unsigned int d = 0; d < maxDepth_; ++d) {
@@ -160,10 +162,17 @@ ModelPtr GreedyLinearObliviousTreeLearner::fit(const DataSet& ds, const Target& 
 
         TIME_BLOCK_START(FIND_BEST_SPLIT)
         auto split = findBestSplit(target);
-        int32_t splitFId = split.first;
-        int32_t splitCond = split.second;
+
+        double splitScore = std::get<0>(split);
+        if (splitScore >= currentScore - 1e-9) {
+            break;
+        }
+
+        currentScore = splitScore;
+        int32_t splitFId = std::get<1>(split);
+        int32_t splitCond = std::get<2>(split);
         tree->splits_.emplace_back(std::make_tuple(splitFId, splitCond));
-        splits_.insert(std::make_pair(splitFId, splitCond));
+        splits_.insert(split);
 
         int oldNUsedFeatures = usedFeatures_.size();
 
@@ -184,12 +193,13 @@ ModelPtr GreedyLinearObliviousTreeLearner::fit(const DataSet& ds, const Target& 
 
         leaves_ = newLeaves_;
         newLeaves_.clear();
+
     }
 
     TIME_BLOCK_START(FINAL_FIT)
     parallelFor(0, leaves_.size(), [&](int lId) {
         auto& l = leaves_[lId];
-        l->fit((float)l2reg_);
+        l->fit(l2reg_);
     });
     TIME_BLOCK_END(FINAL_FIT)
 
@@ -310,13 +320,13 @@ void GreedyLinearObliviousTreeLearner::updateNewCorrelations(
 
 GreedyLinearObliviousTreeLearner::TSplit GreedyLinearObliviousTreeLearner::findBestSplit(
         const Target& target) {
-    float bestScore = 1e9;
+    double bestScore = 1e9;
     int32_t splitFId = -1;
     int32_t splitCond = -1;
 
     const auto& linearL2Target = dynamic_cast<const LinearL2&>(target);
 
-    MultiDimArray<2, float> splitScores({fCount_, totalCond_});
+    MultiDimArray<2, double> splitScores({fCount_, totalCond_});
 
     // TODO can parallelize by totalBins
     parallelFor(0, fCount_, [&](int fId) {
@@ -329,8 +339,8 @@ GreedyLinearObliviousTreeLearner::TSplit GreedyLinearObliviousTreeLearner::findB
 
     for (int fId = 0; fId < fCount_; ++fId) {
         for (int cond = 0; cond < grid_->conditionsCount(fId); ++cond) {
-            float sScore = splitScores[fId][cond];
-            if (sScore < bestScore && splits_.count(std::make_pair(fId, cond)) == 0) {
+            double sScore = splitScores[fId][cond];
+            if (sScore < bestScore) {
                 bestScore = sScore;
                 splitFId = fId;
                 splitCond = cond;
@@ -344,22 +354,22 @@ GreedyLinearObliviousTreeLearner::TSplit GreedyLinearObliviousTreeLearner::findB
 
 //    std::cout << "best split: " << splitFId << " " << splitCond <<  std::endl;
 
-    return std::make_pair(splitFId, splitCond);
+    return std::make_tuple(bestScore, splitFId, splitCond);
 }
 
 void GreedyLinearObliviousTreeLearner::initNewLeaves(GreedyLinearObliviousTreeLearner::TSplit split) {
     newLeaves_.clear();
 
+    auto splitFId = std::get<1>(split);
+    auto splitCond = std::get<2>(split);
+
     for (auto& l : leaves_) {
-        auto newLeavesPair = l->split(split.first, split.second, usedFeatures_.size());
+        auto newLeavesPair = l->split(splitFId, splitCond, usedFeatures_.size());
         newLeaves_.emplace_back(newLeavesPair.first);
         newLeaves_.emplace_back(newLeavesPair.second);
     }
 
-    int32_t splitFId = split.first;
-    int32_t splitCond = split.second;
-
-    float border = grid_->borders(splitFId).at(splitCond);
+    auto border = grid_->borders(splitFId).at(splitCond);
     auto fColumnRef = fColumnsRefs_[splitFId];
 
     for (int i = 0; i < (int)leaves_.size(); ++i) {

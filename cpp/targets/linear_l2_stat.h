@@ -38,9 +38,8 @@ struct LinearL2CorStat : public AdditiveStatistics<LinearL2CorStat,
 };
 
 
-
 struct LinearL2StatOpParams {
-    int opSize = -1; // will be treated as filledSize
+    int opSize = -1;
     int shift = 0;
 
     enum VecAddMode {
@@ -95,6 +94,7 @@ struct LinearL2Stat : public AdditiveStatistics<LinearL2Stat, LinearL2StatTypeTr
     [[nodiscard]] EMx getSumX() const;
 
     [[nodiscard]] EMx getWHat(double l2reg) const;
+    [[nodiscard]] EMx fit(double l2reg) const;
 
     int size_;
     int filledSize_;

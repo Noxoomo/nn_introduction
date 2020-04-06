@@ -38,7 +38,7 @@ double LinearObliviousTree::value(const ConstVecRef<float>& x) const {
     unsigned int lId = 0;
 
     for (int i = 0; i < splits_.size(); ++i) {
-        const auto &s = splits_[i];
+        const auto& s = splits_[i];
         auto fId = std::get<0>(s);
         auto condId = std::get<1>(s);
 
