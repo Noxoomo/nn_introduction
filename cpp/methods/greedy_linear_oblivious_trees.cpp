@@ -49,8 +49,8 @@ public:
         return target.score(leftStat) + target.score(rightStat);
     }
 
-    void fit(double l2reg) {
-        w_ = stats_[grid_->totalBins() - 1].getWHat(l2reg);
+    void fit(double l2reg, int size) {
+        w_ = stats_[grid_->totalBins() - 1].getWHat(l2reg, size);
     }
 
     std::pair<std::shared_ptr<LinearObliviousTreeLeafLearner>, std::shared_ptr<LinearObliviousTreeLeafLearner>>
@@ -152,6 +152,10 @@ ModelPtr GreedyLinearObliviousTreeLearner::fit(const DataSet& ds, const Target& 
     // Root is built
 
     for (unsigned int d = 0; d < maxDepth_; ++d) {
+//        for (int i = 0; i < nSamples_; ++i) {
+//            std::cout << i << " goes to " << leafId_[i] << std::endl;
+//        }
+
         TIME_BLOCK_START(UPDATE_NEW_CORRELATIONS)
         updateNewCorrelations(bds, ds, ys, ws);
         TIME_BLOCK_END(UPDATE_NEW_CORRELATIONS)
@@ -193,13 +197,12 @@ ModelPtr GreedyLinearObliviousTreeLearner::fit(const DataSet& ds, const Target& 
 
         leaves_ = newLeaves_;
         newLeaves_.clear();
-
     }
 
     TIME_BLOCK_START(FINAL_FIT)
     parallelFor(0, leaves_.size(), [&](int lId) {
         auto& l = leaves_[lId];
-        l->fit(l2reg_);
+        l->fit(l2reg_, 1);
     });
     TIME_BLOCK_END(FINAL_FIT)
 
@@ -340,6 +343,7 @@ GreedyLinearObliviousTreeLearner::TSplit GreedyLinearObliviousTreeLearner::findB
     for (int fId = 0; fId < fCount_; ++fId) {
         for (int cond = 0; cond < grid_->conditionsCount(fId); ++cond) {
             double sScore = splitScores[fId][cond];
+//            std::cout << "split score fId=" << fId << ", cond=" << cond << ": " << sScore << std::endl;
             if (sScore < bestScore) {
                 bestScore = sScore;
                 splitFId = fId;
@@ -439,7 +443,7 @@ void GreedyLinearObliviousTreeLearner::updateNewLeaves(
         MultiDimArray<2, LinearL2CorStat> partialStats = ComputeStats<LinearL2CorStat>(
                 leaves_.size(), partialLeafIds, ds, bds,
                 LinearL2CorStat(nUsedFeatures),
-                [&](LinearL2CorStat &stat, std::vector<float> &x, int sampleId, int fId) {
+                [&](LinearL2CorStat& stat, std::vector<float>& x, int sampleId, int fId) {
                     LinearL2CorStatOpParams params;
                     params.fVal = x[nUsedFeatures - 1];
                     stat.append(x.data(), ys[sampleId], ws[sampleId], params);

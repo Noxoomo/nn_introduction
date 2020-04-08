@@ -28,9 +28,9 @@ public:
     }
 
     [[nodiscard]] double score(const LinearL2Stat& s) const {
-        LinearL2Stat::EMx XTX = s.getXTX();
-        LinearL2Stat::EMx XTy = s.getXTy();
-        LinearL2Stat::EMx wHat = s.getWHat(lambda_);
+        LinearL2Stat::EMx XTX = s.getXTX(0, 1);
+        LinearL2Stat::EMx XTy = s.getXTy(1);
+        LinearL2Stat::EMx wHat = s.getWHat(lambda_, 1);
 
         LinearL2Stat::EMx c1 = -2 * (XTy.transpose() * wHat);
         LinearL2Stat::EMx c2 = wHat.transpose() * XTX * wHat;
@@ -60,9 +60,9 @@ public:
         const float weight = s.w_;
         if (weight < 2)
             return 0;
-        LinearL2Stat::EMx wHat = s.getWHat(lambda_); // n x 1 matrix
-        LinearL2Stat::EMx xy = s.getXTy(); // n x 1 matrix
-        xy -= (s.sumY_ / weight) * s.getSumX();
+        LinearL2Stat::EMx wHat = s.getWHat(lambda_, 1); // n x 1 matrix
+        LinearL2Stat::EMx xy = s.getXTy(1); // n x 1 matrix
+        xy -= (s.sumY_ / weight) * s.getSumX(1);
         xy *= 1. / weight;
         float scoreFromLinear = weight * (wHat.transpose() * xy)(0, 0);
         float scoreFromConst = s.sumY_ * s.sumY_ / weight;
@@ -167,7 +167,8 @@ public:
     }
 
     [[nodiscard]] Vec targets() const override {
-        if (nzIndices_.size() == 0) {
+        if (nzIndices_.size() == 0  && nzTargets_.size() != 0) {
+            std::cout << "full targets" << std::endl;
             return nzTargets_;
         }
 
@@ -188,9 +189,18 @@ public:
         auto weights = VecFactory::create(ComputeDeviceType::Cpu, ds_.samplesCount());
 
         if (nzIndices_.size() == 0) {
-            VecTools::fill(1.0, weights);
-            return weights;
+            if (nzTargets_.size() != 0) {
+                VecTools::fill(1.0, weights);
+                std::cout << "uniform weights" << std::endl;
+                return weights;
+            } else {
+                VecTools::fill(0.0, weights);
+                std::cout << "no weights" << std::endl;
+                return weights;
+            }
         }
+
+        std::cout << "partial weights" << std::endl;
 
         auto wRef = weights.arrayRef();
         auto indicesRef = nzIndices_.arrayRef();

@@ -22,10 +22,9 @@ public:
     double value(const ConstVecRef<float>& x) const {
         float res = 0.0;
 
-        int i = 0;
-        for (auto f : usedFeaturesInOrder_) {
+        for (int i = 0; i < w_.size(); ++i) {
+            int f = usedFeaturesInOrder_[i];
             res += x[f] * w_(i, 0);
-            ++i;
         }
 
         return res;

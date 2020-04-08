@@ -216,7 +216,7 @@ TEST(BoostingLinearTrees, FeaturesTxt) {
     trainMetricsCalcer->addMetric(L2(ds), "l2-train");
     boosting.addListener(trainMetricsCalcer);
 
-    L2 target(ds);
+    LinearL2 target(ds);
     auto ensemble = boosting.fit(ds, target);
 }
 
@@ -231,8 +231,8 @@ TEST(BoostingLinearTrees, FeaturesTxtBootsrap) {
     auto grid = buildGrid(ds, config);
 
     BoostingConfig boostingConfig;
-    boostingConfig.iterations_ = 2000;
-    boostingConfig.step_ = 0.005;
+    boostingConfig.iterations_ = 500;
+    boostingConfig.step_ = 0.05;
     Boosting boosting(boostingConfig, createBootstrapWeakTarget(), createWeakLinearLearner(6, 0, 2.0, grid));
 
     auto testMetricsCalcer = std::make_shared<BoostingMetricsCalcer>(test);

@@ -11,14 +11,15 @@
 
 #include <iostream>
 
-struct LinearL2CorStatOpParams {
-    float fVal = 0.;
-};
-
 struct LinearL2CorStatTypeTraits {
-    using ImplSampleType = const float*;
+    using ImplFeatureType = float;
+    using ImplSampleType = const ImplFeatureType*;
     using ImplTargetType = float;
     using ImplWeightType = float;
+};
+
+struct LinearL2CorStatOpParams {
+    LinearL2CorStatTypeTraits::ImplFeatureType fVal = 0.;
 };
 
 struct LinearL2CorStat : public AdditiveStatistics<LinearL2CorStat,
@@ -85,16 +86,15 @@ struct LinearL2Stat : public AdditiveStatistics<LinearL2Stat, LinearL2StatTypeTr
     LinearL2Stat& removeImpl(SampleType x, TargetType y, WeightType weight, const LinearL2StatOpParams& opParams);
 
     void fillXTX(EMx& XTX, double l2reg = 0.) const;
-    [[nodiscard]] EMx getXTX(double l2reg = 0.) const;
+    [[nodiscard]] EMx getXTX(double l2reg = 0., int size = 0) const;
 
     void fillXTy(EMx& XTy) const;
-    [[nodiscard]] EMx getXTy() const;
+    [[nodiscard]] EMx getXTy(int size = 0) const;
 
     void fillSumX(EMx& sumX) const;
-    [[nodiscard]] EMx getSumX() const;
+    [[nodiscard]] EMx getSumX(int size = 0) const;
 
-    [[nodiscard]] EMx getWHat(double l2reg) const;
-    [[nodiscard]] EMx fit(double l2reg) const;
+    [[nodiscard]] EMx getWHat(double l2reg, int size = 0) const;
 
     int size_;
     int filledSize_;
@@ -106,7 +106,14 @@ struct LinearL2Stat : public AdditiveStatistics<LinearL2Stat, LinearL2StatTypeTr
     std::vector<float> xtx_;
     std::vector<float> xty_;
     std::vector<float> sumX_;
+
+    friend std::ostream& operator<<(std::ostream& os, const LinearL2Stat& s);
 };
+
+inline std::ostream& operator<<(std::ostream& os, const LinearL2Stat& s) {
+    os << "XTX=" << s.getXTX() << ", XTy=" << s.getXTy() << ", sumY=" << s.sumY_;
+    return os;
+}
 
 struct LinearL2GridStatOpParams : public LinearL2StatOpParams {
     int bin = -1;

@@ -182,7 +182,7 @@ LinearL2Stat& LinearL2Stat::removeImpl(const float* x, float y, float weight,
 
 void LinearL2Stat::fillXTX(LinearL2Stat::EMx& XTX, double l2reg) const {
     int basePos = 0;
-    for (int i = 0; i < maxUpdatedPos_; ++i) {
+    for (int i = 0; i < XTX.rows(); ++i) {
         for (int j = 0; j < i + 1; ++j) {
             XTX(i, j) = xtx_[basePos + j];
             XTX(j, i) = xtx_[basePos + j];
@@ -192,61 +192,59 @@ void LinearL2Stat::fillXTX(LinearL2Stat::EMx& XTX, double l2reg) const {
     }
 }
 
-LinearL2Stat::EMx LinearL2Stat::getXTX(double l2reg) const {
-    EMx res(maxUpdatedPos_, maxUpdatedPos_);
+LinearL2Stat::EMx LinearL2Stat::getXTX(double l2reg, int size) const {
+    if (size == 0) {
+        size = maxUpdatedPos_;
+    }
+    EMx res(size, size);
     fillXTX(res, l2reg);
     return res;
 }
 
 void LinearL2Stat::fillXTy(EMx &XTy) const {
-    for (int i = 0; i < maxUpdatedPos_; ++i) {
+    for (int i = 0; i < XTy.rows(); ++i) {
         XTy(i, 0) = xty_[i];
     }
 }
 
-LinearL2Stat::EMx LinearL2Stat::getXTy() const {
-    EMx res(maxUpdatedPos_, 1);
+LinearL2Stat::EMx LinearL2Stat::getXTy(int size) const {
+    if (size == 0) {
+        size = maxUpdatedPos_;
+    }
+    EMx res(size, 1);
     fillXTy(res);
     return res;
 }
 
 void LinearL2Stat::fillSumX(EMx& sumX) const {
-    for (int i = 0; i < maxUpdatedPos_; ++i) {
+    for (int i = 0; i < sumX.rows(); ++i) {
         sumX(i, 0) = sumX_[i];
     }
 }
 
-LinearL2Stat::EMx LinearL2Stat::getSumX() const {
-    EMx res(maxUpdatedPos_, 1);
+LinearL2Stat::EMx LinearL2Stat::getSumX(int size) const {
+    if (size == 0) {
+        size = maxUpdatedPos_;
+    }
+    EMx res(size, 1);
     fillSumX(res);
     return res;
 }
 
-LinearL2Stat::EMx LinearL2Stat::getWHat(double l2reg) const {
+LinearL2Stat::EMx LinearL2Stat::getWHat(double l2reg, int size) const {
+    if (size == 0) {
+        size = maxUpdatedPos_;
+    }
     if (w_ < 1e-6) {
-        auto w = EMx(maxUpdatedPos_, 1);
+        auto w = EMx(size, 1);
         for (int i = 0; i < w.rows(); ++i) {
             w(i, 0) = 0;
         }
         return w;
     }
 
-    EMx XTX = getXTX(l2reg);
-    return XTX.inverse() * getXTy();
-}
-
-LinearL2Stat::EMx LinearL2Stat::fit(double l2reg) const {
-    if (w_ < 1e-6) {
-        auto w = EMx(filledSize_, 1);
-        for (int i = 0; i < w.rows(); ++i) {
-            w(i, 0) = 0;
-        }
-        return w;
-    }
-
-    EMx XTX(filledSize_, filledSize_);
-    fillXTX(XTX, l2reg);
-    return XTX.inverse() * getXTy();
+    EMx XTX = getXTX(l2reg, size);
+    return XTX.inverse() * getXTy(size);
 }
 
 LinearL2GridStat::LinearL2GridStat(int nBins, int size, int filledSize)

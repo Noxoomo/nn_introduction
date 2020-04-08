@@ -58,6 +58,7 @@ private:
 
     void resetState();
 
+    // TODO add bins factory
     template <typename Stat, typename UpdaterT>
     MultiDimArray<2, Stat> ComputeStats(
             int nLeaves, const std::vector<int>& lIds,
