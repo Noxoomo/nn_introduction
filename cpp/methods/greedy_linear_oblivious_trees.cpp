@@ -49,7 +49,7 @@ public:
         return target.score(leftStat) + target.score(rightStat);
     }
 
-    void fit(double l2reg, int size) {
+    void fit(double l2reg, int size = 0) {
         w_ = stats_[grid_->totalBins() - 1].getWHat(l2reg, size);
     }
 
@@ -202,7 +202,7 @@ ModelPtr GreedyLinearObliviousTreeLearner::fit(const DataSet& ds, const Target& 
     TIME_BLOCK_START(FINAL_FIT)
     parallelFor(0, leaves_.size(), [&](int lId) {
         auto& l = leaves_[lId];
-        l->fit(l2reg_, 1);
+        l->fit(l2reg_);
     });
     TIME_BLOCK_END(FINAL_FIT)
 

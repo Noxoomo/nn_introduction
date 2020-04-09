@@ -28,9 +28,9 @@ public:
     }
 
     [[nodiscard]] double score(const LinearL2Stat& s) const {
-        LinearL2Stat::EMx XTX = s.getXTX(0, 1);
-        LinearL2Stat::EMx XTy = s.getXTy(1);
-        LinearL2Stat::EMx wHat = s.getWHat(lambda_, 1);
+        LinearL2Stat::EMx XTX = s.getXTX(0);
+        LinearL2Stat::EMx XTy = s.getXTy();
+        LinearL2Stat::EMx wHat = s.getWHat(lambda_);
 
         LinearL2Stat::EMx c1 = -2 * (XTy.transpose() * wHat);
         LinearL2Stat::EMx c2 = wHat.transpose() * XTX * wHat;
@@ -60,9 +60,9 @@ public:
         const float weight = s.w_;
         if (weight < 2)
             return 0;
-        LinearL2Stat::EMx wHat = s.getWHat(lambda_, 1); // n x 1 matrix
-        LinearL2Stat::EMx xy = s.getXTy(1); // n x 1 matrix
-        xy -= (s.sumY_ / weight) * s.getSumX(1);
+        LinearL2Stat::EMx wHat = s.getWHat(lambda_); // n x 1 matrix
+        LinearL2Stat::EMx xy = s.getXTy(); // n x 1 matrix
+        xy -= (s.sumY_ / weight) * s.getSumX();
         xy *= 1. / weight;
         float scoreFromLinear = weight * (wHat.transpose() * xy)(0, 0);
         float scoreFromConst = s.sumY_ * s.sumY_ / weight;

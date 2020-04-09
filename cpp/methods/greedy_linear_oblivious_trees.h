@@ -83,10 +83,11 @@ private:
             if (lId < 0) return;
             auto leafStats = stats[thId][lId];
 
+            ds.fillSample(sampleId, usedFeaturesOrdered_, x);
+
             for (int fId = 0; fId < fCount_; ++fId) {
                 int bin = binOffsets_[fId] + bins[fId];
                 auto& stat = leafStats[bin];
-                ds.fillSample(sampleId, usedFeaturesOrdered_, x);
                 updater(stat, x, sampleId, fId);
             }
         });
