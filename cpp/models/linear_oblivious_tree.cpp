@@ -59,3 +59,27 @@ double LinearObliviousTree::value(const Vec &x) {
 void LinearObliviousTree::grad(const Vec &x, Vec to) {
     throw std::runtime_error("Unimplemented");
 }
+
+void LinearObliviousTree::printInfo() const {
+    std::cout << leaves_.size() << "->(";
+    for (int i = 0; i < (int)splits_.size(); ++i) {
+        int fId = std::get<0>(splits_[i]);
+        int condId = std::get<1>(splits_[i]);
+        const auto border = grid_->condition(fId, condId);
+        std::cout << "f[" << fId << "] > " << border;
+        if (i != splits_.size() - 1) {
+            std::cout << ", ";
+        } else {
+            std::cout << ")+";
+        }
+    }
+
+    std::cout << "[";
+    for (int lId = 0; lId < (int)leaves_.size(); ++lId) {
+        leaves_[lId].printInfo();
+        if (lId != leaves_.size() - 1) {
+            std::cout << ", ";
+        }
+    }
+    std::cout << "]" << std::endl;
+}

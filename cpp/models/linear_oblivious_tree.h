@@ -14,9 +14,11 @@ class LinearObliviousTreeLeaf : std::enable_shared_from_this<LinearObliviousTree
 public:
     LinearObliviousTreeLeaf(
             std::vector<int32_t> usedFeaturesInOrder,
-            Eigen::MatrixXd w)
+            Eigen::MatrixXd w,
+            double weight)
             : usedFeaturesInOrder_(std::move(usedFeaturesInOrder))
-            , w_(std::move(w)) {
+            , w_(std::move(w))
+            , weight_(weight) {
     }
 
     double value(const ConstVecRef<float>& x) const {
@@ -30,11 +32,23 @@ public:
         return res;
     }
 
+    void printInfo() const {
+        std::cout << "{";
+        for (int i = 0; i < w_.size(); ++i) {
+            std::cout << w_(i, 0);
+            if (i != w_.size() - 1) {
+                std::cout << " ";
+            }
+        }
+        std::cout << "}@" << weight_;
+    }
+
 private:
     friend class GreedyLinearObliviousTreeLearner;
 
     std::vector<int32_t> usedFeaturesInOrder_;
     Eigen::MatrixXd w_;
+    double weight_;
 };
 
 class LinearObliviousTree final
@@ -84,6 +98,8 @@ public:
     double value(const Vec& x) override;
 
     void grad(const Vec& x, Vec to) override;
+
+    void printInfo() const;
 
 private:
     friend class GreedyLinearObliviousTreeLearner;

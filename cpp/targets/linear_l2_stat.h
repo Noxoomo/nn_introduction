@@ -36,7 +36,18 @@ struct LinearL2CorStat : public AdditiveStatistics<LinearL2CorStat,
     std::vector<float> xxt;
     float xy;
     float sumX;
+
+    friend std::ostream& operator<<(std::ostream& os, const LinearL2CorStat& s);
 };
+
+inline std::ostream& operator<<(std::ostream& os, const LinearL2CorStat& s) {
+    os << "xy=" << s.xy << ", sumX=" << s.sumX << ", xxt=[";
+    for (int i = 0; i < s.size_; ++i) {
+        os << s.xxt[i] << " ";
+    }
+    os << "]";
+    return os;
+}
 
 
 struct LinearL2StatOpParams {
@@ -111,7 +122,7 @@ struct LinearL2Stat : public AdditiveStatistics<LinearL2Stat, LinearL2StatTypeTr
 };
 
 inline std::ostream& operator<<(std::ostream& os, const LinearL2Stat& s) {
-    os << "XTX=" << s.getXTX() << ", XTy=" << s.getXTy() << ", sumY=" << s.sumY_;
+    os << "w=" << s.w_ << ", XTX=" << s.getXTX() << ", XTy=" << s.getXTy() << ", sumY=" << s.sumY_;
     return os;
 }
 
