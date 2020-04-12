@@ -29,16 +29,16 @@ namespace Detail {
 
     //todo: make specialisation based for all specialisations
     template <>
-    class TorchBufferTrait<double> {
+    class TorchBufferTrait<float> {
     public:
 
         static torch::Tensor create(int64_t size) {
             return torch::zeros({static_cast<int64_t>(size)}, TorchHelpers::tensorOptionsOnDevice(CurrentDevice(),
-                                                                                                              torch::ScalarType::Double));
+                                                                                                              torch::ScalarType::Float));
         }
 
-        static double* data(const torch::Tensor& tensor) {
-            return tensor.data_ptr<double>();
+        static float* data(const torch::Tensor& tensor) {
+            return tensor.data_ptr<float>();
         }
 
         static int64_t size(const torch::Tensor& tensor) {

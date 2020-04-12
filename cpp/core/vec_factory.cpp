@@ -20,9 +20,9 @@ Vec VecFactory::toDevice(const Vec& vec, const ComputeDevice& device) {
 
 Vec VecFactory::fromVector(const std::vector<double>& vec) {
     Vec x(vec.size());
-    VecRef<double> dst = x.arrayRef();
+    VecRef<float> dst = x.arrayRef();
     for (int64_t i = 0; i < dst.size(); ++i) {
-        dst[i] = (double) vec[i];
+        dst[i] = (float) vec[i];
     }
     return x;
 }

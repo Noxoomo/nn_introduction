@@ -57,16 +57,16 @@ public:
     }
 
     [[nodiscard]] double score(const LinearL2Stat& s) const {
-        const double weight = s.w_;
+        const float weight = s.w_;
         if (weight < 2)
             return 0;
         LinearL2Stat::EMx wHat = s.getWHat(lambda_); // n x 1 matrix
         LinearL2Stat::EMx xy = s.getXTy(); // n x 1 matrix
         xy -= (s.sumY_ / weight) * s.getSumX();
         xy *= 1. / weight;
-        double scoreFromLinear = weight * (wHat.transpose() * xy)(0, 0);
-        double scoreFromConst = s.sumY_ * s.sumY_ / weight;
-        double targetValue = scoreFromConst + scoreFromLinear - lambda_ * wHat.norm();
+        float scoreFromLinear = weight * (wHat.transpose() * xy)(0, 0);
+        float scoreFromConst = s.sumY_ * s.sumY_ / weight;
+        float targetValue = scoreFromConst + scoreFromLinear - lambda_ * wHat.norm();
         return -targetValue;
     }
 

@@ -265,8 +265,8 @@ void GreedyLinearObliviousTreeLearner::resetState() {
 void GreedyLinearObliviousTreeLearner::buildRoot(
         const BinarizedDataSet &bds,
         const DataSet &ds,
-        ConstVecRef<double> ys,
-        ConstVecRef<double> ws) {
+        ConstVecRef<float> ys,
+        ConstVecRef<float> ws) {
     auto root = std::make_shared<LinearObliviousTreeLeafLearner>(this->grid_, 1);
     usedFeatures_.insert(biasCol_);
     usedFeaturesOrdered_.push_back(biasCol_);
@@ -277,7 +277,7 @@ void GreedyLinearObliviousTreeLearner::buildRoot(
     MultiDimArray<2, LinearL2Stat> stats = ComputeStats<LinearL2Stat>(
             1, leafId_, ds, bds,
             LinearL2Stat(2, 1),
-            [&](LinearL2Stat& stat, std::vector<double>& x, int sampleId, int fId) {
+            [&](LinearL2Stat& stat, std::vector<float>& x, int sampleId, int fId) {
         stat.append(x.data(), ys[sampleId], ws[sampleId], params);
     });
 
@@ -289,14 +289,14 @@ void GreedyLinearObliviousTreeLearner::buildRoot(
 void GreedyLinearObliviousTreeLearner::updateNewCorrelations(
         const BinarizedDataSet& bds,
         const DataSet& ds,
-        ConstVecRef<double> ys,
-        ConstVecRef<double> ws) {
+        ConstVecRef<float> ys,
+        ConstVecRef<float> ws) {
     int nUsedFeatures = usedFeaturesOrdered_.size();
 
     MultiDimArray<2, LinearL2CorStat> stats = ComputeStats<LinearL2CorStat>(
             leaves_.size(), leafId_, ds, bds,
             LinearL2CorStat(nUsedFeatures + 1),
-            [&](LinearL2CorStat& stat, std::vector<double>& x, int sampleId, int fId) {
+            [&](LinearL2CorStat& stat, std::vector<float>& x, int sampleId, int fId) {
         int origFId = grid_->origFeatureIndex(fId);
         if (usedFeatures_.count(origFId)) return;
 
@@ -400,8 +400,8 @@ void GreedyLinearObliviousTreeLearner::updateNewLeaves(
         const BinarizedDataSet& bds,
         const DataSet& ds,
         int oldNUsedFeatures,
-        ConstVecRef<double> ys,
-        ConstVecRef<double> ws) {
+        ConstVecRef<float> ys,
+        ConstVecRef<float> ws) {
     int nUsedFeatures = usedFeaturesOrdered_.size();
 
     std::vector<int> fullLeafIds(nSamples_, 0);
@@ -422,7 +422,7 @@ void GreedyLinearObliviousTreeLearner::updateNewLeaves(
     MultiDimArray<2, LinearL2Stat> fullStats = ComputeStats<LinearL2Stat>(
             leaves_.size(), fullLeafIds, ds, bds,
             LinearL2Stat(nUsedFeatures + 1, nUsedFeatures),
-            [&](LinearL2Stat& stat, std::vector<double>& x, int sampleId, int fId) {
+            [&](LinearL2Stat& stat, std::vector<float>& x, int sampleId, int fId) {
         LinearL2StatOpParams params;
         params.vecAddMode = LinearL2StatOpParams::FullCorrelation;
         stat.append(x.data(), ys[sampleId], ws[sampleId], params);
@@ -443,7 +443,7 @@ void GreedyLinearObliviousTreeLearner::updateNewLeaves(
         MultiDimArray<2, LinearL2CorStat> partialStats = ComputeStats<LinearL2CorStat>(
                 leaves_.size(), partialLeafIds, ds, bds,
                 LinearL2CorStat(nUsedFeatures),
-                [&](LinearL2CorStat& stat, std::vector<double>& x, int sampleId, int fId) {
+                [&](LinearL2CorStat& stat, std::vector<float>& x, int sampleId, int fId) {
                     LinearL2CorStatOpParams params;
                     params.fVal = x[nUsedFeatures - 1];
                     stat.append(x.data(), ys[sampleId], ws[sampleId], params);

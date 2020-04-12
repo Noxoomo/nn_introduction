@@ -1,6 +1,6 @@
 #include "grid.h"
 
-void Grid::binarize(ConstVecRef<double> row, VecRef<uint8_t> dst) const {
+void Grid::binarize(ConstVecRef<float> row, VecRef<uint8_t> dst) const {
     for (int64_t f = 0; f < features_.size(); ++f) {
         dst[f] = computeBin(row[origFeatureIndex(f)], borders_[f]);
     }

@@ -68,7 +68,7 @@ public:
         return ConstVecRef<Feature>(features_);
     }
 
-    ConstVecRef<double> borders(int64_t fIndex) const {
+    ConstVecRef<float> borders(int64_t fIndex) const {
         return borders_[fIndex];
     }
 
@@ -95,7 +95,7 @@ public:
         return binOffsets_;
     }
 
-    void binarize(ConstVecRef<double> row, VecRef<uint8_t> dst) const;
+    void binarize(ConstVecRef<float> row, VecRef<uint8_t> dst) const;
 //
 //    void binarizeColumn(int32_t fIndex, const Vec& column, torch::Tensor* dst) const;
 
@@ -104,7 +104,7 @@ public:
         int64_t fCount,
         std::vector<BinaryFeature>&& binFeatures,
         std::vector<Feature>&& features,
-        std::vector<std::vector<double>>&& borders)
+        std::vector<std::vector<float>>&& borders)
         : fCount_(fCount)
         , binFeatures_(std::move(binFeatures))
         , features_(std::move(features))
@@ -127,12 +127,12 @@ private:
     std::vector<int32_t> binOffsets_;
     std::vector<BinaryFeature> binFeatures_;
     std::vector<Feature> features_;
-    std::vector<std::vector<double>> borders_;
+    std::vector<std::vector<float>> borders_;
     std::vector<int64_t> binFeatureOffsets_;
 };
 
 
-inline int32_t computeBin(double val, ConstVecRef<double> borders) {
+inline int32_t computeBin(float val, ConstVecRef<float> borders) {
     int32_t bin = 0;
     while (bin < borders.size() && borders[bin] < val) {
         ++bin;

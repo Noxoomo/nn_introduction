@@ -12,7 +12,7 @@ BinarizedDataSetPtr binarize(const DataSet& ds, GridPtr& gridPtr, int32_t maxGro
 
     for (int64_t line = 0; line < ds.samplesCount(); ++line) {
         const Vec lineFeatures = ds.sample(line);
-        ConstVecRef<double> row = lineFeatures.arrayRef();
+        ConstVecRef<float> row = lineFeatures.arrayRef();
         grid.binarize(row, binarizedLine);
 
         for (int64_t i = 0; i < groups; ++i) {

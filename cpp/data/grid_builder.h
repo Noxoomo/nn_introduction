@@ -17,6 +17,6 @@ struct BinarizationConfig {
 };
 
 
-std::vector<double> buildBorders(const BinarizationConfig& config, Vec* vals);
+std::vector<float> buildBorders(const BinarizationConfig& config, Vec* vals);
 
 GridPtr buildGrid(const DataSet& ds, const BinarizationConfig& config);

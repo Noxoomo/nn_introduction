@@ -13,7 +13,7 @@ void L2::makeStats(Buffer<L2Stat>* stats, Buffer<int32_t>* indices) const {
     }
 
     auto nzTargetsRef = nzTargets_.arrayRef();
-    auto nzWeightsRef = nzWeights_.dim() ? nzWeights_.arrayRef() : ConstVecRef<double>((const double*)nullptr, (size_t)0u);
+    auto nzWeightsRef = nzWeights_.dim() ? nzWeights_.arrayRef() : ConstVecRef<float>((const float*)nullptr, (size_t)0u);
 
     VecRef<L2Stat> statsRef = stats->arrayRef();
     if (!nzWeightsRef.empty()) {

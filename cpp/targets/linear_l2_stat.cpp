@@ -29,9 +29,9 @@ LinearL2CorStat& LinearL2CorStat::removeImpl(const LinearL2CorStat &other,
     sumX -= other.sumX;
 }
 
-LinearL2CorStat& LinearL2CorStat::appendImpl(SampleType x, TargetType y, WeightType weight,
+LinearL2CorStat& LinearL2CorStat::appendImpl(const float* x, float y, float weight,
                                              const LinearL2CorStatOpParams &opParams) {
-    WeightType wf = weight * opParams.fVal;
+    const float wf = weight * opParams.fVal;
     for (int i = 0; i < size_ - 1; ++i) {
         xxt[i] += x[i] * wf;
     }
@@ -40,9 +40,9 @@ LinearL2CorStat& LinearL2CorStat::appendImpl(SampleType x, TargetType y, WeightT
     sumX += wf;
 }
 
-LinearL2CorStat& LinearL2CorStat::removeImpl(SampleType x, TargetType y, WeightType weight,
+LinearL2CorStat& LinearL2CorStat::removeImpl(const float* x, float y, float weight,
                                              const LinearL2CorStatOpParams &opParams) {
-    WeightType wf = weight * opParams.fVal;
+    const float wf = weight * opParams.fVal;
     for (int i = 0; i < size_ - 1; ++i) {
         xxt[i] -= x[i] * wf;
     }
@@ -72,15 +72,15 @@ void LinearL2Stat::reset() {
     w_ = 0;
     sumY_ = 0;
     sumY2_ = 0;
-    memset(xtx_.data(), 0, (maxUpdatedPos_ * (maxUpdatedPos_ + 1) / 2) * sizeof(double));
-    memset(xty_.data(), 0, maxUpdatedPos_ * sizeof(double));
-    memset(sumX_.data(), 0, maxUpdatedPos_ * sizeof(double));
+    memset(xtx_.data(), 0, (maxUpdatedPos_ * (maxUpdatedPos_ + 1) / 2) * sizeof(float));
+    memset(xty_.data(), 0, maxUpdatedPos_ * sizeof(float));
+    memset(sumX_.data(), 0, maxUpdatedPos_ * sizeof(float));
 
     filledSize_ = 0;
     maxUpdatedPos_ = 0;
 }
 
-void LinearL2Stat::addNewCorrelation(SampleType xtx, TargetType xty, WeightType sumX, int shift)  {
+void LinearL2Stat::addNewCorrelation(const float* xtx, float xty, float sumX, int shift)  {
     // TODO: using y as xty and w as sumX. Bad interface :/
 
     const int corPos = filledSize_ + shift;
@@ -94,16 +94,15 @@ void LinearL2Stat::addNewCorrelation(SampleType xtx, TargetType xty, WeightType 
     maxUpdatedPos_ = std::max(maxUpdatedPos_, corPos + 1);
 }
 
-void LinearL2Stat::addFullCorrelation(SampleType x, TargetType y, WeightType w) {
-    WeightType yw = y * w;
-
+void LinearL2Stat::addFullCorrelation(const float* x, float y, float w) {
     w_ += w;
+    float yw = y * w;
     sumY_ += yw;
     sumY2_ += yw * y;
 
     int pos = 0;
     for (int i = 0; i < filledSize_; ++i) {
-        WeightType xiw = x[i] * w;
+        float xiw = x[i] * w;
         for (int j = 0; j < i + 1; ++j) {
             xtx_[pos + j] += xiw * x[j];
         }
@@ -120,7 +119,7 @@ LinearL2Stat& LinearL2Stat::appendImpl(const LinearL2Stat &other, const LinearL2
 
     int size = opParams.opSize;
     if (size < 0) {
-        size = std::min(maxUpdatedPos_, other.maxUpdatedPos_);
+        size = std::min(maxUpdatedPos_, other.maxUpdatedPos_); // TODO filled or updated?
     }
 
     int pos = 0;
@@ -143,7 +142,7 @@ LinearL2Stat& LinearL2Stat::removeImpl(const LinearL2Stat &other, const LinearL2
 
     int size = opParams.opSize;
     if (size < 0) {
-        size = std::min(maxUpdatedPos_, other.maxUpdatedPos_);
+        size = std::min(maxUpdatedPos_, other.maxUpdatedPos_); // TODO filled or updated?
     }
 
     int pos = 0;
@@ -159,7 +158,7 @@ LinearL2Stat& LinearL2Stat::removeImpl(const LinearL2Stat &other, const LinearL2
     return *this;
 }
 
-LinearL2Stat& LinearL2Stat::appendImpl(SampleType x, TargetType y, WeightType weight,
+LinearL2Stat& LinearL2Stat::appendImpl(const float* x, float y, float weight,
                                        const LinearL2StatOpParams &opParams) {
     switch (opParams.vecAddMode) {
         case LinearL2StatOpParams::FullCorrelation:
@@ -175,7 +174,7 @@ LinearL2Stat& LinearL2Stat::appendImpl(SampleType x, TargetType y, WeightType we
     return *this;
 }
 
-LinearL2Stat& LinearL2Stat::removeImpl(SampleType x, TargetType y, WeightType weight,
+LinearL2Stat& LinearL2Stat::removeImpl(const float* x, float y, float weight,
                                        const LinearL2StatOpParams &opParams) {
     throw std::runtime_error("Unimplemented");
 //    appendImpl(x, y, -1 * weight, opParams);

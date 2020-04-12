@@ -182,7 +182,7 @@ TEST(BoostingLinearTrees, SimpleDs) {
     trainMetricsCalcer->addMetric(L2(ds), "l2-train");
     boosting.addListener(trainMetricsCalcer);
 
-    LinearL2 target(ds);
+    L2 target(ds);
     auto ensemble = boosting.fit(ds, target);
 
     for (int i = 0; i < ds.samplesCount(); ++i) {

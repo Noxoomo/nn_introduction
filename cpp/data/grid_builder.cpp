@@ -66,14 +66,14 @@ namespace {
             return (BinStart != BestSplit && BinEnd != BestSplit);
         }
 
-        double Border() const {
+        float Border() const {
             assert(BinStart < BinEnd);
             double borderValue = 0.5f * (*(FeaturesStart + BinEnd - 1));
             const double nextValue = ((FeaturesStart + BinEnd) < FeaturesEnd)
                                     ? (*(FeaturesStart + BinEnd))
                                     : (*(FeaturesStart + BinEnd - 1));
             borderValue += 0.5f * nextValue;
-            return static_cast<double>(borderValue);
+            return static_cast<float>(borderValue);
         }
 
         bool IsLast() const {
@@ -83,8 +83,8 @@ namespace {
 }
 
 
-std::vector<double> buildBorders(const BinarizationConfig& config, Vec* vals) {
-    std::vector<double> borders;
+std::vector<float> buildBorders(const BinarizationConfig& config, Vec* vals) {
+    std::vector<float> borders;
     if (vals->dim()) {
         auto sortedFeature = VecFactory::toDevice(VecTools::sort(*vals), ComputeDevice(ComputeDeviceType::Cpu));
         auto data = sortedFeature.arrayRef();
@@ -119,7 +119,7 @@ std::vector<double> buildBorders(const BinarizationConfig& config, Vec* vals) {
 GridPtr buildGrid(const DataSet& ds, const BinarizationConfig& config) {
     std::vector<BinaryFeature> binFeatures;
     std::vector<Feature> features;
-    std::vector<std::vector<double>> borders;
+    std::vector<std::vector<float>> borders;
 
     Vec column(ds.samplesCount());
 

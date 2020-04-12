@@ -6,15 +6,15 @@ void LinearObliviousTree::applyToBds(const BinarizedDataSet& bds, Mx to, ApplyTy
     const uint64_t sampleDim = ds.featuresCount();
     const uint64_t targetDim = to.xdim();
 
-    ConstVecRef<double> dsRef = ds.samplesMx().arrayRef();
-    VecRef<double> toRef = to.arrayRef();
+    ConstVecRef<float> dsRef = ds.samplesMx().arrayRef();
+    VecRef<float> toRef = to.arrayRef();
 
     uint64_t xSliceStart = 0;
     uint64_t toSliceStart = 0;
 
     for (uint64_t i = 0; i < ds.samplesCount(); ++i) {
-        ConstVecRef<double> x = dsRef.slice(xSliceStart, sampleDim);
-        VecRef<double> y = toRef.slice(toSliceStart, targetDim);
+        ConstVecRef<float> x = dsRef.slice(xSliceStart, sampleDim);
+        VecRef<float> y = toRef.slice(toSliceStart, targetDim);
 
         switch (type) {
             case ApplyType::Append:
@@ -34,7 +34,7 @@ void LinearObliviousTree::appendTo(const Vec &x, Vec to) const {
     to += value(x.arrayRef());
 }
 
-double LinearObliviousTree::value(const ConstVecRef<double>& x) const {
+double LinearObliviousTree::value(const ConstVecRef<float>& x) const {
     unsigned int lId = 0;
 
     for (int i = 0; i < splits_.size(); ++i) {
