@@ -82,17 +82,19 @@ class LinearL2 : public Stub<Target, LinearL2>,
                  public StatBasedLoss<LinearL2Stat>,
                  public PointwiseTarget {
 public:
-    LinearL2(const DataSet& ds, Vec target, LinearL2ScoreFunction scoreFunction = LinearL2ScoreFunction())
+    LinearL2(const DataSet& ds, Vec target, double l2reg)
             : Stub<Target, LinearL2>(ds)
             , nzTargets_(std::move(target))
-            , scoreFunction_(scoreFunction) {
+            , scoreFunction_(LinearL2ScoreFunction(l2reg))
+            , l2reg_(l2reg) {
 
     }
 
-    explicit LinearL2(const DataSet& ds, LinearL2ScoreFunction scoreFunction = LinearL2ScoreFunction())
+    explicit LinearL2(const DataSet& ds, double l2reg)
             : Stub<Target, LinearL2>(ds)
             , nzTargets_(ds.target())
-            , scoreFunction_(scoreFunction) {
+            , scoreFunction_(LinearL2ScoreFunction(l2reg))
+            , l2reg_(l2reg) {
 
     }
 
@@ -100,12 +102,13 @@ public:
            Vec target,
            Vec weights,
            const Buffer<int32_t>& indices,
-             LinearL2ScoreFunction scoreFunction = LinearL2ScoreFunction())
+           double l2reg)
             :  Stub<Target, LinearL2>(ds)
             , nzTargets_(std::move(target))
             , nzWeights_(std::move(weights))
             , nzIndices_(indices)
-            , scoreFunction_(scoreFunction) {
+            , scoreFunction_(LinearL2ScoreFunction(l2reg))
+            , l2reg_(l2reg) {
 
     }
 
@@ -132,7 +135,7 @@ public:
 
         for (int64_t i = 0; i < indices.size(); ++i) {
             const int32_t idx = indicesArrayRef[i];
-            destArrayRef[i] = targetArrayRef[idx] - sourceArrayRef[idx];
+            destArrayRef[i] = 2 * (targetArrayRef[idx] - sourceArrayRef[idx]);
         }
     }
 
@@ -150,6 +153,7 @@ public:
 
             VecTools::copyTo(owner_.nzTargets_, to);
             to -= x;
+            to *= 2;
             return to;
         }
 
@@ -219,4 +223,7 @@ private:
     Vec nzWeights_;
     Buffer<int32_t> nzIndices_;
     LinearL2ScoreFunction scoreFunction_;
+
+public:
+    double l2reg_;
 };

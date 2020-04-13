@@ -78,7 +78,12 @@ public:
             for (int bin = 0; bin <= (int)grid_->conditionsCount(fId); ++bin) {
                 int absBin = offset + bin;
                 std::cout << "  fId=" << fId << ", bin=" << bin << std::endl;
-                std::cout << "    " << stats_[absBin] << std::endl;
+                if (bin == 0) {
+                    std::cout << "    " << stats_[absBin] << std::endl;
+                } else {
+                    std::cout << "    " << (stats_[absBin] - stats_[absBin - 1]) << std::endl;
+                }
+                std::cout << std::endl;
             }
         }
     }
@@ -160,9 +165,9 @@ ModelPtr GreedyLinearObliviousTreeLearner::fit(const DataSet& ds, const Target& 
         updateNewCorrelations(bds, ds, ys, ws);
         TIME_BLOCK_END(UPDATE_NEW_CORRELATIONS)
 
-        for (auto& l : leaves_) {
-            l->printInfo();
-        }
+//        for (auto& l : leaves_) {
+//            l->printInfo();
+//        }
 
         TIME_BLOCK_START(FIND_BEST_SPLIT)
         auto split = findBestSplit(target);
@@ -202,7 +207,7 @@ ModelPtr GreedyLinearObliviousTreeLearner::fit(const DataSet& ds, const Target& 
     TIME_BLOCK_START(FINAL_FIT)
     parallelFor(0, leaves_.size(), [&](int lId) {
         auto& l = leaves_[lId];
-        l->fit(l2reg_);
+        l->fit(l2reg_, usedFeatures_.size());
     });
     TIME_BLOCK_END(FINAL_FIT)
 
@@ -310,14 +315,6 @@ void GreedyLinearObliviousTreeLearner::updateNewCorrelations(
         stat.append(x.data(), ys[sampleId], ws[sampleId], params);
     });
 
-    std::cout << "STATS:" << std::endl;
-    for (int fId = 0; fId < fCount_; ++fId) {
-        for (int bin = 0; bin <= grid_->conditionsCount(fId); ++bin) {
-            int absBin = binOffsets_[fId] + bin;
-            std::cout << "fId=" << fId << ", bin=" << bin << "(" << absBin << "): " << stats[0][absBin] << std::endl;
-        }
-    }
-
     // update stats with this correlations
     parallelFor(0, totalBins_, [&](int bin) {
         int fId = absBinToFId_[bin];
@@ -327,12 +324,11 @@ void GreedyLinearObliviousTreeLearner::updateNewCorrelations(
         LinearL2StatOpParams params = {};
         for (int lId = 0; lId < leaves_.size(); ++lId) {
             auto& stat = stats[lId][bin];
-            std::cout << "fId=" << fId << ", bin=" << (bin - binOffsets_[fId]) << "(" << bin << "): " << stat << std::endl;
             leaves_[lId]->stats_[bin].append(stat.xxt.data(),
                                              stat.xy,
                                              stat.sumX, params);
         }
-    }, false);
+    });
 }
 
 GreedyLinearObliviousTreeLearner::TSplit GreedyLinearObliviousTreeLearner::findBestSplit(
@@ -358,7 +354,7 @@ GreedyLinearObliviousTreeLearner::TSplit GreedyLinearObliviousTreeLearner::findB
         for (int cond = 0; cond < grid_->conditionsCount(fId); ++cond) {
             double sScore = splitScores[fId][cond];
             double border = grid_->borders(fId)[cond];
-            std::cout << "split score fId=" << fId << ", cond=" << cond << " (" << border << "): " << sScore << std::endl;
+//            std::cout << "split score fId=" << fId << ", cond=" << cond << " (" << border << "): " << sScore << std::endl;
             if (sScore < bestScore) {
                 bestScore = sScore;
                 splitFId = fId;
@@ -371,7 +367,7 @@ GreedyLinearObliviousTreeLearner::TSplit GreedyLinearObliviousTreeLearner::findB
         throw std::runtime_error("Failed to find the best split");
     }
 
-    std::cout << "best split: " << splitFId << " " << splitCond <<  std::endl;
+//    std::cout << "best split: " << splitFId << " " << splitCond <<  std::endl;
 
     return std::make_tuple(bestScore, splitFId, splitCond);
 }

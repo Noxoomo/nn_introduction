@@ -203,10 +203,12 @@ TEST(BoostingLinearTrees, FeaturesTxt) {
     config.bordersCount_ = 32;
     auto grid = buildGrid(ds, config);
 
+    const double l2reg = 2.0;
+
     BoostingConfig boostingConfig;
     boostingConfig.iterations_ = 500;
     boostingConfig.step_ = 0.05;
-    Boosting boosting(boostingConfig, createWeakTarget(), createWeakLinearLearner(6, 0, 2., grid));
+    Boosting boosting(boostingConfig, createWeakTarget(), createWeakLinearLearner(6, 0, l2reg, grid));
 
     auto testMetricsCalcer = std::make_shared<BoostingMetricsCalcer>(test);
     testMetricsCalcer->addMetric(L2(test), "l2-test");
@@ -216,7 +218,7 @@ TEST(BoostingLinearTrees, FeaturesTxt) {
     trainMetricsCalcer->addMetric(L2(ds), "l2-train");
     boosting.addListener(trainMetricsCalcer);
 
-    LinearL2 target(ds);
+    LinearL2 target(ds, l2reg);
     auto ensemble = boosting.fit(ds, target);
 }
 
@@ -230,10 +232,12 @@ TEST(BoostingLinearTrees, FeaturesTxtBootsrap) {
     config.bordersCount_ = 32;
     auto grid = buildGrid(ds, config);
 
+    const double l2reg = 2.0;
+
     BoostingConfig boostingConfig;
-    boostingConfig.iterations_ = 500;
-    boostingConfig.step_ = 0.05;
-    Boosting boosting(boostingConfig, createBootstrapWeakTarget(), createWeakLinearLearner(6, 0, 2.0, grid));
+    boostingConfig.iterations_ = 2000;
+    boostingConfig.step_ = 0.003;
+    Boosting boosting(boostingConfig, createBootstrapWeakTarget(), createWeakLinearLearner(6, 0, l2reg, grid));
 
     auto testMetricsCalcer = std::make_shared<BoostingMetricsCalcer>(test);
     testMetricsCalcer->addMetric(L2(test), "l2-test");
@@ -243,6 +247,6 @@ TEST(BoostingLinearTrees, FeaturesTxtBootsrap) {
     trainMetricsCalcer->addMetric(L2(ds), "l2-train");
     boosting.addListener(trainMetricsCalcer);
 
-    LinearL2 target(ds);
+    LinearL2 target(ds, l2reg);
     auto ensemble = boosting.fit(ds, target);
 }
