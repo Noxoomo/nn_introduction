@@ -247,6 +247,9 @@ TEST(BoostingLinearTrees, FeaturesTxtBootsrap) {
     trainMetricsCalcer->addMetric(L2(ds), "l2-train");
     boosting.addListener(trainMetricsCalcer);
 
+    auto fitTimeCalcer = std::make_shared<BoostingFitTimeTracker>();
+    boosting.addListener(fitTimeCalcer);
+
     LinearL2 target(ds, l2reg);
     auto ensemble = boosting.fit(ds, target);
 }

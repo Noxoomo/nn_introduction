@@ -81,6 +81,52 @@ private:
     int bestIter_ = 0;
 };
 
+class BoostingFitTimeTracker : public Listener<Model> {
+public:
+    using time_point = std::chrono::steady_clock::time_point;
+
+    explicit BoostingFitTimeTracker(int avgWindow = 50)
+            : avgWindow_(avgWindow) {
+        fitTimes_.push_back(std::chrono::steady_clock::now());
+    }
+
+    void operator()(const Model& model) override {
+        fitTimes_.push_back(std::chrono::steady_clock::now());
+        auto avgTimeLast = getAvgTime(1);
+        auto avgTimeWindow = getAvgTime(avgWindow_);
+        auto avgTimeAll = getAvgTime(fitTimes_.size());
+        std::cout << "Fit on iter #" << iter_ << " time [ms]: [" << avgTimeLast << ", "
+                << avgTimeWindow << "(" << avgWindow_ << "), " << avgTimeAll << "]" << std::endl;
+        ++iter_;
+    }
+
+private:
+
+    double getAvgTime(int window) {
+        double totalTime = 0;
+        int realWindowSize = 0;
+
+        int start = (int)fitTimes_.size() - 1;
+        int end = std::max(0, (int)fitTimes_.size() - window - 1);
+        for (int i = start; i > end; --i, ++realWindowSize) {
+            const auto& startTime = fitTimes_[i - 1];
+            const auto& endTime = fitTimes_[i];
+            totalTime += std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
+        }
+
+        if (realWindowSize == 0) {
+            return 0.;
+        }
+
+        return totalTime / realWindowSize;
+    }
+
+private:
+    std::vector<time_point> fitTimes_;
+    int avgWindow_;
+    int iter_ = 0;
+};
+
 
 class IterPrinter : public Listener<Model> {
 public:
