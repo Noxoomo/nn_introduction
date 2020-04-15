@@ -57,22 +57,26 @@ private:
                          ConstVecRef<float> ws);
 
     void resetState();
+    void resetStats(int nLeaves, int filledSize);
+
+    LinearL2Stat& linearL2StatsAccessor(
+            const std::vector<std::shared_ptr<LinearObliviousTreeLeafLearner>>& leaves,
+            int thId, int lId, int bin);
+    LinearL2CorStat& linearL2CorStatsAccessor(int thId, int lId, int bin);
 
     // TODO add bins factory
     template <typename Stat, typename UpdaterT>
-    MultiDimArray<2, Stat> ComputeStats(
+    void ComputeStats(
             int nLeaves, const std::vector<int>& lIds,
             const DataSet& ds, const BinarizedDataSet& bds,
-            const Stat& defaultVal,
+            MultiDimArray<1, MultiDimArray<2, Stat>>& stats,
             UpdaterT updater) {
         int nUsedFeatures = usedFeaturesOrdered_.size();
 
-        MultiDimArray<1, MultiDimArray<2, Stat>> stats({nThreads_});
         MultiDimArray<1, std::vector<float>> curX({nThreads_});
 
         parallelFor(0, nThreads_, [&](int thId) {
             curX[thId] = std::vector<float>(nUsedFeatures, 0.);
-            stats[thId] = MultiDimArray<2, Stat>({nLeaves, totalBins_}, defaultVal);
         });
 
         // compute stats per [thread Id][leaf Id]
@@ -114,9 +118,6 @@ private:
                 }
             }
         });
-
-        // TODO this copies can affect performance. Need to rework MultiDimArray a bit
-        return stats[0].copy();
     }
 
 private:
@@ -132,6 +133,9 @@ private:
     std::vector<int32_t> leafId_;
     std::vector<std::shared_ptr<LinearObliviousTreeLeafLearner>> leaves_;
     std::vector<std::shared_ptr<LinearObliviousTreeLeafLearner>> newLeaves_;
+
+    std::unique_ptr<MultiDimArray<1, MultiDimArray<2, LinearL2CorStat>>> corStats_;
+    std::unique_ptr<MultiDimArray<1, MultiDimArray<2, LinearL2Stat>>> stats_;
 
     std::set<TSplit> splits_;
 

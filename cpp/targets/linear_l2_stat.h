@@ -24,7 +24,7 @@ struct LinearL2CorStatOpParams {
 
 struct LinearL2CorStat : public AdditiveStatistics<LinearL2CorStat,
         LinearL2CorStatTypeTraits, LinearL2CorStatOpParams> {
-    explicit LinearL2CorStat(int size);
+    explicit LinearL2CorStat(int size, int filledSize);
 
     LinearL2CorStat& appendImpl(const LinearL2CorStat& other, const LinearL2CorStatOpParams& opParams);
     LinearL2CorStat& removeImpl(const LinearL2CorStat& other, const LinearL2CorStatOpParams& opParams);
@@ -32,7 +32,11 @@ struct LinearL2CorStat : public AdditiveStatistics<LinearL2CorStat,
     LinearL2CorStat& appendImpl(SampleType x, TargetType y, WeightType weight, const LinearL2CorStatOpParams& opParams);
     LinearL2CorStat& removeImpl(SampleType x, TargetType y, WeightType weight, const LinearL2CorStatOpParams& opParams);
 
+    void reset();
+    void setFilledSize(int filledSize);
+
     int size_;
+    int filledSize_;
     std::vector<float> xxt;
     float xy;
     float sumX;

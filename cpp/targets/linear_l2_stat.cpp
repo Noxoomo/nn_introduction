@@ -4,16 +4,27 @@
 // LinearL2CorStat
 
 
-LinearL2CorStat::LinearL2CorStat(int size)
-        : size_(size) {
+LinearL2CorStat::LinearL2CorStat(int size, int filledSize)
+        : size_(size)
+        , filledSize_(filledSize) {
     xxt.resize(size_, 0.);
     xy = 0.;
     sumX = 0.;
 }
 
+void LinearL2CorStat::reset() {
+    std::fill_n(xxt.begin(), filledSize_, 0);
+    xy = 0;
+    sumX = 0;
+}
+
+void LinearL2CorStat::setFilledSize(int filledSize) {
+    filledSize_ = filledSize;
+}
+
 LinearL2CorStat& LinearL2CorStat::appendImpl(const LinearL2CorStat &other,
                                              const LinearL2CorStatOpParams &opParams) {
-    for (int i = 0; i < size_; ++i) {
+    for (int i = 0; i < filledSize_; ++i) {
         xxt[i] += other.xxt[i];
     }
     xy += other.xy;
@@ -22,7 +33,7 @@ LinearL2CorStat& LinearL2CorStat::appendImpl(const LinearL2CorStat &other,
 
 LinearL2CorStat& LinearL2CorStat::removeImpl(const LinearL2CorStat &other,
                                              const LinearL2CorStatOpParams &opParams) {
-    for (int i = 0; i < size_; ++i) {
+    for (int i = 0; i < filledSize_; ++i) {
         xxt[i] -= other.xxt[i];
     }
     xy -= other.xy;
@@ -32,10 +43,10 @@ LinearL2CorStat& LinearL2CorStat::removeImpl(const LinearL2CorStat &other,
 LinearL2CorStat& LinearL2CorStat::appendImpl(const float* x, float y, float weight,
                                              const LinearL2CorStatOpParams &opParams) {
     const float wf = weight * opParams.fVal;
-    for (int i = 0; i < size_ - 1; ++i) {
+    for (int i = 0; i < filledSize_ - 1; ++i) {
         xxt[i] += x[i] * wf;
     }
-    xxt[size_ - 1] += opParams.fVal * wf;
+    xxt[filledSize_ - 1] += opParams.fVal * wf;
     xy += y * wf;
     sumX += wf;
 }
@@ -43,10 +54,10 @@ LinearL2CorStat& LinearL2CorStat::appendImpl(const float* x, float y, float weig
 LinearL2CorStat& LinearL2CorStat::removeImpl(const float* x, float y, float weight,
                                              const LinearL2CorStatOpParams &opParams) {
     const float wf = weight * opParams.fVal;
-    for (int i = 0; i < size_ - 1; ++i) {
+    for (int i = 0; i < filledSize_ - 1; ++i) {
         xxt[i] -= x[i] * wf;
     }
-    xxt[size_ - 1] -= opParams.fVal * wf;
+    xxt[filledSize_ - 1] -= opParams.fVal * wf;
     xy -= y * wf;
     sumX -= wf;
 }
@@ -72,9 +83,10 @@ void LinearL2Stat::reset() {
     w_ = 0;
     sumY_ = 0;
     sumY2_ = 0;
-    memset(xtx_.data(), 0, (maxUpdatedPos_ * (maxUpdatedPos_ + 1) / 2) * sizeof(float));
-    memset(xty_.data(), 0, maxUpdatedPos_ * sizeof(float));
-    memset(sumX_.data(), 0, maxUpdatedPos_ * sizeof(float));
+
+    std::fill_n(xtx_.begin(), (maxUpdatedPos_ * (maxUpdatedPos_ + 1) / 2), 0);
+    std::fill_n(xty_.begin(), maxUpdatedPos_, 0);
+    std::fill_n(sumX_.begin(), maxUpdatedPos_, 0);
 
     filledSize_ = 0;
     maxUpdatedPos_ = 0;
