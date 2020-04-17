@@ -49,6 +49,12 @@ public:
         return w;
     }
 
+    Buffer<int32_t> indices() const override {
+        std::vector<int32_t> indicesVec(target_.size());
+        std::iota(indicesVec.begin(), indicesVec.end(), 0);
+        return Buffer<int32_t>::fromVector(indicesVec);
+    }
+
 private:
     Vec target_;
 };

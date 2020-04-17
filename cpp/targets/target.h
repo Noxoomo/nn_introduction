@@ -14,6 +14,8 @@ public:
     virtual Vec targets() const = 0;
 
     virtual Vec weights() const = 0;
+
+    virtual Buffer<int32_t> indices() const = 0;
 };
 
 class PointwiseTarget : public Object {

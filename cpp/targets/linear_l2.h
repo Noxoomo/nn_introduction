@@ -170,51 +170,70 @@ public:
     }
 
     [[nodiscard]] Vec targets() const override {
-        if (nzIndices_.size() == 0  && nzTargets_.size() != 0) {
-            std::cout << "full targets" << std::endl;
-            return nzTargets_;
-        }
-
-        auto targets = VecFactory::create(ComputeDeviceType::Cpu, ds_.samplesCount());
-        auto tRef = targets.arrayRef();
-        auto indicesRef = nzIndices_.arrayRef();
-        auto nzTRef = nzTargets_.arrayRef();
-
-        for (int64_t i = 0; i < nzIndices_.size(); ++i) {
-            auto idx = indicesRef[i];
-            tRef[idx] += nzTRef[i];
-        }
-
-        return targets;
+        return nzTargets_;
+//
+//        if (nzIndices_.size() == 0  && nzTargets_.size() != 0) {
+//            return nzTargets_;
+//        }
+//
+//        auto targets = VecFactory::create(ComputeDeviceType::Cpu, ds_.samplesCount());
+//        auto tRef = targets.arrayRef();
+//        auto indicesRef = nzIndices_.arrayRef();
+//        auto nzTRef = nzTargets_.arrayRef();
+//
+//        for (int64_t i = 0; i < nzIndices_.size(); ++i) {
+//            auto idx = indicesRef[i];
+//            tRef[idx] += nzTRef[i];
+//        }
+//
+//        return targets;
     }
 
     [[nodiscard]] Vec weights() const override {
-        auto weights = VecFactory::create(ComputeDeviceType::Cpu, ds_.samplesCount());
-
-        if (nzIndices_.size() == 0) {
-            if (nzTargets_.size() != 0) {
-                VecTools::fill(1.0, weights);
-                std::cout << "uniform weights" << std::endl;
-                return weights;
-            } else {
-                VecTools::fill(0.0, weights);
-                std::cout << "no weights" << std::endl;
-                return weights;
-            }
+        if (nzWeights_.size() != 0) {
+            return nzWeights_;
         }
 
-        std::cout << "partial weights" << std::endl;
-
-        auto wRef = weights.arrayRef();
-        auto indicesRef = nzIndices_.arrayRef();
-        auto nzWRef = nzWeights_.arrayRef();
-
-        for (int64_t i = 0; i < nzIndices_.size(); ++i) {
-            auto idx = indicesRef[i];
-            wRef[idx] += nzWRef[i];
-        }
-
+        auto weights = VecFactory::create(ComputeDeviceType::Cpu, nzTargets_.size());
+        VecTools::fill(1.0, weights);
         return weights;
+//
+//        auto weights = VecFactory::create(ComputeDeviceType::Cpu, ds_.samplesCount());
+//
+//        if (nzIndices_.size() == 0) {
+//            if (nzTargets_.size() != 0) {
+//                VecTools::fill(1.0, weights);
+//                std::cout << "uniform weights" << std::endl;
+//                return weights;
+//            } else {
+//                VecTools::fill(0.0, weights);
+//                std::cout << "no weights" << std::endl;
+//                return weights;
+//            }
+//        }
+//
+//        std::cout << "partial weights" << std::endl;
+//
+//        auto wRef = weights.arrayRef();
+//        auto indicesRef = nzIndices_.arrayRef();
+//        auto nzWRef = nzWeights_.arrayRef();
+//
+//        for (int64_t i = 0; i < nzIndices_.size(); ++i) {
+//            auto idx = indicesRef[i];
+//            wRef[idx] += nzWRef[i];
+//        }
+//
+//        return weights;
+    }
+
+    [[nodiscard]] Buffer<int32_t> indices() const override {
+        if (nzIndices_.size() != 0) {
+            return nzIndices_;
+        }
+
+        std::vector<int32_t> indicesVec(nzTargets_.size());
+        std::iota(indicesVec.begin(), indicesVec.end(), 0);
+        return Buffer<int32_t>::fromVector(indicesVec);
     }
 
 private:

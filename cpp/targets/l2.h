@@ -194,6 +194,16 @@ public:
         return weights;
     }
 
+    Buffer<int32_t> indices() const override {
+        if (nzIndices_.size() != 0) {
+            return nzIndices_;
+        }
+
+        std::vector<int32_t> indicesVec(nzTargets_.size());
+        std::iota(indicesVec.begin(), indicesVec.end(), 0);
+        return Buffer<int32_t>::fromVector(indicesVec);
+    }
+
 private:
     //TODO(noxoomo): this should be just sparse vec instead
     Vec nzTargets_;

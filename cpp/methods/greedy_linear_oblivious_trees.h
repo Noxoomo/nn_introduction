@@ -77,9 +77,12 @@ private:
 
         // compute stats per [thread Id][leaf Id]
         parallelFor(0, nSamples_, [&](int thId, int sampleId) {
-            auto bins = bds.sampleBins(sampleId);
+            int origSampleId = indices_[sampleId];
+            auto bins = bds.sampleBins(origSampleId);
+
             int lId = lIds[sampleId];
             if (lId < 0) return;
+
             auto leafStats = stats[thId][lId];
 
             for (int fId = 0; fId < fCount_; ++fId) {
@@ -126,6 +129,8 @@ private:
     std::vector<Vec> fColumns_;
     std::vector<ConstVecRef<float>> fColumnsRefs_;
     MultiDimArray<2, float> xs_;
+
+    ConstVecRef<int32_t> indices_;
 
     std::vector<int32_t> leafId_;
     std::vector<std::shared_ptr<LinearObliviousTreeLeafLearner>> leaves_;

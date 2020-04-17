@@ -136,6 +136,10 @@ ModelPtr GreedyLinearObliviousTreeLearner::fit(const DataSet& ds, const Target& 
 
     auto bds = cachedBinarize(ds, grid_, fCount_);
 
+    auto indices = target.indices();
+    indices_ = indices.arrayRef();
+    nSamples_ = indices.size();
+
     auto ysVec = target.targets();
     auto ys = ysVec.arrayRef();
 
@@ -309,7 +313,7 @@ void GreedyLinearObliviousTreeLearner::updateXs(int origFId) {
     int pos = usedFeatures_.size() - 1;
     auto fColumn = fColumnsRefs_[origFId];
     parallelFor(0, nSamples_, [&](int i) {
-        xs_[i][pos] = fColumn[i];
+        xs_[i][pos] = fColumn[indices_[i]];
     });
 }
 
@@ -383,7 +387,7 @@ void GreedyLinearObliviousTreeLearner::updateNewCorrelations(
         if (usedFeatures_.count(origFId)) return;
 
         LinearL2CorStatOpParams params;
-        params.fVal = fColumnsRefs_[origFId][sampleId];
+        params.fVal = fColumnsRefs_[origFId][indices_[sampleId]];
 
         float* x = curX(sampleId);
 
@@ -483,7 +487,7 @@ void GreedyLinearObliviousTreeLearner::initNewLeaves(GreedyLinearObliviousTreeLe
     }
 
     parallelFor(0,nSamples_, [&](int i) {
-        if (fColumnRef[i] <= border) {
+        if (fColumnRef[indices_[i]] <= border) {
             leafId_[i] = 2 * leafId_[i];
         } else {
             leafId_[i] = 2 * leafId_[i] + 1;
