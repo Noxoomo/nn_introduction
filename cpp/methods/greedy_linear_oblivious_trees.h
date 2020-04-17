@@ -61,11 +61,6 @@ private:
     void resetState();
     void resetStats(int nLeaves, int filledSize);
 
-    LinearL2Stat& linearL2StatsAccessor(
-            const std::vector<std::shared_ptr<LinearObliviousTreeLeafLearner>>& leaves,
-            int thId, int lId, int bin);
-    LinearL2CorStat& linearL2CorStatsAccessor(int thId, int lId, int bin);
-
     // TODO add bins factory
     template <typename Stat, typename UpdaterT>
     void ComputeStats(

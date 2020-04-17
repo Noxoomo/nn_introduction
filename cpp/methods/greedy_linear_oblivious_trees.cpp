@@ -321,18 +321,6 @@ float* GreedyLinearObliviousTreeLearner::curX(int sampleId) {
     return xs_[sampleId].data();
 }
 
-LinearL2CorStat& GreedyLinearObliviousTreeLearner::linearL2CorStatsAccessor(int thId, int lId, int bin) {
-    return (*corStats_)[thId][lId][bin];
-}
-
-LinearL2Stat& GreedyLinearObliviousTreeLearner::linearL2StatsAccessor(
-        const std::vector<std::shared_ptr<LinearObliviousTreeLeafLearner>>& leaves, int thId, int lId, int bin) {
-    if (thId == 0) {
-        return leaves[lId]->stats_[bin];
-    }
-    return (*stats_)[thId - 1][lId][bin];
-}
-
 void GreedyLinearObliviousTreeLearner::buildRoot(
         const BinarizedDataSet &bds,
         const DataSet &ds,
@@ -345,13 +333,6 @@ void GreedyLinearObliviousTreeLearner::buildRoot(
 
     LinearL2StatOpParams params;
     params.vecAddMode = LinearL2StatOpParams::FullCorrelation;
-
-//    std::function<LinearL2Stat&(int, int, int)> linearL2StatsFactory =
-//            std::bind(&GreedyLinearObliviousTreeLearner::linearL2StatsAccessor,
-//                    this,
-//                    std::placeholders::_1,
-//                      (const std::vector<std::shared_ptr<LinearObliviousTreeLeafLearner>>&)leaves_,
-//                    std::placeholders::_2);
 
     resetStats(1, 1);
 
