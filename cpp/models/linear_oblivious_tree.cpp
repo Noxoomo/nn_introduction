@@ -30,12 +30,12 @@ void LinearObliviousTree::applyToBds(const BinarizedDataSet& bds, Mx to, ApplyTy
     }
 }
 
-void LinearObliviousTree::appendTo(const Vec &x, Vec to) const {
+void LinearObliviousTree::appendTo(const Vec& x, Vec to) const {
     to += value(x.arrayRef());
 }
 
-double LinearObliviousTree::value(const ConstVecRef<float>& x) const {
-    unsigned int lId = 0;
+int LinearObliviousTree::getLeaf(const ConstVecRef<float>& x) const {
+    int lId = 0;
 
     for (int i = 0; i < splits_.size(); ++i) {
         const auto& s = splits_[i];
@@ -45,19 +45,26 @@ double LinearObliviousTree::value(const ConstVecRef<float>& x) const {
         const auto border = grid_->condition(fId, condId);
         const auto val = x[grid_->origFeatureIndex(fId)];
         if (val > border) {
-            lId |= 1U << (splits_.size() - i - 1);
+            lId |= 1 << (splits_.size() - i - 1);
         }
     }
 
+    return lId;
+}
+
+double LinearObliviousTree::value(const ConstVecRef<float>& x) const {
+    int lId = getLeaf(x);
     return scale_ * leaves_[lId].value(x);
 }
 
-double LinearObliviousTree::value(const Vec &x) {
+double LinearObliviousTree::value(const Vec& x) {
     return value(x.arrayRef());
 }
 
-void LinearObliviousTree::grad(const Vec &x, Vec to) {
-    throw std::runtime_error("Unimplemented");
+void LinearObliviousTree::grad(const Vec& x, Vec to) {
+    VecRef<float> toRef = to.arrayRef();
+    int lId = getLeaf(x.arrayRef());
+    leaves_[lId].grad(toRef);
 }
 
 void LinearObliviousTree::printInfo() const {

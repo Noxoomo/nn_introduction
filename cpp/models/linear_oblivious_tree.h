@@ -22,7 +22,7 @@ public:
     }
 
     double value(const ConstVecRef<float>& x) const {
-        float res = 0.0;
+        double res = 0.0;
 
         for (int i = 0; i < w_.size(); ++i) {
             int f = usedFeaturesInOrder_[i];
@@ -30,6 +30,12 @@ public:
         }
 
         return res;
+    }
+
+    void grad(VecRef<float> to) {
+        for (int i = 0; i < w_.size(); ++i) {
+            to[i] = w_(i, 0);
+        }
     }
 
     void printInfo() const {
@@ -105,6 +111,8 @@ private:
     friend class GreedyLinearObliviousTreeLearner;
 
     double value(const ConstVecRef<float>& x) const;
+
+    int getLeaf(const ConstVecRef<float>& x) const;
 
 private:
     GridPtr grid_;
