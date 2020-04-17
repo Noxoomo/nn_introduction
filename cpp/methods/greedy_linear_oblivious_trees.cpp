@@ -44,7 +44,7 @@ public:
         int bin = grid_->binOffsets()[fId] + condId;
         int lastBin = (int)grid_->binOffsets()[fId] + (int)grid_->conditionsCount(fId);
 
-        auto leftStat = stats_[bin];
+        auto& leftStat = stats_[bin];
         auto rightStat = stats_[lastBin] - leftStat;
 
         return target.score(leftStat) + target.score(rightStat);
@@ -190,6 +190,7 @@ ModelPtr GreedyLinearObliviousTreeLearner::fit(const DataSet& ds, const Target& 
         if (usedFeatures_.count(splitOrigFId) == 0) {
             usedFeatures_.insert(splitOrigFId);
             usedFeaturesOrdered_.push_back(splitOrigFId);
+            updateXs(splitOrigFId);
         }
         TIME_BLOCK_END(FIND_BEST_SPLIT)
 
@@ -230,14 +231,13 @@ void GreedyLinearObliviousTreeLearner::cacheDs(const DataSet &ds) {
         return;
     }
 
-    for (int fId = 0; fId < (int)grid_->nzFeaturesCount(); ++fId) {
+    for (int fId = 0; fId < ds.featuresCount(); ++fId) {
         fColumns_.emplace_back(ds.samplesCount());
         fColumnsRefs_.emplace_back(NULL);
     }
 
-    parallelFor<0>(0, grid_->nzFeaturesCount(), [&](int fId) {
-        int origFId = grid_->origFeatureIndex(fId);
-        ds.copyColumn(origFId, &fColumns_[fId]);
+    parallelFor(0, ds.featuresCount(), [&](int fId) {
+        ds.copyColumn(fId, &fColumns_[fId]);
         fColumnsRefs_[fId] = fColumns_[fId].arrayRef();
     });
 
@@ -271,6 +271,8 @@ void GreedyLinearObliviousTreeLearner::cacheDs(const DataSet &ds) {
         (*stats_)[thId] = MultiDimArray<2, LinearL2Stat>({1 << maxDepth_, totalBins_}, defaultStat);
     });
 
+    xs_ = MultiDimArray<2, float>({(int)ds.samplesCount(), maxDepth_ + 1});
+
     isDsCached_ = true;
 }
 
@@ -286,9 +288,11 @@ void GreedyLinearObliviousTreeLearner::resetState() {
 
 void GreedyLinearObliviousTreeLearner::resetStats(int nLeaves, int filledSize) {
     parallelFor(0, nThreads_, [&](int thId) {
+        auto& thStats = (*stats_)[thId];
+        auto& thCorStats = (*corStats_)[thId];
         for (int lId = 0; lId < nLeaves; ++lId) {
-            auto leafCorStat = (*corStats_)[thId][lId];
-            auto leafStat = (*stats_)[thId][lId];
+            auto leafCorStat = thCorStats[lId];
+            auto leafStat = thStats[lId];
             for (int bin = 0; bin < totalBins_; ++bin) {
                 auto& corStat = leafCorStat[bin];
                 corStat.reset();
@@ -299,6 +303,18 @@ void GreedyLinearObliviousTreeLearner::resetStats(int nLeaves, int filledSize) {
             }
         }
     });
+}
+
+void GreedyLinearObliviousTreeLearner::updateXs(int origFId) {
+    int pos = usedFeatures_.size() - 1;
+    auto fColumn = fColumnsRefs_[origFId];
+    parallelFor(0, nSamples_, [&](int i) {
+        xs_[i][pos] = fColumn[i];
+    });
+}
+
+float* GreedyLinearObliviousTreeLearner::curX(int sampleId) {
+    return xs_[sampleId].data();
 }
 
 LinearL2CorStat& GreedyLinearObliviousTreeLearner::linearL2CorStatsAccessor(int thId, int lId, int bin) {
@@ -321,20 +337,33 @@ void GreedyLinearObliviousTreeLearner::buildRoot(
     auto root = std::make_shared<LinearObliviousTreeLeafLearner>(this->grid_, 1);
     usedFeatures_.insert(biasCol_);
     usedFeaturesOrdered_.push_back(biasCol_);
+    updateXs(biasCol_);
 
     LinearL2StatOpParams params;
     params.vecAddMode = LinearL2StatOpParams::FullCorrelation;
+
+//    std::function<LinearL2Stat&(int, int, int)> linearL2StatsFactory =
+//            std::bind(&GreedyLinearObliviousTreeLearner::linearL2StatsAccessor,
+//                    this,
+//                    std::placeholders::_1,
+//                      (const std::vector<std::shared_ptr<LinearObliviousTreeLeafLearner>>&)leaves_,
+//                    std::placeholders::_2);
 
     resetStats(1, 1);
 
     ComputeStats<LinearL2Stat>(
             1, leafId_, ds, bds,
             *stats_,
-            [&](LinearL2Stat& stat, std::vector<float>& x, int sampleId, int fId) {
-        stat.append(x.data(), ys[sampleId], ws[sampleId], params);
+            [&](LinearL2Stat& stat, int sampleId, int origFId) {
+        float* x = curX(sampleId);
+        stat.append(x, ys[sampleId], ws[sampleId], params);
     });
 
-    root->stats_ = (*stats_)[0][0].copy();
+    auto stats = (*stats_)[0][0];
+
+    parallelFor(0, totalBins_, [&](int bin) {
+        root->stats_[bin] = stats[bin];
+    });
 
     leaves_.emplace_back(std::move(root));
 }
@@ -350,14 +379,15 @@ void GreedyLinearObliviousTreeLearner::updateNewCorrelations(
     ComputeStats<LinearL2CorStat>(
             leaves_.size(), leafId_, ds, bds,
             *corStats_,
-            [&](LinearL2CorStat& stat, std::vector<float>& x, int sampleId, int fId) {
-        int origFId = grid_->origFeatureIndex(fId);
+            [&](LinearL2CorStat& stat, int sampleId, int origFId) {
         if (usedFeatures_.count(origFId)) return;
 
         LinearL2CorStatOpParams params;
-        params.fVal = ds.fVal(sampleId, origFId);
+        params.fVal = fColumnsRefs_[origFId][sampleId];
 
-        stat.append(x.data(), ys[sampleId], ws[sampleId], params);
+        float* x = curX(sampleId);
+
+        stat.append(x, ys[sampleId], ws[sampleId], params);
     });
 
     MultiDimArray<2, LinearL2CorStat>& stats = (*corStats_)[0];
@@ -389,8 +419,18 @@ GreedyLinearObliviousTreeLearner::TSplit GreedyLinearObliviousTreeLearner::findB
     MultiDimArray<2, double> splitScores({fCount_, totalCond_});
 
     // TODO can parallelize by totalBins
-    parallelFor(0, fCount_, [&](int fId) {
-        for (int cond = 0; cond < grid_->conditionsCount(fId); ++cond) {
+//    parallelFor(0, fCount_, [&](int fId) {
+//        for (int cond = 0; cond < grid_->conditionsCount(fId); ++cond) {
+//            for (auto &l : leaves_) {
+//                splitScores[fId][cond] += l->splitScore(linearL2Target, fId, cond);
+//            }
+//        }
+//    });
+
+    parallelFor(0, totalBins_, [&](int bin) {
+        int fId = absBinToFId_[bin];
+        int cond = bin - binOffsets_[fId];
+        if (cond != grid_->conditionsCount(fId)) {
             for (auto &l : leaves_) {
                 splitScores[fId][cond] += l->splitScore(linearL2Target, fId, cond);
             }
@@ -423,16 +463,19 @@ void GreedyLinearObliviousTreeLearner::initNewLeaves(GreedyLinearObliviousTreeLe
     newLeaves_.clear();
 
     auto splitFId = std::get<1>(split);
+    int splitOrigFId = grid_->origFeatureIndex(splitFId);
     auto splitCond = std::get<2>(split);
 
-    for (auto& l : leaves_) {
-        auto newLeavesPair = l->split(splitFId, splitCond, usedFeatures_.size());
-        newLeaves_.emplace_back(newLeavesPair.first);
-        newLeaves_.emplace_back(newLeavesPair.second);
-    }
+    newLeaves_.resize(2 * leaves_.size());
+
+    parallelFor(0, leaves_.size(), [&](int lId) {
+        auto newLeavesPair = leaves_[lId]->split(splitFId, splitCond, usedFeatures_.size());
+        newLeaves_[2 * lId] = newLeavesPair.first;
+        newLeaves_[2 * lId + 1] = newLeavesPair.second;
+    });
 
     auto border = grid_->borders(splitFId).at(splitCond);
-    auto fColumnRef = fColumnsRefs_[splitFId];
+    auto fColumnRef = fColumnsRefs_[splitOrigFId];
 
     for (int i = 0; i < (int)leaves_.size(); ++i) {
         samplesLeavesCnt_[2 * i] = 0;
@@ -482,19 +525,28 @@ void GreedyLinearObliviousTreeLearner::updateNewLeaves(
     ComputeStats<LinearL2Stat>(
             leaves_.size(), fullLeafIds, ds, bds,
             *stats_,
-            [&](LinearL2Stat& stat, std::vector<float>& x, int sampleId, int fId) {
+            [&](LinearL2Stat& stat, int sampleId, int origFId) {
         LinearL2StatOpParams params;
         params.vecAddMode = LinearL2StatOpParams::FullCorrelation;
-        stat.append(x.data(), ys[sampleId], ws[sampleId], params);
+        float* x = curX(sampleId);
+        stat.append(x, ys[sampleId], ws[sampleId], params);
     });
     TIME_BLOCK_END(FullUpdatesCompute)
 
     auto& fullStats = (*stats_)[0];
 
     TIME_BLOCK_START(FullUpdatesAssign)
-    parallelFor(0, newLeaves_.size(), [&](int lId) {
-        if (fullUpdate_[lId]) {
-            newLeaves_[lId]->stats_ = fullStats[lId / 2].copy();
+//    parallelFor(0, newLeaves_.size(), [&](int lId) {
+//        if (fullUpdate_[lId]) {
+//            newLeaves_[lId]->stats_ = fullStats[lId / 2].copy();
+//        }
+//    });
+
+    parallelFor(0, totalBins_, [&](int bin) {
+        for (int lId = 0; lId < (int)newLeaves_.size(); ++lId) {
+            if (!fullUpdate_[lId]) continue;
+//            auto &fullStat = fullStats[lId / 2][bin];
+            newLeaves_[lId]->stats_[bin] = fullStats[lId / 2][bin];
         }
     });
     TIME_BLOCK_END(FullUpdatesAssign)
@@ -508,10 +560,11 @@ void GreedyLinearObliviousTreeLearner::updateNewLeaves(
         ComputeStats<LinearL2CorStat>(
                 leaves_.size(), partialLeafIds, ds, bds,
                 *corStats_,
-                [&](LinearL2CorStat& stat, std::vector<float>& x, int sampleId, int fId) {
+                [&](LinearL2CorStat& stat, int sampleId, int origFId) {
+                    float* x = curX(sampleId);
                     LinearL2CorStatOpParams params;
                     params.fVal = x[nUsedFeatures - 1];
-                    stat.append(x.data(), ys[sampleId], ws[sampleId], params);
+                    stat.append(x, ys[sampleId], ws[sampleId], params);
                 });
         TIME_BLOCK_END(PartialUpdatesCompute)
 
@@ -521,14 +574,23 @@ void GreedyLinearObliviousTreeLearner::updateNewLeaves(
         LinearL2StatOpParams params;
         params.shift = -1;
 
-        parallelFor(0, newLeaves_.size(), [&](int lId) {
-            if (!fullUpdate_[lId]) {
-                for (int bin = 0; bin < totalBins_; ++bin) {
-                    auto &partialStat = partialStats[lId / 2][bin];
-                    newLeaves_[lId]->stats_[bin].append(partialStat.xxt.data(),
-                                                        partialStat.xy,
-                                                        partialStat.sumX, params);
-                }
+//        parallelFor(0, newLeaves_.size(), [&](int lId) {
+//            if (fullUpdate_[lId]) return;
+//            for (int bin = 0; bin < totalBins_; ++bin) {
+//                auto &partialStat = partialStats[lId / 2][bin];
+//                newLeaves_[lId]->stats_[bin].append(partialStat.xxt.data(),
+//                                                    partialStat.xy,
+//                                                    partialStat.sumX, params);
+//            }
+//        });
+
+        parallelFor(0, totalBins_, [&](int bin) {
+            for (int lId = 0; lId < (int)newLeaves_.size(); ++lId) {
+                if (fullUpdate_[lId]) continue;
+                auto &partialStat = partialStats[lId / 2][bin];
+                newLeaves_[lId]->stats_[bin].append(partialStat.xxt.data(),
+                                                    partialStat.xy,
+                                                    partialStat.sumX, params);
             }
         });
         TIME_BLOCK_END(PartialUpdatesAssign)

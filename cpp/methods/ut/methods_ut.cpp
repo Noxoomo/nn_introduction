@@ -173,16 +173,18 @@ TEST(BoostingLinearTrees, SimpleDs) {
     config.bordersCount_ = 32;
     auto grid = buildGrid(ds, config);
 
+    const double l2reg = 1e-5;
+
     BoostingConfig boostingConfig;
     boostingConfig.iterations_ = 1;
     boostingConfig.step_ = 1;
-    Boosting boosting(boostingConfig, createWeakTarget(), createWeakLinearLearner(6, 0, 1e-5, grid));
+    Boosting boosting(boostingConfig, createWeakTarget(), createWeakLinearLearner(4, 0, l2reg, grid));
 
     auto trainMetricsCalcer = std::make_shared<BoostingMetricsCalcer>(ds);
     trainMetricsCalcer->addMetric(L2(ds), "l2-train");
     boosting.addListener(trainMetricsCalcer);
 
-    L2 target(ds);
+    LinearL2 target(ds, l2reg);
     auto ensemble = boosting.fit(ds, target);
 
     for (int i = 0; i < ds.samplesCount(); ++i) {

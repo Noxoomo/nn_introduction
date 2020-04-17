@@ -55,6 +55,8 @@ private:
                          int oldNUsedFeatures,
                          ConstVecRef<float> ys,
                          ConstVecRef<float> ws);
+    void updateXs(int origFId);
+    float* curX(int sampleId);
 
     void resetState();
     void resetStats(int nLeaves, int filledSize);
@@ -73,35 +75,29 @@ private:
             UpdaterT updater) {
         int nUsedFeatures = usedFeaturesOrdered_.size();
 
-        MultiDimArray<1, std::vector<float>> curX({nThreads_});
-
-        parallelFor(0, nThreads_, [&](int thId) {
-            curX[thId] = std::vector<float>(nUsedFeatures, 0.);
-        });
-
         // compute stats per [thread Id][leaf Id]
         parallelFor(0, nSamples_, [&](int thId, int sampleId) {
-            auto& x = curX[thId];
             auto bins = bds.sampleBins(sampleId);
             int lId = lIds[sampleId];
             if (lId < 0) return;
             auto leafStats = stats[thId][lId];
 
-            ds.fillSample(sampleId, usedFeaturesOrdered_, x);
-
             for (int fId = 0; fId < fCount_; ++fId) {
+                int origFId = grid_->origFeatureIndex(fId);
                 int bin = binOffsets_[fId] + bins[fId];
                 auto& stat = leafStats[bin];
-                updater(stat, x, sampleId, fId);
+                updater(stat, sampleId, origFId);
             }
         });
 
         // gather individual workers results together
         // TODO maybe change order
         parallelFor(0, nLeaves, [&](int lId) {
+            auto leftLeafStats = stats[0][lId];
             for (int thId = 1; thId < nThreads_; ++thId) {
+                auto rightLeafStats = stats[thId][lId];
                 for (int bin = 0; bin < totalBins_; ++bin) {
-                    stats[0][lId][bin] += stats[thId][lId][bin];
+                    leftLeafStats[bin] += rightLeafStats[bin];
                 }
             }
         });
@@ -129,6 +125,7 @@ private:
     bool isDsCached_ = false;
     std::vector<Vec> fColumns_;
     std::vector<ConstVecRef<float>> fColumnsRefs_;
+    MultiDimArray<2, float> xs_;
 
     std::vector<int32_t> leafId_;
     std::vector<std::shared_ptr<LinearObliviousTreeLeafLearner>> leaves_;

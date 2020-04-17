@@ -1,6 +1,56 @@
 #include "linear_l2_stat.h"
 
 
+namespace {
+    void vectorizedAdd(float* dst, const float* src, int size) {
+        int i;
+        for (i = 0; i <= size - 4; i += 4) {
+            for (int j = i; j < i + 4; ++j) {
+                dst[j] += src[j];
+            }
+        }
+        for (; i < size; ++i) {
+            dst[i] += src[i];
+        }
+    }
+
+    void vectorizedScaleAdd(float* dst, const float* src, float m, int size) {
+        int i;
+        for (i = 0; i <= size - 4; i += 4) {
+            for (int j = i; j < i + 4; ++j) {
+                dst[j] += m * src[j];
+            }
+        }
+        for (; i < size; ++i) {
+            dst[i] += m * src[i];
+        }
+    }
+
+    void vectorizedRm(float* dst, const float* src, int size) {
+        int i;
+        for (i = 0; i <= size - 4; i += 4) {
+            for (int j = i; j < i + 4; ++j) {
+                dst[j] -= src[j];
+            }
+        }
+        for (; i < size; ++i) {
+            dst[i] -= src[i];
+        }
+    }
+
+    void vectorizedScaleRm(float* dst, const float* src, float m, int size) {
+        int i;
+        for (i = 0; i <= size - 4; i += 4) {
+            for (int j = i; j < i + 4; ++j) {
+                dst[j] -= m * src[j];
+            }
+        }
+        for (; i < size; ++i) {
+            dst[i] -= m * src[i];
+        }
+    }
+}
+
 // LinearL2CorStat
 
 
@@ -24,18 +74,20 @@ void LinearL2CorStat::setFilledSize(int filledSize) {
 
 LinearL2CorStat& LinearL2CorStat::appendImpl(const LinearL2CorStat &other,
                                              const LinearL2CorStatOpParams &opParams) {
-    for (int i = 0; i < filledSize_; ++i) {
-        xxt[i] += other.xxt[i];
-    }
+//    for (int i = 0; i < filledSize_; ++i) {
+//        xxt[i] += other.xxt[i];
+//    }
+    vectorizedAdd(xxt.data(), other.xxt.data(), filledSize_);
     xy += other.xy;
     sumX += other.sumX;
 }
 
 LinearL2CorStat& LinearL2CorStat::removeImpl(const LinearL2CorStat &other,
                                              const LinearL2CorStatOpParams &opParams) {
-    for (int i = 0; i < filledSize_; ++i) {
-        xxt[i] -= other.xxt[i];
-    }
+//    for (int i = 0; i < filledSize_; ++i) {
+//        xxt[i] -= other.xxt[i];
+//    }
+    vectorizedRm(xxt.data(), other.xxt.data(), filledSize_);
     xy -= other.xy;
     sumX -= other.sumX;
 }
@@ -43,9 +95,10 @@ LinearL2CorStat& LinearL2CorStat::removeImpl(const LinearL2CorStat &other,
 LinearL2CorStat& LinearL2CorStat::appendImpl(const float* x, float y, float weight,
                                              const LinearL2CorStatOpParams &opParams) {
     const float wf = weight * opParams.fVal;
-    for (int i = 0; i < filledSize_ - 1; ++i) {
-        xxt[i] += x[i] * wf;
-    }
+//    for (int i = 0; i < filledSize_ - 1; ++i) {
+//        xxt[i] += x[i] * wf;
+//    }
+    vectorizedScaleAdd(xxt.data(), x, wf, filledSize_ - 1);
     xxt[filledSize_ - 1] += opParams.fVal * wf;
     xy += y * wf;
     sumX += wf;
@@ -54,9 +107,10 @@ LinearL2CorStat& LinearL2CorStat::appendImpl(const float* x, float y, float weig
 LinearL2CorStat& LinearL2CorStat::removeImpl(const float* x, float y, float weight,
                                              const LinearL2CorStatOpParams &opParams) {
     const float wf = weight * opParams.fVal;
-    for (int i = 0; i < filledSize_ - 1; ++i) {
-        xxt[i] -= x[i] * wf;
-    }
+//    for (int i = 0; i < filledSize_ - 1; ++i) {
+//        xxt[i] -= x[i] * wf;
+//    }
+    vectorizedScaleRm(xxt.data(), x, wf, filledSize_ - 1);
     xxt[filledSize_ - 1] -= opParams.fVal * wf;
     xy -= y * wf;
     sumX -= wf;
@@ -98,9 +152,10 @@ void LinearL2Stat::addNewCorrelation(const float* xtx, float xty, float sumX, in
     const int corPos = filledSize_ + shift;
 
     int pos = corPos * (corPos + 1) / 2;
-    for (int i = 0; i <= corPos; ++i) {
-        xtx_[pos + i] += xtx[i];
-    }
+//    for (int i = 0; i <= corPos; ++i) {
+//        xtx_[pos + i] += xtx[i];
+//    }
+    vectorizedAdd(xtx_.data() + pos, xtx, corPos + 1);
     xty_[corPos] += xty;
     sumX_[corPos] += sumX;
     maxUpdatedPos_ = std::max(maxUpdatedPos_, corPos + 1);
@@ -118,10 +173,11 @@ void LinearL2Stat::addFullCorrelation(const float* x, float y, float w) {
         for (int j = 0; j < i + 1; ++j) {
             xtx_[pos + j] += xiw * x[j];
         }
-        sumX_[i] += xiw;
-        xty_[i] += xiw * y;
         pos += i + 1;
     }
+
+    vectorizedScaleAdd(sumX_.data(), x, w, filledSize_);
+    vectorizedScaleAdd(xty_.data(), x, yw, filledSize_);
 }
 
 LinearL2Stat& LinearL2Stat::appendImpl(const LinearL2Stat &other, const LinearL2StatOpParams &opParams) {
@@ -134,15 +190,22 @@ LinearL2Stat& LinearL2Stat::appendImpl(const LinearL2Stat &other, const LinearL2
         size = std::min(maxUpdatedPos_, other.maxUpdatedPos_); // TODO filled or updated?
     }
 
-    int pos = 0;
-    for (int i = 0; i < size; ++i) {
-        for (int j = 0; j < i + 1; ++j) {
-            xtx_[pos + j] += other.xtx_[pos + j];
-        }
-        pos += i + 1;
-        xty_[i] += other.xty_[i];
-        sumX_[i] += other.sumX_[i];
-    }
+//    int pos = 0;
+//    for (int i = 0; i < size; ++i) {
+//        for (int j = 0; j < i + 1; ++j) {
+//            xtx_[pos + j] += other.xtx_[pos + j];
+//        }
+//        pos += i + 1;
+//        xty_[i] += other.xty_[i];
+//        sumX_[i] += other.sumX_[i];
+//    }
+
+    int pos = size * (size + 1) / 2;
+    vectorizedAdd(xtx_.data(), other.xtx_.data(), pos);
+
+    vectorizedAdd(xty_.data(), other.xty_.data(), size);
+    vectorizedAdd(sumX_.data(), other.sumX_.data(), size);
+
 
     return *this;
 }
@@ -157,15 +220,21 @@ LinearL2Stat& LinearL2Stat::removeImpl(const LinearL2Stat &other, const LinearL2
         size = std::min(maxUpdatedPos_, other.maxUpdatedPos_); // TODO filled or updated?
     }
 
-    int pos = 0;
-    for (int i = 0; i < size; ++i) {
-        for (int j = 0; j < i + 1; ++j) {
-            xtx_[pos + j] -= other.xtx_[pos + j];
-        }
-        pos += i + 1;
-        xty_[i] -= other.xty_[i];
-        sumX_[i] -= other.sumX_[i];
-    }
+//    int pos = 0;
+//    for (int i = 0; i < size; ++i) {
+//        for (int j = 0; j < i + 1; ++j) {
+//            xtx_[pos + j] -= other.xtx_[pos + j];
+//        }
+//        pos += i + 1;
+//        xty_[i] -= other.xty_[i];
+//        sumX_[i] -= other.sumX_[i];
+//    }
+
+    int pos = size * (size + 1) / 2;
+    vectorizedRm(xtx_.data(), other.xtx_.data(), pos);
+
+    vectorizedRm(xty_.data(), other.xty_.data(), size);
+    vectorizedRm(sumX_.data(), other.sumX_.data(), size);
 
     return *this;
 }

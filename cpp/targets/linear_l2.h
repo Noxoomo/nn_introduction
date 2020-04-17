@@ -63,8 +63,7 @@ public:
         LinearL2Stat::EMx wHat = s.getWHat(lambda_); // n x 1 matrix
         LinearL2Stat::EMx xy = s.getXTy(); // n x 1 matrix
         xy -= (s.sumY_ / weight) * s.getSumX();
-        xy *= 1. / weight;
-        float scoreFromLinear = weight * (wHat.transpose() * xy)(0, 0);
+        float scoreFromLinear = (wHat.transpose() * xy)(0, 0);
         float scoreFromConst = s.sumY_ * s.sumY_ / weight;
         float targetValue = scoreFromConst + scoreFromLinear - lambda_ * wHat.norm();
         return -targetValue;
