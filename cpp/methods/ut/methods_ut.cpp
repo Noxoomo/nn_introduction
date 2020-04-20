@@ -209,8 +209,8 @@ TEST(BoostingLinearTrees, FeaturesTxt) {
 
     BoostingConfig boostingConfig;
     boostingConfig.iterations_ = 500;
-    boostingConfig.step_ = 0.05;
-    Boosting boosting(boostingConfig, createWeakTarget(), createWeakLinearLearner(6, 0, l2reg, grid));
+    boostingConfig.step_ = 0.008;
+    Boosting boosting(boostingConfig, createBootstrapWeakTarget(), createWeakLinearLearner(6, 0, l2reg, grid));
 
     auto testMetricsCalcer = std::make_shared<BoostingMetricsCalcer>(test);
     testMetricsCalcer->addMetric(L2(test), "l2-test");

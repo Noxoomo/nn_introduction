@@ -15,7 +15,7 @@
 
 class CatBoostNN : public EMLikeTrainer<decltype(getDefaultCifar10TrainTransform())> {
 public:
-    using ConvModelPtr = std::shared_ptr<experiments::ConvModel>;
+    using ConvModelPtr = std::shared_ptr<experiments::EmModel>;
 
     CatBoostNN(json opts,
         ConvModelPtr model,

@@ -36,45 +36,37 @@ torch::Tensor MLP::forward(torch::Tensor x) {
     return x;
 }
 
-LinearCifarClassifier::LinearCifarClassifier(int dim) {
-    fc1_ = register_module("fc1_", torch::nn::Linear(dim, 10));
-}
-
-torch::Tensor LinearCifarClassifier::forward(torch::Tensor x) {
-    x = correctDevice(x, *this);
-    return fc1_->forward(x.view({x.size(0), -1}));
-}
-
-SigmoidLinearCifarClassifier::SigmoidLinearCifarClassifier(int dim) {
-    fc1_ = register_module("fc1_", torch::nn::Linear(dim, 10));
-}
-
-torch::Tensor SigmoidLinearCifarClassifier::forward(torch::Tensor x) {
-    x = correctDevice(x, *this);
-    return fc1_->forward(torch::sigmoid(x.view({x.size(0), -1})));
-}
-
-torch::Tensor experiments::ConvModel::forward(torch::Tensor x) {
-    x = conv()->forward(x);
-    x = classifier()->forward(x);
+torch::Tensor experiments::EmModel::forward(torch::Tensor x) {
+    if (eStepModel_) {
+//        std::cout << "forwarding e model" << std::endl;
+        x = eStepModel_->forward(x);
+    }
+    if (mStepModel_) {
+//        std::cout << "forwarding m model" << std::endl;
+        x = mStepModel_->forward(x);
+    }
     return x;
 }
 
-void experiments::ConvModel::train(bool on) {
-    conv()->train(on);
-    classifier()->train(on);
+void experiments::EmModel::train(bool on) {
+    if (eStepModel_) {
+        eStepModel_->train(on);
+    }
+    if (mStepModel_) {
+        mStepModel_->train(on);
+    }
 }
 
 torch::Tensor experiments::Classifier::forward(torch::Tensor x) {
     x = x.view({x.size(0), -1});
     auto result = classifier_->forward(x);
 //    result *= classifierScale_;
-    if (baseline_) {
-        result = correctDevice(result, baseline_->device());
-        x = torch::sigmoid(x);
-        result += baseline_->forward(x);
-    }
-    result *= classifierScale_;
+//    if (baseline_) {
+//        result = correctDevice(result, baseline_->device());
+////        x = torch::sigmoid(x);
+//        result += baseline_->forward(x);
+//    }
+//    result *= classifierScale_;
     return result;
 }
 
@@ -84,6 +76,7 @@ ZeroClassifier::ZeroClassifier(int numClasses)
 }
 
 torch::Tensor ZeroClassifier::forward(torch::Tensor x) {
+//    std::cout << "forwarding zero" << std::endl;
     return torch::zeros({x.size(0), numClasses_}, torch::kFloat32).to(this->parameters().data()->device());
 }
 
@@ -102,6 +95,20 @@ torch::Tensor Bias::forward(torch::Tensor x) {
 
 // Utils
 
+// TODO move it somewhere
+torch::Device getDevice(const std::string& device) {
+    auto ls = splitByDelim(device, ':');
+    if (ls[0] == "GPU") {
+        if (ls.size() > 1) {
+            return torch::Device(torch::kCUDA, std::stoi(ls[1]));
+        } else {
+            return torch::kCUDA;
+        }
+    } else {
+        return torch::kCPU;
+    }
+}
+
 static ModelPtr _createConvLayers(const std::vector<int>& inputShape, const json& params) {
     std::string modelName = params[ModelArchKey];
 
@@ -119,20 +126,6 @@ static ModelPtr _createConvLayers(const std::vector<int>& inputShape, const json
 
     std::string errMsg("Unsupported model architecture");
     throw std::runtime_error(errMsg + " " + modelName);
-}
-
-// TODO move it somewhere
-torch::Device getDevice(const std::string& device) {
-    auto ls = splitByDelim(device, ':');
-    if (ls[0] == "GPU") {
-        if (ls.size() > 1) {
-            return torch::Device(torch::kCUDA, std::stoi(ls[1]));
-        } else {
-            return torch::kCUDA;
-        }
-    } else {
-        return torch::kCPU;
-    }
 }
 
 ModelPtr createConvLayers(const std::vector<int>& inputShape, const json& params) {
@@ -159,23 +152,27 @@ static ModelPtr _createClassifier(int numClasses, const json& params) {
             polynom->Ensemble_.push_back(std::move(emptyMonom));
         }
         return std::make_shared<PolynomModel>(std::move(polynom));
+    } else if (archType == "Id") {
+        return std::make_shared<IdClassifier>();
     }
 
     std::string errMsg("Unsupported baseline classifier type");
     throw std::runtime_error(errMsg + " " + archType);
 }
 
-ClassifierPtr createClassifier(int numClasses, const json& params) {
+ClassifierPtr createClassifier(const json& params) {
     ModelPtr mainClassifier{nullptr};
     ModelPtr baselineClassifier{nullptr};
 
+    int numClasses = params["num_classes"];
+
     if (params.count(ClassifierMainKey)) {
         mainClassifier = _createClassifier(numClasses, params[ClassifierMainKey]);
-        auto device = getDevice(params[ClassifierMainKey][DeviceKey]);
-        mainClassifier->to(device);
     } else {
         mainClassifier = std::make_shared<ZeroClassifier>(numClasses);
     }
+    auto device = getDevice(params[ClassifierMainKey][DeviceKey]);
+    mainClassifier->to(device);
 
     if (params.count(ClassifierBaselineKey)) {
         baselineClassifier = _createClassifier(numClasses, params[ClassifierBaselineKey]);
@@ -190,6 +187,46 @@ ClassifierPtr createClassifier(int numClasses, const json& params) {
     }
 }
 
+ModelPtr createConvModel(const json& convModelParams) {
+    ModelPtr conv;
+    ClassifierPtr classifier;
 
+    if (convModelParams.contains("conv")) {
+        const json& convParams = convModelParams["conv"];
+        conv = createConvLayers({}, convParams);
+    }
+
+    if (convModelParams.contains("classifier")) {
+        const json& classifierParams = convModelParams["classifier"];
+        classifier = createClassifier(classifierParams);
+    }
+
+    return std::make_shared<ConvModel>(std::move(conv), std::move(classifier));
+}
+
+ModelPtr createEmModel(const json& emModelParams) {
+    ModelPtr eModel = createModel(emModelParams["e_model"]);
+    auto device = getDevice(emModelParams["e_model"][DeviceKey]);
+    eModel->to(device);
+
+    ModelPtr mModel = createModel(emModelParams["m_model"]);
+    device = getDevice(emModelParams["m_model"][DeviceKey]);
+    mModel->to(device);
+
+    return std::make_shared<EmModel>(std::move(eModel), std::move(mModel));
+}
+
+ModelPtr createModel(const json& modelParams) {
+    const std::string& arch = modelParams["model_arch"];
+    if (arch == "em_model") {
+        return createEmModel(modelParams);
+    } else if (arch == "conv_model") {
+        return createConvModel(modelParams);
+    } else if (arch == "Id") {
+        return std::make_shared<IdClassifier>();
+    }
+
+    throw std::runtime_error("Unknown model arch " + arch);
+}
 
 }

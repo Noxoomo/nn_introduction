@@ -23,13 +23,7 @@ int main(int argc, const char* argv[]) {
     auto device = getDevice(params[DeviceKey]);
     int batchSize = params[BatchSizeKey];
 
-    const json& convParams = params[ModelKey][ConvKey];
-    const json& classParams = params[ModelKey][ClassifierKey];
-
-    auto conv = createConvLayers({}, convParams);
-    auto classifier = createClassifier(2, classParams);
-
-    auto model = std::make_shared<ConvModel>(conv, classifier);
+    auto model = std::dynamic_pointer_cast<ConvModel>(experiments::createModel(params["model"]));
     model->to(device);
 
     // Load data
@@ -41,7 +35,6 @@ int main(int argc, const char* argv[]) {
 
     // AttachListeners
 
-    std::string modelCheckpoint = params[ModelCheckpointFileKey];
     attachDefaultListeners(optimizer, params);
     auto mds = dataset.second.map(getDefaultCifar10TestTransform());
 

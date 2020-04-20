@@ -72,8 +72,8 @@ static void attachReprListeners(const experiments::OptimizerPtr& optimizer,
   auto epochReportOptimizerListener = std::make_shared<experiments::EpochReportOptimizerListener>();
   optimizer->registerListener(epochReportOptimizerListener);
 
-  auto lrDecayListener = std::make_shared<LrLinearDecayOptimizerListener>(startLr, endLr, epochs);
-  optimizer->registerListener(lrDecayListener);
+//  auto lrDecayListener = std::make_shared<LrLinearDecayOptimizerListener>(startLr, endLr, epochs);
+//  optimizer->registerListener(lrDecayListener);
 }
 
 static torch::Tensor maybeMakeBaseline(torch::Tensor data, const experiments::ClassifierPtr& classifier,
@@ -182,7 +182,7 @@ namespace {
                    TensorPairDataset &validationDs,
                    LossPtr loss,
                    experiments::ModelPtr model) const override {
-            auto castedModel = std::dynamic_pointer_cast<experiments::ConvModel>(model);
+            auto castedModel = std::dynamic_pointer_cast<experiments::EmModel>(model);
             auto classifier = castedModel->classifier();
             auto polynomModel = std::dynamic_pointer_cast<PolynomModel>(classifier->classifier());
 
@@ -497,7 +497,7 @@ void CatBoostNN::trainDecision(TensorPairDataset& ds, const LossPtr& loss) {
     auto decisionModel = model_->classifier();
     representationsModel->train(false);
 
-    static bool needBias = true;
+    static bool needBias = false;
 
     if (model_->classifier()->baseline()) {
         model_->classifier()->enableBaselineTrain(false);
@@ -507,7 +507,7 @@ void CatBoostNN::trainDecision(TensorPairDataset& ds, const LossPtr& loss) {
 
     std::cout << "    getting representations" << std::endl;
 
-    representationsModel->lastNonlinearity(false);
+//    representationsModel->lastNonlinearity(false);
     auto trainDsRepr = getRepr(ds, representationsModel);
     if (needBias) {
         std::cout << "\n\n Setting Bias \n\n" << std::endl;
@@ -694,7 +694,7 @@ void CatBoostNN::initialTrainRepr(TensorPairDataset& ds, const LossPtr& loss) {
     iter_ = 3;
 
     if (initClassifier_) {
-        auto model = std::make_shared<ConvModel>(model_->conv(), initClassifier_);
+        auto model = std::make_shared<EmModel>(model_->conv(), initClassifier_);
         model->train(true);
         LossPtr representationLoss = makeRepresentationLoss(initClassifier_, loss);
         auto representationOptimizer = getReprOptimizer(model_->conv());

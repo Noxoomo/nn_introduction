@@ -29,7 +29,7 @@ int main(int argc, const char* argv[]) {
     auto conv = createConvLayers({}, convParams);
     auto classifier = createClassifier(2, classParams);
 
-    auto model = std::make_shared<ConvModel>(conv, classifier);
+    auto model = std::make_shared<EmModel>(conv, classifier);
     model->to(device);
 
     // Load data

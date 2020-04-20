@@ -1,5 +1,5 @@
 #include "common.h"
-#include "common_em.h"
+#include "cifar10_em.h"
 #include "catboost_nn.h"
 
 #include <experiments/core/optimizer.h>
@@ -41,7 +41,7 @@ int main(int argc, const char* argv[]) {
     auto conv = createConvLayers({}, convParams);
     auto classifier = createClassifier(2, classParams);
 
-    auto model = std::make_shared<ConvModel>(conv, classifier);
+    auto model = std::make_shared<EmModel>(conv, classifier);
 
     //torch::setNumThreads(16);
 

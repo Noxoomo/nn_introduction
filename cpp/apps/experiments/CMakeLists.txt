@@ -8,11 +8,11 @@ include_directories(../../experiments)
 add_executable(train_default train_default.cpp common.h common.cpp)
 target_link_libraries(train_default "${TORCH_LIBRARIES}" experiments)
 
-add_executable(train_default_em train_default_em.cpp common.h common.cpp common_em.h)
+add_executable(train_default_em train_default_em.cpp common.h common.cpp cifar10_em.h)
 target_link_libraries(train_default_em "${TORCH_LIBRARIES}" experiments)
 
-add_executable(train_with_catboost train_with_catboost.cpp common.h common.cpp catboost_nn.h catboost_nn.cpp)
-target_link_libraries(train_with_catboost "${TORCH_LIBRARIES}" experiments polynom ${CATBOOST})
+#add_executable(train_with_catboost train_with_catboost.cpp common.h common.cpp catboost_nn.h catboost_nn.cpp)
+#target_link_libraries(train_with_catboost "${TORCH_LIBRARIES}" experiments polynom ${CATBOOST})
 
 add_executable(train_cnn_linear train_cnn_linear_trees.cpp common.h common.cpp)
 target_link_libraries(train_cnn_linear "${TORCH_LIBRARIES}" experiments methods)

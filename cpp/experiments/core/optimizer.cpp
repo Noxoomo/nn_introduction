@@ -57,11 +57,13 @@ void EpochReportOptimizerListener::onEpoch(int epoch, double *lr, experiments::M
 
 // LrDecayOptimizerListener
 
-LrDecayOptimizerListener::LrDecayOptimizerListener(double lrDecay, std::vector<int> decayEpochs)
+LrDecayOptimizerListener::LrDecayOptimizerListener(
+        std::vector<double> newLr,
+        std::vector<int> decayEpochs)
         : OptimizerEpochListener()
-        , lrDecay_(lrDecay)
+        , newLr_(std::move(newLr))
         , decayEpochs_(std::move(decayEpochs)) {
-
+    assert(newLr_.size() == decayEpochs_.size());
 }
 
 void LrDecayOptimizerListener::epochReset() {
@@ -69,9 +71,12 @@ void LrDecayOptimizerListener::epochReset() {
 }
 
 void LrDecayOptimizerListener::onEpoch(int epoch, double *lr, experiments::ModelPtr model) {
-    if (std::find(decayEpochs_.begin(), decayEpochs_.end(), epoch) != decayEpochs_.end()) {
-        std::cout << "Decaying lr: (" << (*lr) << " -> " << (*lr / lrDecay_) << ")" << std::endl;
-        *lr /= lrDecay_;
+    for (int i = 0; i < decayEpochs_.size(); ++i) {
+        if (epoch == decayEpochs_[i]) {
+            std::cout << "Decaying lr: (" << (*lr) << " -> " << newLr_[i] << ")" << std::endl;
+            *lr = newLr_[i];
+            return;
+        }
     }
 }
 

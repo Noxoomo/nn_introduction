@@ -1,5 +1,7 @@
 {
   "model": {
+    "model_arch": "em_model",
+    "e_model": {
       "model_arch": "conv_model",
       "device": "GPU",
       "conv": {
@@ -14,6 +16,12 @@
           "device": "GPU"
         }
       }
+    },
+    "m_model": {
+      "model_arch": "Id",
+      "num_classes": 2,
+      "device": "GPU"
+    }
   },
 
   "dataset": {
@@ -26,7 +34,11 @@
   "checkpoint_file": "small_net_checkpoint.pt",
   "batch_size": 128,
   "reports_per_epoch": 10,
-  "n_iterations": [100, 400, 500],
+  "em_iterations": {
+    "global_iters": 3,
+    "e_iters": 0,
+    "m_iters": 0
+  },
   "sgd_step": 0.01,
   "dropout": 0.0,
   "device": "GPU",
@@ -36,6 +48,12 @@
       "field": "sgd_step",
       "type": "double",
       "values": [0.01, 0.001, 0.0001],
+      "iters": [0, 1, 2]
+    },
+    {
+      "field": "em_iterations.e_iters",
+      "type": "int",
+      "values": [1, 1, 1],
       "iters": [0, 1, 2]
     }
   ]

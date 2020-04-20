@@ -66,7 +66,8 @@ private:
 
 class LrDecayOptimizerListener : public OptimizerEpochListener {
 public:
-    LrDecayOptimizerListener(double lrDecay,
+    LrDecayOptimizerListener(
+            std::vector<double> newLr,
             std::vector<int> decayEpochs);
 
     void epochReset() override;
@@ -74,7 +75,7 @@ public:
     void onEpoch(int epoch, double* lr, ModelPtr model) override;
 
 private:
-    double lrDecay_;
+    std::vector<double> newLr_;
     std::vector<int> decayEpochs_;
 };
 
@@ -201,12 +202,22 @@ struct OptimizerArgs {
     int epochs_ = -1;
 };
 
+class NoopOptimizer : public Optimizer {
+public:
+    NoopOptimizer() = default;
+
+    void train(TensorPairDataset& ds, LossPtr loss, ModelPtr model) const {
+    }
+
+    ~NoopOptimizer() = default;
+};
+
 // DefaultOptimizer
 
 template <typename TransformType>
 class DefaultOptimizer : public Optimizer {
 public:
-    explicit DefaultOptimizer(const OptimizerArgs<TransformType>& args)
+    explicit DefaultOptimizer(OptimizerArgs<TransformType> args)
             : args_(std::move(args)) {
 
     }
@@ -219,7 +230,7 @@ public:
             this->fireEpochResetListeners();
             this->fireBatchResetListeners();
             int batchId = 0;
-            for (auto& batch : *dloader) {
+            for (const auto& batch : *dloader) {
                 auto data = batch.data;
                 auto target = batch.target;
 
