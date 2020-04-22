@@ -107,7 +107,7 @@ protected:
 
 private:
     void optimizeRepresentationModel(TensorPairDataset& ds, const LossPtr& loss) {
-        if (params_[NIterationsKey][1] == 0) {
+        if (params_["em_iterations"]["e_iters"] == 0) {
             return;
         }
 
@@ -125,7 +125,7 @@ private:
     }
 
     void optimizeDecisionModel(TensorPairDataset& ds, const LossPtr& loss) {
-        if (params_[NIterationsKey][2] == 0) {
+        if (params_["em_iterations"]["m_iters"] == 0) {
             return;
         }
 

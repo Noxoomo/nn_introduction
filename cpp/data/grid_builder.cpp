@@ -140,6 +140,11 @@ namespace {
     };
 }
 
+BinarizationConfig BinarizationConfig::fromJson(const json& params) {
+    BinarizationConfig opts;
+    opts.bordersCount_ = params["borders_count"];
+    return opts;
+}
 
 std::vector<float> buildBorders(const BinarizationConfig& config, Vec* vals) {
     std::vector<float> borders;

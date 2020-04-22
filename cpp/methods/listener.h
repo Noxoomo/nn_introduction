@@ -48,37 +48,45 @@ public:
 
     void operator()(const Model& model) override {
         model.append(ds_, cursor_);
-        if (iter_ % 1 == 0) {
-            std::cout << "iter " << iter_<<": ";
-            for (int32_t i = 0; i < metrics_.size(); ++i) {
+
+        std::cout << "iter " << iter_<<": ";
+        for (int32_t i = 0; i < metrics_.size(); ++i) {
+            if (iter_ % metricPeriods_[i] == 0) {
                 double val = metrics_[i]->value(cursor_);
-                if (val < bestValue_) {
-                    bestValue_ = val;
-                    bestIter_  = iter_;
+                if (val < bestValue_[i]) {
+                    bestValue_[i] = val;
+                    bestIter_[i] = iter_;
                 }
-                std::cout << metricName[i] << "=" << val << ", best: (" << bestValue_ << ", " << bestIter_ << ")";
+                std::cout << metricName[i] << "=" << val << ", best: (" << bestValue_[i] << ", " << bestIter_[i] << ")";
                 if (i + 1 != metrics_.size()) {
                     std::cout << "\t";
                 }
             }
-            std::cout << std::endl;
         }
+        std::cout << std::endl;
+
         ++iter_;
     }
 
-    void addMetric(const Func& func, const std::string& name) {
+    void addMetric(const Func& func, const std::string& name, int metricPeriod = 1) {
         metrics_.push_back(func);
         metricName.push_back(name);
+        metricPeriods_.push_back(metricPeriod);
+        bestIter_.push_back(-1);
+        bestValue_.push_back(1e9);
     }
+
 private:
+    std::vector<int> metricPeriods_;
     std::vector<SharedPtr<Func>> metrics_;
     std::vector<std::string> metricName;
+
+    std::vector<double> bestValue_;
+    std::vector<int> bestIter_;
+
     const DataSet& ds_;
     Mx cursor_;
     int32_t iter_ = 0;
-
-    double bestValue_ = 1e9;
-    int bestIter_ = 0;
 };
 
 class BoostingFitTimeTracker : public Listener<Model> {

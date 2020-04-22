@@ -6,6 +6,7 @@
 #include <targets/target.h>
 #include <targets/l2.h>
 #include <random>
+#include <util/json.h>
 
 class GradientBoostingWeakTargetFactory : public EmpiricalTargetFactory {
 public:
@@ -19,6 +20,7 @@ private:
 
 
 enum class BootstrapType {
+    None,
     Bayessian,
     Uniform,
     Poisson
@@ -28,6 +30,8 @@ struct BootstrapOptions {
     BootstrapType type_ = BootstrapType::Poisson;
     double sampleRate_ = 0.7;
     uint32_t seed_ = 42;
+
+    static BootstrapOptions fromJson(const json& params);
 };
 
 class GradientBoostingBootstrappedWeakTargetFactory : public EmpiricalTargetFactory {

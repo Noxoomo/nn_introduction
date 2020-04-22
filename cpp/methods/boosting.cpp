@@ -2,6 +2,13 @@
 #include <models/ensemble.h>
 #include <chrono>
 
+BoostingConfig BoostingConfig::fromJson(const json& params) {
+    BoostingConfig opts;
+    opts.step_ = params["step"];
+    opts.iterations_ = params["iterations"];
+    return opts;
+}
+
 ModelPtr Boosting::fit(const DataSet& dataSet, const Target& target)  {
     assert(&dataSet == &target.owner());
     Mx cursor(dataSet.samplesCount(),  1);

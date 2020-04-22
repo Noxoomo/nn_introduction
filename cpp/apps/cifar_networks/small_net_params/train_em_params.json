@@ -5,14 +5,14 @@
       "model_arch": "conv_model",
       "device": "GPU",
       "conv": {
-        "model_arch": "SmallNet",
+        "model_arch": "LeNet",
         "device": "GPU"
       },
       "classifier": {
         "num_classes": 2,
         "main": {
           "model_arch": "MLP",
-          "dims": [512, 2],
+          "dims": [400, 2],
           "device": "GPU"
         }
       }
@@ -53,8 +53,27 @@
     {
       "field": "em_iterations.e_iters",
       "type": "int",
-      "values": [1, 1, 1],
+      "values": [10, 300, 500],
       "iters": [0, 1, 2]
     }
-  ]
+  ],
+
+  "eval_model": {
+    "binarization": {
+      "borders_count": 3
+    },
+    "boosting": {
+      "step": 0.1,
+      "iterations": 100
+    },
+    "bootstrap": {
+      "sample_rate": 0.7,
+      "seed": 42,
+      "type": "bayessian"
+    },
+    "linear_trees": {
+      "l2reg": 2.0,
+      "depth": 6
+    }
+  }
 }

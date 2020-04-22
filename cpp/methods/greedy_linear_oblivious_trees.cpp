@@ -28,6 +28,13 @@
 //        std::cout << #name << " done in " << time_ms##name << " [ms]" << std::endl; \
 //    } while (false);
 
+GreedyLinearObliviousTreeLearnerOptions GreedyLinearObliviousTreeLearnerOptions::fromJson(const json& params) {
+    GreedyLinearObliviousTreeLearnerOptions opts;
+    opts.l2reg = params["l2reg"];
+    opts.maxDepth = params["depth"];
+    return opts;
+}
+
 
 class LinearObliviousTreeLeafLearner : std::enable_shared_from_this<LinearObliviousTreeLeafLearner> {
 public:
@@ -146,7 +153,7 @@ ModelPtr GreedyLinearObliviousTreeLearner::fit(const DataSet& ds, const Target& 
     auto wsVec = target.weights();
     auto ws = wsVec.arrayRef();
 
-    if (biasCol_ == -1) {
+    if (opts_.biasCol == -1) {
         // TODO
         throw std::runtime_error("provide bias col!");
     }
@@ -161,7 +168,7 @@ ModelPtr GreedyLinearObliviousTreeLearner::fit(const DataSet& ds, const Target& 
 
     // Root is built
 
-    for (unsigned int d = 0; d < maxDepth_; ++d) {
+    for (unsigned int d = 0; d < opts_.maxDepth; ++d) {
 //        for (int i = 0; i < nSamples_; ++i) {
 //            std::cout << i << " goes to " << leafId_[i] << std::endl;
 //        }
@@ -213,7 +220,7 @@ ModelPtr GreedyLinearObliviousTreeLearner::fit(const DataSet& ds, const Target& 
     TIME_BLOCK_START(FINAL_FIT)
     parallelFor(0, leaves_.size(), [&](int lId) {
         auto& l = leaves_[lId];
-        l->fit(l2reg_, usedFeatures_.size());
+        l->fit(opts_.l2reg, usedFeatures_.size());
     });
     TIME_BLOCK_END(FINAL_FIT)
 
@@ -260,22 +267,22 @@ void GreedyLinearObliviousTreeLearner::cacheDs(const DataSet &ds) {
         }
     }
 
-    fullUpdate_.resize(1U << (unsigned)maxDepth_, false);
-    samplesLeavesCnt_.resize(1U << (unsigned)maxDepth_, 0);
+    fullUpdate_.resize(1U << (unsigned)opts_.maxDepth, false);
+    samplesLeavesCnt_.resize(1U << (unsigned)opts_.maxDepth, 0);
 
     auto sizeV = std::vector<int>({nThreads_});
     corStats_ = std::make_unique<MultiDimArray<1, MultiDimArray<2, LinearL2CorStat>>>(sizeV);
     stats_ = std::make_unique<MultiDimArray<1, MultiDimArray<2, LinearL2Stat>>>(sizeV);
 
-    LinearL2CorStat defaultCorStat(maxDepth_ + 1, 0);
-    LinearL2Stat defaultStat(maxDepth_ + 1, 0);
+    LinearL2CorStat defaultCorStat(opts_.maxDepth + 1, 0);
+    LinearL2Stat defaultStat(opts_.maxDepth + 1, 0);
 
     parallelFor(0, nThreads_, [&](int thId) {
-        (*corStats_)[thId] = MultiDimArray<2, LinearL2CorStat>({1 << maxDepth_, totalBins_}, defaultCorStat);
-        (*stats_)[thId] = MultiDimArray<2, LinearL2Stat>({1 << maxDepth_, totalBins_}, defaultStat);
+        (*corStats_)[thId] = MultiDimArray<2, LinearL2CorStat>({1 << opts_.maxDepth, totalBins_}, defaultCorStat);
+        (*stats_)[thId] = MultiDimArray<2, LinearL2Stat>({1 << opts_.maxDepth, totalBins_}, defaultStat);
     });
 
-    xs_ = MultiDimArray<2, float>({(int)ds.samplesCount(), maxDepth_ + 1});
+    xs_ = MultiDimArray<2, float>({(int)ds.samplesCount(), opts_.maxDepth + 1});
 
     isDsCached_ = true;
 }
@@ -327,9 +334,9 @@ void GreedyLinearObliviousTreeLearner::buildRoot(
         ConstVecRef<float> ys,
         ConstVecRef<float> ws) {
     auto root = std::make_shared<LinearObliviousTreeLeafLearner>(this->grid_, 1);
-    usedFeatures_.insert(biasCol_);
-    usedFeaturesOrdered_.push_back(biasCol_);
-    updateXs(biasCol_);
+    usedFeatures_.insert(opts_.biasCol);
+    usedFeaturesOrdered_.push_back(opts_.biasCol);
+    updateXs(opts_.biasCol);
 
     LinearL2StatOpParams params;
     params.vecAddMode = LinearL2StatOpParams::FullCorrelation;

@@ -2,6 +2,25 @@
 #include <core/vec_factory.h>
 #include <targets/linear_l2.h>
 
+BootstrapOptions BootstrapOptions::fromJson(const json& params) {
+    BootstrapOptions opts;
+    opts.sampleRate_ = params["sample_rate"];
+    if (params.contains("seed")) {
+        opts.seed_ = params["seed"];
+    }
+    std::string type = params["type"];
+    if (type == "none") {
+        opts.type_ = BootstrapType::None;
+    } else if (type == "bayessian") {
+        opts.type_ = BootstrapType::Bayessian;
+    } else if (type == "uniform") {
+        opts.type_ = BootstrapType::Uniform;
+    } else if (type == "poisson") {
+        opts.type_ = BootstrapType::Poisson;
+    }
+    return opts;
+}
+
 SharedPtr<Target> GradientBoostingWeakTargetFactory::create(
     const DataSet& ds,
     const Target& target,
@@ -31,7 +50,12 @@ SharedPtr<Target> GradientBoostingBootstrappedWeakTargetFactory::create(
     std::vector<int32_t> nzIndices;
     std::vector<double> nzWeights;
 
-    if (options_.type_ == BootstrapType::Uniform) {
+    if (options_.type_ == BootstrapType::None) {
+        nzWeights.resize(target.dim());
+        nzIndices.resize(target.dim());
+        std::iota(nzIndices.begin(), nzIndices.end(), 0);
+        std::fill(nzWeights.begin(), nzWeights.end(), 1.0);
+    } else if (options_.type_ == BootstrapType::Uniform) {
         nzIndices = uniformBootstrap(target.dim(), options_.sampleRate_, [&]() -> double {
             return uniform_(engine_);
         });

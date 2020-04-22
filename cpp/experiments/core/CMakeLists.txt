@@ -43,6 +43,8 @@ add_library(experiments_core
         layer_norm.h
         layer_norm.cpp
         params.h
+        linear_trees_booster.h
+        linear_trees_booster.cpp
 
         networks/lenet.h
         networks/lenet.cpp
@@ -53,7 +55,8 @@ add_library(experiments_core
         networks/mobile_net_v2.h
         networks/mobile_net_v2.cpp
         networks/small_net.cpp
-        networks/small_net.h)
+        networks/small_net.h
+)
 target_link_libraries(experiments_core "${TORCH_LIBRARIES}"  Eigen3::Eigen methods core models polynom targets util)
 enable_cxx14(experiments_core)
 

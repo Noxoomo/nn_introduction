@@ -7,11 +7,13 @@
 #include <targets/target.h>
 #include <models/model.h>
 #include <data/dataset.h>
+#include <util/json.h>
 
 struct BoostingConfig {
     double step_ = 0.01;
     int64_t iterations_ = 1000;
 
+    static BoostingConfig fromJson(const json& params);
 };
 
 class Boosting : public Optimizer, public ListenersHolder<Model> {

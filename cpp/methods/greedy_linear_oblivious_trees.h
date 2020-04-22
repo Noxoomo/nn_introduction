@@ -16,18 +16,27 @@
 #include <eigen3/Eigen/Core>
 #include <eigen3/Eigen/LU>
 
+#include <util/json.h>
+
 
 class LinearObliviousTreeLeafLearner;
+
+struct GreedyLinearObliviousTreeLearnerOptions {
+    int maxDepth = 6;
+    int biasCol = -1;
+    double l2reg = 0.0;
+
+    static GreedyLinearObliviousTreeLearnerOptions fromJson(const json& params);
+};
 
 class GreedyLinearObliviousTreeLearner final
         : public Optimizer {
 public:
-    explicit GreedyLinearObliviousTreeLearner(GridPtr grid, int32_t maxDepth = 6,
-            int biasCol = -1, double l2reg = 0.0)
+    typedef GreedyLinearObliviousTreeLearnerOptions Options;
+
+    explicit GreedyLinearObliviousTreeLearner(GridPtr grid, Options opts)
             : grid_(std::move(grid))
-            , biasCol_(biasCol)
-            , maxDepth_(maxDepth)
-            , l2reg_(l2reg) {
+            , opts_(opts) {
     }
 
     GreedyLinearObliviousTreeLearner(const GreedyLinearObliviousTreeLearner& other) = default;
@@ -116,9 +125,7 @@ private:
 
 private:
     GridPtr grid_;
-    int32_t maxDepth_ = 6;
-    int biasCol_ = -1;
-    double l2reg_ = 0.0;
+    Options opts_;
 
     bool isDsCached_ = false;
     std::vector<Vec> fColumns_;

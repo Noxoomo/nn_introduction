@@ -31,7 +31,11 @@ inline std::unique_ptr<GreedyLinearObliviousTreeLearner> createWeakLinearLearner
         int biasCol,
         double l2reg,
         GridPtr grid) {
-    return std::make_unique<GreedyLinearObliviousTreeLearner>(std::move(grid), depth, biasCol, l2reg);
+    GreedyLinearObliviousTreeLearnerOptions opts;
+    opts.biasCol = biasCol;
+    opts.maxDepth = depth;
+    opts.l2reg = l2reg;
+    return std::make_unique<GreedyLinearObliviousTreeLearner>(std::move(grid), opts);
 }
 
 inline std::unique_ptr<EmpiricalTargetFactory> createWeakTarget() {

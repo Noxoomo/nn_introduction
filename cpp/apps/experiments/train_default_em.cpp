@@ -10,6 +10,9 @@
 #include <string>
 #include <memory>
 #include <iostream>
+#include <core/matrix.h>
+#include <data/dataset.h>
+#include <core/linear_trees_booster.h>
 
 int main(int argc, const char* argv[]) {
     using namespace experiments;
@@ -37,7 +40,7 @@ int main(int argc, const char* argv[]) {
     // Attach Listeners
 
     auto mds = dataset.second.map(getDefaultCifar10TestTransform());
-    emTrainer.attachReprEpochEndCallback([&](int epoch, Model& model) {
+    emTrainer.attachReprEpochEndCallback([&](int epoch, experiments::Model& model) {
         model.eval();
 
         auto dloader = torch::data::make_data_loader(mds, torch::data::DataLoaderOptions(batchSize));
@@ -82,6 +85,12 @@ int main(int argc, const char* argv[]) {
     auto loss = std::make_shared<CrossEntropyLoss>();
     emTrainer.train(dataset.first, loss);
 
+    //    const std::string& path = params["checkpoint_file"];
+    auto emodel = model->eStepModel();
+//    torch::load(emodel, path);
+
+    auto conv = std::dynamic_pointer_cast<ConvModel>(emodel)->conv();
+
     // Eval model
 
     auto acc = evalModelTestAccEval(dataset.second,
@@ -90,4 +99,34 @@ int main(int argc, const char* argv[]) {
 
     std::cout << "Test accuracy: " << std::setprecision(2)
               << acc << "%" << std::endl;
+
+    // Eval with trees
+
+    std::cout << "getting train ds repr" << std::endl;
+
+    auto trainRepr = conv->forward(dataset.first.data()).to(torch::kCPU);
+    trainRepr = trainRepr.view({trainRepr.sizes()[0], -1});
+    Vec trainReprVec(trainRepr);
+    Mx reprTrainDsMx(trainReprVec, trainRepr.sizes()[0], trainRepr.sizes()[1]);
+    DataSet trainDs(reprTrainDsMx, Vec(dataset.first.targets().to(torch::kCPU).to(torch::kFloat)));
+    trainDs.addBiasColumn();
+
+    std::cout << "getting test ds repr" << std::endl;
+
+    auto testRepr = conv->forward(dataset.second.data()).to(torch::kCPU);
+    testRepr = testRepr.view({testRepr.sizes()[0], -1});
+    Vec testReprVec(testRepr);
+    Mx reprTestDsMx(testReprVec, testRepr.sizes()[0], testRepr.sizes()[1]);
+    DataSet testDs(reprTestDsMx, Vec(dataset.second.targets().to(torch::kCPU).to(torch::kFloat)));
+    testDs.addBiasColumn();
+
+    std::cout << "parsing options" << std::endl;
+
+    LinearTreesBoosterOptions opts = LinearTreesBoosterOptions::fromJson(params["eval_model"]);
+    opts.greedyLinearTreesOpts.biasCol = 0;
+    LinearTreesBooster ltBooster(opts);
+
+    std::cout << "fitting ensemble" << std::endl;
+
+    auto ensemble = ltBooster.fit(trainDs, testDs);
 }
