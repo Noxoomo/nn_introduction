@@ -58,6 +58,14 @@ namespace VecTools {
     Vec expCopy(Vec x) {
         return Vec(x.data().exp());
     }
+
+    Vec sigmoidCopy(const Vec& point) {
+        Vec x = VecTools::expCopy(point);
+        auto tmp = x + 1.0;
+        x /= tmp;
+        return x;
+    }
+
     Vec log(Vec x) {
         x.data().log_();
         return x;

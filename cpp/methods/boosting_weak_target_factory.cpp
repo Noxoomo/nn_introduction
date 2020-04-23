@@ -83,6 +83,6 @@ SharedPtr<Target> GradientBoostingBootstrappedWeakTargetFactory::create(
     Buffer<int32_t> indices = Buffer<int32_t>::fromVector(nzIndices);
     const auto& pointwiseTarget = dynamic_cast<const PointwiseTarget&>(target);
     pointwiseTarget.subsetDer(startPoint, indices, der);
-    const auto& l2Target = dynamic_cast<const LinearL2&>(target);
-    return std::static_pointer_cast<Target>(std::make_shared<LinearL2>(ds, der, weights, indices, l2Target.l2reg_));
+    // TODO this god damn params...
+    return std::static_pointer_cast<Target>(std::make_shared<LinearL2>(ds, der, weights, indices, 2.0));
 }

@@ -29,6 +29,8 @@ namespace VecTools {
 
     Vec mul(Scalar alpha, Vec x);
 
+    Vec sigmoidCopy(const Vec& point);
+
 
     Vec gather(const Vec& from, const Buffer<int32_t>& map, Vec to);
 }

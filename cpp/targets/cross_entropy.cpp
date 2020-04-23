@@ -3,15 +3,8 @@
 #include <vec_tools/stats.h>
 
 
-inline Vec sigmoid(const Vec& point) {
-    Vec x = VecTools::expCopy(point);
-    auto tmp = x + 1.0;
-    x /= tmp;
-    return x;
-}
-
 inline void crossEntropyGradient(const Vec& target, const Vec& point, Vec to) {
-    Vec p = sigmoid(point);
+    Vec p = VecTools::sigmoidCopy(point);
     VecTools::copyTo(target, to);
     to -= p;
 }

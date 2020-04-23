@@ -1,7 +1,9 @@
 #include "linear_trees_booster.h"
 
 #include <targets/linear_l2.h>
+#include <targets/cross_entropy.h>
 #include <methods/greedy_linear_oblivious_trees.h>
+#include <vec_tools/transform.h>
 
 namespace experiments {
 
@@ -18,17 +20,17 @@ public:
     void valueTo(const Vec& vec, double& res) const {
         // TODO maybe a better way with libtorch to do this? Like torch::where
 
-        auto vecRef = vec.arrayRef();
+        auto p = VecTools::sigmoidCopy(vec);
+        auto pRef = p.arrayRef();
         auto targetRef = ds_.target().arrayRef();
 
         int correct = 0;
 
         for (int i = 0; i < targetRef.size(); ++i) {
             double val = 0.0;
-            if (vecRef[i] > threshold_) {
+            if (pRef[i] > threshold_) {
                 val = 1.0;
             }
-            std::cout << std::setw(6) << vecRef[i] << " " << targetRef[i] << std::endl;
 
             if (std::abs(val - targetRef[i]) < 1e-8) {
                 correct++;
@@ -77,18 +79,18 @@ ModelPtr LinearTreesBooster::fit(const DataSet& trainDs, const DataSet& testDs) 
                       createWeakLinearLearner(grid, opts_.greedyLinearTreesOpts));
 
     auto testMetricsCalcer = std::make_shared<BoostingMetricsCalcer>(testDs);
-    testMetricsCalcer->addMetric(L2(testDs), "l2-test");
-    testMetricsCalcer->addMetric(BinaryAcc(testDs), "l2-acc", 10);
+    testMetricsCalcer->addMetric(CrossEntropy(testDs), "cross_entropy-test");
+    testMetricsCalcer->addMetric(BinaryAcc(testDs), "acc-test", 1);
     boosting.addListener(testMetricsCalcer);
 
     auto trainMetricsCalcer = std::make_shared<BoostingMetricsCalcer>(trainDs);
-    trainMetricsCalcer->addMetric(L2(trainDs), "l2-train");
+    trainMetricsCalcer->addMetric(CrossEntropy(trainDs), "cross_entropy-train");
     boosting.addListener(trainMetricsCalcer);
 
     auto fitTimeCalcer = std::make_shared<BoostingFitTimeTracker>();
     boosting.addListener(fitTimeCalcer);
 
-    LinearL2 target(trainDs, opts_.greedyLinearTreesOpts.l2reg);
+    CrossEntropy target(trainDs, 0.5);
     auto ensemble = boosting.fit(trainDs, target);
 }
 
