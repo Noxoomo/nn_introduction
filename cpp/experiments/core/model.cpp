@@ -217,13 +217,21 @@ ModelPtr createEmModel(const json& emModelParams) {
 }
 
 ModelPtr createModel(const json& modelParams) {
+    ModelPtr model;
+
     const std::string& arch = modelParams["model_arch"];
     if (arch == "em_model") {
-        return createEmModel(modelParams);
+        model = createEmModel(modelParams);
     } else if (arch == "conv_model") {
-        return createConvModel(modelParams);
+        model = createConvModel(modelParams);
     } else if (arch == "Id") {
-        return std::make_shared<IdClassifier>();
+        model = std::make_shared<IdClassifier>();
+    }
+
+    if (modelParams["load_from_checkpoint"] == true) {
+        const std::string& path = modelParams["checkpoint_file"];
+        std::cout << "Loading model from '" << path << "'" << std::endl;
+        torch::load(model, path);
     }
 
     throw std::runtime_error("Unknown model arch " + arch);

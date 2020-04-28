@@ -21,7 +21,9 @@
       "model_arch": "Id",
       "num_classes": 2,
       "device": "GPU"
-    }
+    },
+    "checkpoint_file": "small_net_checkpoint.pt",
+    "load_from_checkpoint": true
   },
 
   "dataset": {
@@ -31,7 +33,6 @@
     "test_limit": -1
   },
 
-  "checkpoint_file": "small_net_checkpoint.pt",
   "batch_size": 128,
   "reports_per_epoch": 10,
   "em_iterations": {

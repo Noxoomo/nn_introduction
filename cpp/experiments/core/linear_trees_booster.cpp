@@ -4,6 +4,7 @@
 #include <targets/cross_entropy.h>
 #include <methods/greedy_linear_oblivious_trees.h>
 #include <vec_tools/transform.h>
+#include <methods/greedy_oblivious_tree.h>
 
 namespace experiments {
 

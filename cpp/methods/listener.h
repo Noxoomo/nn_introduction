@@ -57,7 +57,7 @@ public:
                     bestValue_[i] = val;
                     bestIter_[i] = iter_;
                 }
-                std::cout << metricName[i] << "=" << val << ", best: (" << bestValue_[i] << ", " << bestIter_[i] << ")";
+                std::cout << std::setprecision(5) << metricName[i] << "=" << val << ", best: (" << bestValue_[i] << ", " << bestIter_[i] << ")";
                 if (i + 1 != metrics_.size()) {
                     std::cout << "\t";
                 }

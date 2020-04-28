@@ -72,11 +72,11 @@ int main(int argc, const char* argv[]) {
         std::cout << "Test accuracy: " <<  rightAnswersCnt * 100.0f / dataset.second.size().value() << std::endl;
     });
 
-    if (params.contains("checkpoint_file")) {
+    if (params["model"].contains("checkpoint_file")) {
         emTrainer.registerGlobalIterationListener([&](int32_t globalIt, EmModelPtr model) {
-            const std::string& path = params["checkpoint_file"];
-            std::cout << "Saving e model to '" << path << "'" << std::endl;
-            torch::save(model->eStepModel(), path);
+            const std::string& path = params["model"]["checkpoint_file"];
+            std::cout << "Saving model to '" << path << "'" << std::endl;
+            torch::save(model, path);
         });
     }
 
@@ -85,11 +85,7 @@ int main(int argc, const char* argv[]) {
     auto loss = std::make_shared<CrossEntropyLoss>();
     emTrainer.train(dataset.first, loss);
 
-    //    const std::string& path = params["checkpoint_file"];
-    auto emodel = model->eStepModel();
-//    torch::load(emodel, path);
-
-    auto conv = std::dynamic_pointer_cast<ConvModel>(emodel)->conv();
+    auto conv = std::dynamic_pointer_cast<ConvModel>(model->eStepModel())->conv();
 
     // Eval model
 
@@ -97,7 +93,7 @@ int main(int argc, const char* argv[]) {
                                     model,
                                     getDefaultCifar10TestTransform());
 
-    std::cout << "Test accuracy: " << std::setprecision(2)
+    std::cout << "Test accuracy: " << std::setprecision(5)
               << acc << "%" << std::endl;
 
     // Eval with trees
