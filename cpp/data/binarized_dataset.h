@@ -89,7 +89,7 @@ public:
 
     template <class Visitor>
     void visitGroups(Visitor&& visitor) const {
-        for (int32_t groupId = 0; groupId < groups_.size(); ++groupId) {
+        for (uint32_t groupId = 0; groupId < groups_.size(); ++groupId) {
             const auto& groupInfo = groups_[groupId];
             auto groupBundle = group(groupId);
             visitor(groupInfo, groupBundle);
@@ -108,7 +108,7 @@ public:
                 visitor(blockId, i, groupBundle[indices[i] * groupInfo.groupSize() + fIndexInGroup]);
             });
         } else {
-            for (int64_t i = 0; i < indices.size(); ++i) {
+            for (uint64_t i = 0; i < indices.size(); ++i) {
                 visitor(0, i, groupBundle[indices[i] * groupInfo.groupSize() + fIndexInGroup]);
             }
         }
@@ -157,7 +157,7 @@ private:
         featureToGroup_.resize(grid_->nzFeaturesCount());
         groupToFeatures.resize(groups_.size());
 
-        for (int32_t groupIdx = 0; groupIdx < groups_.size(); ++groupIdx) {
+        for (uint32_t groupIdx = 0; groupIdx < groups_.size(); ++groupIdx) {
             const auto& group  = groups_[groupIdx];
             for (int32_t f=  group.firstFeature_; f < group.lastFeature_; ++f) {
                 featureToGroup_[f] = groupIdx;

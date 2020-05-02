@@ -110,7 +110,7 @@ public:
         , features_(std::move(features))
         , borders_(std::move(borders)) {
         binFeatureOffsets_.resize(features_.size());
-        for (int64_t i = 1; i < features_.size(); ++i) {
+        for (uint64_t i = 1; i < features_.size(); ++i) {
             binFeatureOffsets_[i] = binFeatureOffsets_[i - 1] + features_[i - 1].conditionsCount_;
         }
 
@@ -133,7 +133,7 @@ private:
 
 
 inline int32_t computeBin(float val, ConstVecRef<float> borders) {
-    int32_t bin = 0;
+    uint32_t bin = 0;
     while (bin < borders.size() && borders[bin] < val) {
         ++bin;
     }

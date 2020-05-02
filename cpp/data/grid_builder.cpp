@@ -151,7 +151,7 @@ std::vector<float> buildBorders(const BinarizationConfig& config, Vec* vals) {
     if (vals->dim()) {
         auto sortedFeature = VecFactory::toDevice(VecTools::sort(*vals), ComputeDevice(ComputeDeviceType::Cpu));
         auto data = sortedFeature.arrayRef();
-        for (int32_t i = 1; i < data.size(); ++i) {
+        for (uint32_t i = 1; i < data.size(); ++i) {
             assert(data[i] >= data[i - 1]);
         }
         const uint32_t dim = static_cast<uint32_t>(sortedFeature.dim());
@@ -202,7 +202,7 @@ GridPtr buildGrid(const DataSet& ds, const BinarizationConfig& config) {
             borders.push_back(featureBorders);
             const auto binCount = borders.back().size();
             features.push_back(Feature(nzFeatureId, binCount, fIndex));
-            for (int32_t bin = 0; bin < binCount; ++bin) {
+            for (uint32_t bin = 0; bin < binCount; ++bin) {
                 binFeatures.emplace_back(nzFeatureId, bin);
             }
             ++nzFeatureId;

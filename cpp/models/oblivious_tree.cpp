@@ -8,7 +8,7 @@ void ObliviousTree::applyBinarizedRow(const Buffer<uint8_t>& x, Vec to) const {
     auto bytes = x.arrayRef();
 
     int32_t bin = 0;
-    for (int64_t f = 0; f < splits_.size(); ++f) {
+    for (uint64_t f = 0; f < splits_.size(); ++f) {
         if (bytes[splits_[f].featureId_] > splits_[f].conditionId_) {
             bin |= 1 << f;
         }
@@ -23,7 +23,7 @@ void ObliviousTree::applyToBds(const BinarizedDataSet& ds, Mx to, ApplyType type
     bins.fill(0);
     auto binsArray = bins.arrayRef();
 
-    for (int64_t i = 0; i < splits_.size(); ++i) {
+    for (uint64_t i = 0; i < splits_.size(); ++i) {
         auto binFeature = splits_[i];
         //TODO:: this is map operation (but for non-trivial accessor)
         ds.visitFeature(binFeature.featureId_, [&](int blockId, const int64_t lineIdx, int32_t bin) {
@@ -57,7 +57,7 @@ void ObliviousTree::appendTo(const Vec& x, Vec to) const {
 
 
     int32_t bin = 0;
-    for (int64_t f = 0; f < splits_.size(); ++f) {
+    for (uint64_t f = 0; f < splits_.size(); ++f) {
         const auto binFeature = splits_[f];
         const auto border = grid_->condition(binFeature.featureId_, binFeature.conditionId_);
         const auto val = x.get(grid_->origFeatureIndex(binFeature.featureId_));
@@ -82,7 +82,7 @@ double ObliviousTree::value(const Vec& x) {
     double res = 0;
     for (uint32_t b = 0; b < leaves_.dim(); ++b) {
         double value = bitVec[b];
-        for (int f = 0; f < probs.size(); ++f) {
+        for (uint32_t f = 0; f < probs.size(); ++f) {
             if (((b >> f) & 1) != 0) {
                 value *= probs[f];
             }
@@ -94,13 +94,13 @@ double ObliviousTree::value(const Vec& x) {
 
 void ObliviousTree::grad(const Vec& x, Vec to) {
     std::vector<uint32_t> masks(x.dim());
-    for (int i = 0; i < splits_.size(); ++i) {
+    for (uint32_t i = 0; i < splits_.size(); ++i) {
         const auto binFeature = splits_[i];
         masks[grid_->origFeatureIndex(binFeature.featureId_)] += (1 << (i));
     }
     std::vector<double> probs(splits_.size());
 
-    for (int64_t i = 0; i < probs.size(); i++) {
+    for (uint64_t i = 0; i < probs.size(); i++) {
         const auto binFeature = splits_[i];
         const auto border = grid_->condition(binFeature.featureId_, binFeature.conditionId_);
         const auto val = x.get(grid_->origFeatureIndex(binFeature.featureId_));
@@ -133,7 +133,7 @@ void ObliviousTree::grad(const Vec& x, Vec to) {
             double value = bitVec[b] * probs_mult_buff[b];
             double diffCf = 0;
 
-            for (int f = 0; f < probs.size(); f++) {
+            for (uint32_t f = 0; f < probs.size(); f++) {
                 if (mask_b >> f == 0) break;
                 if (((mask_b >> f) & 1) != 0) {
                     diffCf += 1 - probs[f];
