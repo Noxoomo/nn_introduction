@@ -24,9 +24,9 @@ createBootstrapWeakTarget(BootstrapOptions options) {
       options);
 }
 
-int main(int /*argc*/, char * /*argv*/[]) {
+int main(int /*argc*/, char* argv[]) {
   auto start = std::chrono::system_clock::now();
-  auto params = readJson("train_config.json");
+  auto params = readJson(argv[1]);
   torch::set_num_threads(params.value("num_threads", std::thread::hardware_concurrency()));
   //    auto ds =
   //    loadFeaturesTxt("/Users/noxoomo/Projects/moscow_learn_200k.tsv"); auto
@@ -52,7 +52,6 @@ int main(int /*argc*/, char * /*argv*/[]) {
   auto metricsCalcer = std::make_shared<BoostingMetricsCalcer>(test);
   if (target == "mse") {
     metricsCalcer->addMetric(L2(test), "l2_test");
-    boosting.addListener(metricsCalcer);
     objective.reset(new L2(ds));
   } else if (target == "ce") {
     metricsCalcer->addMetric(CrossEntropy(test), "CE_test");
