@@ -334,13 +334,13 @@ TEST(Serialize, DuringFit) {
     boostingConfig.step_ = 0.5;
     Boosting boosting(boostingConfig, createWeakTarget(), createWeakLinearLearner(4, 0, l2reg, grid));
 
-//    std::ofstream fout("test1.out", std::ios::binary);
-//    auto boostingSerializer = std::make_shared<BoostingSerializer>(fout, 1.0, 1);
-//    boosting.addListener(boostingSerializer);
+    std::ofstream fout("test1.out", std::ios::binary);
+    auto boostingSerializer = std::make_shared<BoostingSerializer>(fout, 1.0, 1);
+    boosting.addListener(boostingSerializer);
 
     LinearL2 target(ds, l2reg);
     auto ensemble = std::dynamic_pointer_cast<Ensemble>(boosting.fit(ds, target));
-//    fout.close();
+    fout.close();
 
     std::ifstream fin("test1.out", std::ios::binary);
     auto newEnsemble = Ensemble::deserialize(fin, [&]() {
