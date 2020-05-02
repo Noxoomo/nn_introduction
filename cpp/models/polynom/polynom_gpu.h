@@ -12,6 +12,7 @@ struct PolynomCuda {
     torch::Tensor Conditions;
     torch::Tensor PolynomOffsets;
     torch::Tensor PolynomValues;
+    torch::Tensor OrigFIds;
 
     PolynomCuda(PolynomPtr polynom_);
 

@@ -530,3 +530,251 @@ void SigmoidProbPolynomBackward(int batchSize,
 }
 
 // }}}
+
+
+
+// TODO move linear polynom to a separate file
+
+// LinearPolynom {{{
+
+__global__ void LinearPolynomProbsImpl(
+        const float* features,
+        int batchSize,
+        const int* splits,
+        const float* conditions,
+        const int* polynomOffsets,
+        int polynomCount,
+        float lambda,
+        float* probs,
+        const int* origFIds) {
+    if (threadIdx.x < batchSize) {
+        int polynomId = blockIdx.x;
+
+        features += threadIdx.x;
+        probs += threadIdx.x;
+
+        while (polynomId < polynomCount) {
+            int offset = polynomOffsets[polynomId];
+            int nextOffset = polynomOffsets[polynomId + 1];
+            const int depth = nextOffset - offset;
+            const int origFId = origFIds[polynomId];
+
+            bool zeroProb = false;
+            for (int i = 0; i < depth; ++i) {
+                if (zeroProb) {
+                    continue;
+                }
+
+                const float c = __ldg(conditions + offset + i);
+
+                const int f = __ldg(splits + offset + i);
+                const float x = __ldg(features + f * batchSize);
+
+                if (x <= c) {
+                    zeroProb = true;
+                }
+            }
+
+            float prob = 0.0f;
+            if (!zeroProb) {
+                prob = __ldg(features + origFId * batchSize);
+            }
+
+            probs[polynomId * batchSize] = prob;
+            polynomId += gridDim.x;
+        }
+    }
+}
+
+//batch size should be equal to BlockSize
+//we need to reduce polynoms for each output dim
+__global__ void LinearPolynomForwardImpl(
+        const float* probs,
+        int batchSize,
+        const float* values,
+        int polynomCount,
+        int outputDim,
+        float* out) {
+
+    //out: batch_elem0 dim0, dim1, dimk batch_elem1 dim0 dim1 dimk
+    //so threads
+    int polynomId = blockIdx.x;
+    const int dimId = blockIdx.y;
+
+    int tid = threadIdx.x;
+    if (tid >= batchSize) {
+        return;
+    }
+
+    float sum = 0;
+    probs += threadIdx.x;
+    values += dimId;
+
+    while (polynomId < polynomCount) {
+        const float polynomProb = __ldg(probs + polynomId * batchSize); // includes x
+        const float v = __ldg(values + polynomId * outputDim);
+        sum += polynomProb * v;
+        polynomId += gridDim.x;
+    }
+
+    atomicAdd(out + dimId * batchSize + threadIdx.x, sum);
+}
+
+void LinearPolynomForward(
+        const float lambda,
+        const float* features,
+        int fCount,
+        int batchSize,
+        const int* splits,
+        const float* conditions,
+        const int* polynomOffsets,
+        const float* values,
+        int polynomCount,
+        int outDim,
+        float* tempProbs,
+        float* output,
+        const int* origFIds
+) {
+    const int blockSize = batchSize;
+    const int numBlocks = min(polynomCount, 1000);
+    assert(batchSize < 2048);
+    assert(numBlocks);
+
+    LinearPolynomProbsImpl << < numBlocks, blockSize >>> (features, batchSize, splits, conditions, polynomOffsets, polynomCount, lambda, tempProbs, origFIds);
+
+    dim3 forwardBlocks;
+    forwardBlocks.z = 1;
+    forwardBlocks.y = outDim;
+    forwardBlocks.x = min(polynomCount, 512);
+    LinearPolynomForwardImpl << < forwardBlocks, batchSize >> > (tempProbs, batchSize, values, polynomCount, outDim, output);
+}
+
+/*
+ * Here layout is not the same as in forward pass
+ * BlockSize = 256, MaxDepth = 8, K = 24
+ * should give 50% occupancy, this should be enough
+ */
+template <int MaxDepth, int BlockSize, int K>
+__global__ void LinearPolynomBackwardImpl(float lambda,
+                                          const float* features,
+                                          int featuresCount,
+                                          const float* outDer,
+                                          int outputDim,
+                                          const int* featureIds,
+                                          const float* conditions,
+                                          const float* values,
+                                          const int* polynomOffsets,
+                                          int polynomCount,
+                                          float* featuresDer,
+                                          const int* origFIds) {
+    const int sampleId = blockIdx.y;
+
+    features += sampleId * featuresCount;
+    featuresDer += sampleId * featuresCount;
+    outDer += sampleId * outputDim;
+
+
+    //out: batch_elem0 dim0, dim1, dimk batch_elem1 dim0 dim1 dimk
+    //so threads
+
+    __shared__ float localFeaturesDer[BlockSize * K];
+
+    for (int i = threadIdx.x; i < BlockSize * K; i += BlockSize) {
+        localFeaturesDer[i] = 0;
+    }
+    __syncthreads();
+
+
+    const int alignedFeaturesCount = ((featuresCount + BlockSize - 1) / BlockSize) * BlockSize;
+
+    const int memoryBlocks = (BlockSize * K) / alignedFeaturesCount;
+    const int memoryBlockId = threadIdx.x % memoryBlocks;
+
+
+    int polynomId = blockIdx.x * blockDim.x + threadIdx.x;
+
+    while (polynomId < polynomCount) {
+        const int offset = polynomOffsets[polynomId];
+        const int nextOffset = polynomOffsets[polynomId + 1];
+        const int depth = nextOffset - offset;
+        const int origFId = origFIds[polynomId];
+
+        // TODO for now we treat origFId=0 as bias
+        if (origFId != 0) {
+
+            bool isZero = false;
+
+#pragma unroll
+            for (int i = 0; i < MaxDepth; ++i) {
+                if (isZero) {
+                    continue;
+                }
+                if (i < depth) {
+                    const float c = __ldg(conditions + i + offset);
+                    const int f = __ldg(featureIds + i + offset);
+                    const float x = __ldg(features + f);
+                    if (x <= c) {
+                        isZero = true;
+                    }
+                }
+            }
+
+            //featureDerivative is outputDer * total value before monom * monom derivative
+            float derMultiplier = 0;
+            if (!isZero) {
+#pragma unroll 10
+                for (int dim = 0; dim < outputDim; ++dim) {
+                    derMultiplier += __ldg(values + polynomId * outputDim + dim) * __ldg(outDer + dim);
+                }
+            }
+
+            const float featureDer = derMultiplier * __ldg(features + origFId);
+            atomicAdd(localFeaturesDer + memoryBlocks * origFId + memoryBlockId, derMultiplier);
+        }
+        polynomId += gridDim.x * blockDim.x;
+    }
+
+
+    __syncthreads();
+
+    //outputDim = 1024 => memoryBlocks = 6
+    for (int f = threadIdx.x; f < featuresCount; f += BlockSize) {
+        float der = 0;
+
+#pragma unroll
+        for (int k = 0; k < memoryBlocks; ++k) {
+            der += localFeaturesDer[f * memoryBlocks + k];
+        }
+        atomicAdd(featuresDer + f,  der);
+    }
+}
+
+void LinearPolynomBackward(int batchSize,
+                           float lambda,
+                           const float* features,
+                           int featuresCount,
+                           const float* outDer,
+                           int outputDim,
+                           const int* featureIds,
+                           const float* conditions,
+                           const float* values,
+                           const int* polynomOffsets,
+                           int polynomCount,
+                           float* featuresDer,
+                           const int* origFIds) {
+
+    const int blockSize = 256;
+    dim3 numBlocks;
+    numBlocks.z = 1;
+    numBlocks.y = batchSize;
+    //should be ≈ smCount * 6 / batchSize
+    numBlocks.x = min((polynomCount + blockSize - 1) * outputDim / blockSize, 160);
+
+    const int maxDepth = 12;
+    const int K = 16;
+
+    LinearPolynomBackwardImpl<maxDepth, blockSize, K> <<<numBlocks, blockSize>>>(lambda, features, featuresCount, outDer, outputDim, featureIds, conditions, values, polynomOffsets, polynomCount, featuresDer, origFIds);
+}
+
+
+// }}}

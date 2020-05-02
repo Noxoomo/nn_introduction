@@ -6,11 +6,12 @@
 #include <data/grid.h>
 #include <core/vec_factory.h>
 #include <core/func.h>
+#include <catboost_wrapper.h>
 
 #include <eigen3/Eigen/Core>
 #include <eigen3/Eigen/LU>
 
-class LinearObliviousTreeLeaf : std::enable_shared_from_this<LinearObliviousTreeLeaf> {
+struct LinearObliviousTreeLeaf : std::enable_shared_from_this<LinearObliviousTreeLeaf> {
 public:
     LinearObliviousTreeLeaf(
             std::vector<int32_t> usedFeaturesInOrder,
@@ -33,8 +34,13 @@ public:
     }
 
     void grad(VecRef<float> to) {
-        for (int i = 0; i < w_.size(); ++i) {
-            to[i] = w_(i, 0);
+        int i = 0;
+        for (int f : usedFeaturesInOrder_) {
+            // TODO we treat f = 0 as bias
+            if (f != 0) {
+                to[f] += w_(i, 0);
+            }
+            ++i;
         }
     }
 
@@ -49,7 +55,6 @@ public:
         std::cout << "}@" << weight_;
     }
 
-private:
     friend class GreedyLinearObliviousTreeLearner;
 
     std::vector<int32_t> usedFeaturesInOrder_;
@@ -57,7 +62,7 @@ private:
     double weight_;
 };
 
-class LinearObliviousTree final
+struct LinearObliviousTree final
         : public Stub<BinOptimizedModel, LinearObliviousTree>
         , std::enable_shared_from_this<LinearObliviousTree> {
 public:
@@ -107,14 +112,14 @@ public:
 
     void printInfo() const;
 
-private:
+    std::vector<std::tuple<TSymmetricTree, int>> toSymmetricTrees() const;
+
     friend class GreedyLinearObliviousTreeLearner;
 
     double value(const ConstVecRef<float>& x) const;
 
     int getLeaf(const ConstVecRef<float>& x) const;
 
-private:
     GridPtr grid_;
     double scale_ = 1;
 

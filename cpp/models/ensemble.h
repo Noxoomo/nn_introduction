@@ -57,6 +57,12 @@ public:
         return models_.size();
     }
 
+    template <typename TVisitor>
+    ModelPtr visitModels(TVisitor visitor) const {
+        for (const auto& model : models_) {
+            visitor(model);
+        }
+    }
 
 private:
     std::vector<ModelPtr> models_;

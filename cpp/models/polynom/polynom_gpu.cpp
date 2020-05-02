@@ -54,6 +54,7 @@ PolynomCuda::PolynomCuda(PolynomPtr polynom)
     std::vector<float> conditions;
     std::vector<int>  offsets;
     std::vector<float> values;
+    std::vector<int> origFIds;
 
     int cursor = 0;
     for (const auto& monom : Polynom_->Ensemble_) {
@@ -64,6 +65,7 @@ PolynomCuda::PolynomCuda(PolynomPtr polynom)
         values.insert(values.end(), monom->Values_.begin(), monom->Values_.end());
         offsets.push_back(cursor);
         cursor += monom->Structure_.Splits.size();
+        origFIds.push_back(monom->origFId_);
     }
 
     offsets.push_back(cursor);
@@ -72,6 +74,7 @@ PolynomCuda::PolynomCuda(PolynomPtr polynom)
     Conditions = Buffer<float>::fromVector(conditions).data().to(torch::kCUDA);
     PolynomOffsets = Buffer<int>::fromVector(offsets).data().to(torch::kCUDA);
     PolynomValues = Buffer<float>::fromVector(values).data().to(torch::kCUDA);
+    OrigFIds = Buffer<int>::fromVector(origFIds).data().to(torch::kCUDA);
 }
 
 
@@ -122,6 +125,21 @@ torch::Tensor PolynomCuda::Forward(torch::Tensor batch) const {
                                   outDim,
                                   probs.data<float>(),
                                   result.data<float>()
+        );
+    } else if (Polynom_->getMonomType() == Monom::MonomType::LinearMonom) {
+        LinearPolynomForward(Polynom_->Lambda_,
+                             transposed.data_ptr<float>(),
+                             fCount,
+                             batchSize,
+                             Features.data_ptr<int>(),
+                             Conditions.data_ptr<float>(),
+                             PolynomOffsets.data_ptr<int>(),
+                             PolynomValues.data_ptr<float>(),
+                             polynomCount,
+                             outDim,
+                             probs.data_ptr<float>(),
+                             result.data_ptr<float>(),
+                             OrigFIds.data_ptr<int>()
         );
     } else {
         throw std::runtime_error("Unsupported monom type");
@@ -182,6 +200,21 @@ torch::Tensor PolynomCuda::Backward(torch::Tensor batch,
                 PolynomOffsets.data<int>(),
                 polynomCount,
                 result.data<float>());
+    } else if (Polynom_->getMonomType() == Monom::MonomType::LinearMonom) {
+        LinearPolynomBackward(
+                batchSize,
+                Polynom_->Lambda_,
+                batch.data_ptr<float>(),
+                fCount,
+                outputDer.data_ptr<float>(),
+                outDim,
+                Features.data_ptr<int>(),
+                Conditions.data_ptr<float>(),
+                PolynomValues.data_ptr<float>(),
+                PolynomOffsets.data_ptr<int>(),
+                polynomCount,
+                result.data_ptr<float>(),
+                OrigFIds.data_ptr<int>());
     } else {
         throw std::runtime_error("Unsupported monom type");
     }

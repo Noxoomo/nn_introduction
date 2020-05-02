@@ -40,7 +40,7 @@ inline void SortUnique(Vec& vec) {
     vec.erase(std::unique(vec.begin(), vec.end()), vec.end());
 }
 
-void PolynomBuilder::AddTree(const TSymmetricTree& tree)  {
+void PolynomBuilder::AddTree(const TSymmetricTree& tree, int origFId)  {
     const int maxDepth = static_cast<int>(tree.Conditions.size());
     if (maxDepth == 0) {
         return;
@@ -96,7 +96,7 @@ void PolynomBuilder::AddTree(const TSymmetricTree& tree)  {
             polynomStructure.Splits.push_back({split, condition});
         }
         SortUnique(polynomStructure.Splits);
-        auto& dst = EnsemblePolynoms[polynomStructure];
+        auto& dst = EnsemblePolynoms[std::make_tuple(polynomStructure, origFId)];
         if (dst.Weight < 0) {
             dst.Weight = weights[i];
         } else {
@@ -105,176 +105,6 @@ void PolynomBuilder::AddTree(const TSymmetricTree& tree)  {
         dst.Value.resize(tree.OutputDim());
         for (uint32_t dim = 0; dim < tree.OutputDim(); ++dim) {
             dst.Value[dim] += values[i * tree.OutputDim() + dim];
-        }
-    }
-
-}
-
-Monom::MonomType Monom::getMonomType(const std::string &strMonomType) {
-    if (strMonomType == "SigmoidProbMonom") {
-        return MonomType::SigmoidProbMonom;
-    } else if (strMonomType == "ExpProbMonom") {
-        return MonomType::ExpProbMonom;
-    } else {
-        throw std::runtime_error("Unsupported monom type '" + strMonomType + "'");
-    }
-}
-
-MonomPtr Monom::createMonom(Monom::MonomType monomType) {
-    if (monomType == Monom::MonomType::SigmoidProbMonom) {
-        return _makeMonomPtr<SigmoidProbMonom>();
-    } else if (monomType == Monom::MonomType::ExpProbMonom) {
-        return _makeMonomPtr<ExpProbMonom>();
-    } else {
-        throw std::runtime_error("Unsupported monom type");
-    }
-}
-
-MonomPtr Monom::createMonom(Monom::MonomType monomType, PolynomStructure structure,
-                                          std::vector<double> values) {
-    if (monomType == Monom::MonomType::SigmoidProbMonom) {
-        return _makeMonomPtr<SigmoidProbMonom>(std::move(structure), std::move(values));
-    } else if (monomType == Monom::MonomType::ExpProbMonom) {
-        return _makeMonomPtr<ExpProbMonom>(std::move(structure), std::move(values));
-    } else {
-        throw std::runtime_error("Unsupported monom type");
-    }
-}
-
-Monom::MonomType SigmoidProbMonom::getMonomType() const {
-    return Monom::MonomType::SigmoidProbMonom;
-}
-
-void SigmoidProbMonom::Forward(double lambda, ConstVecRef<float> features, VecRef<float> dst) const {
-//    bool allTrue = true;
-//    for (const auto& split : Structure_.Splits) {
-//
-//        if (features[split.Feature] <= split.Condition) {
-//            allTrue = false;
-//            break;
-//        }
-//    }
-//    if (allTrue) {
-//        for (int dim = 0; dim < dst.size(); ++dim) {
-//            dst[dim] +=  Values_[dim];
-//        }
-//    }
-  double trueLogProb = 0;
-  for (const auto& split : Structure_.Splits) {
-    const double val = -lambda * (features[split.Feature] - split.Condition);
-//    log(1.0 / (1.0 + exp(-val))) = -log(1.0 + exp(-val));
-
-    const double expVal = exp(val);
-    if (std::isfinite(expVal)) {
-      trueLogProb -= log(1.0 + expVal);
-    } else {
-      trueLogProb -= val;
-    }
-  }
-  const double p = exp(trueLogProb);
-  for (int dim = 0; dim < (int)dst.size(); ++dim) {
-    dst[dim] += p * Values_[dim];
-  }
-}
-
-void SigmoidProbMonom::Backward(double lambda,
-                     ConstVecRef<float> features,
-                     ConstVecRef<float> outputsDer,
-                     VecRef<float> featuresDer) const {
-  std::vector<double> logProbs;
-  logProbs.resize(Structure_.Splits.size(), 0.0f);
-
-  double totalLogProb = 0;
-
-  for (int i = 0; i < (int)Structure_.Splits.size(); ++i) {
-    const auto& split = Structure_.Splits[i];
-    const double val = -lambda * (features[split.Feature] - split.Condition);
-//    log(1.0 / (1.0 + exp(-val))) = -log(1.0 + exp(-val));
-
-    const double expVal = exp(val);
-    if (std::isfinite(expVal)) {
-      logProbs[i] -= log(1.0 + expVal);
-    } else {
-      logProbs[i] -= val;
-    }
-    totalLogProb += logProbs[i];
-  }
-  const double p = exp(totalLogProb);
-
-  double tmp = 0;
-  for (size_t dim = 0; dim < Values_.size(); ++dim) {
-      tmp += Values_[dim] * outputsDer[dim];
-  }
-
-  for (int i = 0; i < (int)Structure_.Splits.size(); ++i) {
-    const auto& split = Structure_.Splits[i];
-    const double featureProb = exp(logProbs[i]);
-    const double monomDer = p * (1.0 - featureProb);
-    featuresDer[split.Feature] += monomDer * tmp;
-  }
-}
-
-Monom::MonomType ExpProbMonom::getMonomType() const {
-    return Monom::MonomType::ExpProbMonom;
-}
-
-void ExpProbMonom::Forward(double lambda, ConstVecRef<float> features, VecRef<float> dst) const {
-    double trueLogProb = 0;
-    bool zeroProb = false;
-
-    for (const auto& split : Structure_.Splits) {
-        const double val = -lambda * features[split.Feature];
-        const double expVal = 1.0f - exp(val);
-        if (std::isfinite(log(expVal))) {
-            trueLogProb += log(expVal);
-        } else {
-            zeroProb = true;
-            break;
-        }
-    }
-
-    double p = 0.0f;
-    if (!zeroProb) {
-        p = exp(trueLogProb);
-    }
-    for (int dim = 0; dim < (int)dst.size(); ++dim) {
-        dst[dim] += p * Values_[dim];
-    }
-}
-
-void ExpProbMonom::Backward(double lambda, ConstVecRef<float> features, ConstVecRef<float> outputsDer,
-                            VecRef<float> featuresDer) const {
-    std::vector<double> logProbs;
-    logProbs.resize(Structure_.Splits.size(), 0.f);
-    std::vector<double> vals;
-    vals.resize(Structure_.Splits.size(), 0.f);
-
-    double derMultiplier = 0;
-    for (size_t dim = 0; dim < Values_.size(); ++dim) {
-        derMultiplier += 1e5 * Values_[dim] * outputsDer[dim];
-    }
-
-    double totalLogProb = 0;
-    bool zeroProb = false;
-
-    for (int i = 0; i < (int)Structure_.Splits.size(); ++i) {
-        const auto& split = Structure_.Splits[i];
-        vals[i] = -lambda * features[split.Feature];
-        const double expVal = 1.0f - exp(vals[i]);
-        if (std::isfinite(log(expVal))) {
-            logProbs[i] += log(expVal);
-        } else {
-            zeroProb = true;
-            break;
-        }
-        totalLogProb += logProbs[i];
-    }
-
-    for (int i = 0; i < (int)Structure_.Splits.size(); ++i) {
-        const auto& split = Structure_.Splits[i];
-        if (!zeroProb) {
-            const double monomDer = exp(totalLogProb - logProbs[i] + log(lambda) + vals[i]);
-            featuresDer[split.Feature] += monomDer * derMultiplier;
         }
     }
 }

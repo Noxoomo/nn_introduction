@@ -226,6 +226,8 @@ ModelPtr createModel(const json& modelParams) {
         model = createConvModel(modelParams);
     } else if (arch == "Id") {
         model = std::make_shared<IdClassifier>();
+    } else {
+        throw std::runtime_error("Unknown model arch " + arch);
     }
 
     if (modelParams["load_from_checkpoint"] == true) {
@@ -234,7 +236,7 @@ ModelPtr createModel(const json& modelParams) {
         torch::load(model, path);
     }
 
-    throw std::runtime_error("Unknown model arch " + arch);
+    return model;
 }
 
 }

@@ -9,6 +9,9 @@
 #include <models/oblivious_tree.h>
 #include <vec_tools/transform.h>
 
+#include <models/polynom/polynom.h>
+#include <models/polynom/linear_monom.h>
+
 #define EPS 1e-5
 
 //run it from root
@@ -89,4 +92,8 @@ TEST(FeaturesTxt, Gradient) {
             }
         }
     }
+}
+
+TEST(LinearTreeMonom, ValGrad) {
+
 }

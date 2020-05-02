@@ -23,7 +23,7 @@
       "device": "GPU"
     },
     "checkpoint_file": "small_net_checkpoint.pt",
-    "load_from_checkpoint": true
+    "load_from_checkpoint": false
   },
 
   "dataset": {
