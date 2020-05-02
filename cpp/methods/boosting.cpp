@@ -4,8 +4,8 @@
 
 BoostingConfig BoostingConfig::fromJson(const json& params) {
     BoostingConfig opts;
-    opts.step_ = params["step"];
-    opts.iterations_ = params["iterations"];
+    opts.step_ = params.value("step", opts.step_);
+    opts.iterations_ = params.value("iterations", opts.iterations_);
     return opts;
 }
 

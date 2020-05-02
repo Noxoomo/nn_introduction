@@ -4,11 +4,11 @@
 
 BootstrapOptions BootstrapOptions::fromJson(const json& params) {
     BootstrapOptions opts;
-    opts.sampleRate_ = params["sample_rate"];
+    opts.sampleRate_ = params.value("sample_rate", opts.sampleRate_);
     if (params.contains("seed")) {
         opts.seed_ = params["seed"];
     }
-    std::string type = params["type"];
+    std::string type = params.value("type", "poisson");
     if (type == "none") {
         opts.type_ = BootstrapType::None;
     } else if (type == "bayessian") {

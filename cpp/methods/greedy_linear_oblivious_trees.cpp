@@ -30,8 +30,8 @@
 
 GreedyLinearObliviousTreeLearnerOptions GreedyLinearObliviousTreeLearnerOptions::fromJson(const json& params) {
     GreedyLinearObliviousTreeLearnerOptions opts;
-    opts.l2reg = params["l2reg"];
-    opts.maxDepth = params["depth"];
+    opts.l2reg = params.value("l2reg", opts.l2reg);
+    opts.maxDepth = params.value("depth", opts.maxDepth);
     return opts;
 }
 
