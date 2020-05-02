@@ -77,7 +77,7 @@ private:
             const DataSet& ds, const BinarizedDataSet& bds,
             MultiDimArray<1, MultiDimArray<2, Stat>>& stats,
             UpdaterT updater) {
-        int nUsedFeatures = (int)usedFeaturesOrdered_.size();
+//        int nUsedFeatures = (int)usedFeaturesOrdered_.size();
 
         // compute stats per [thread Id][leaf Id]
         parallelFor(0, nSamples_, [&](int thId, int sampleId) {

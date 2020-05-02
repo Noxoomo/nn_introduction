@@ -53,7 +53,7 @@ namespace {
             }
 
             std::vector<int64_t> writeOffsets(newLeaves.size());
-            for (int32_t i =  1; i < newLeaves.size(); ++i) {
+            for (uint32_t i =  1; i < newLeaves.size(); ++i) {
                 newLeaves[i].Offset = newLeaves[i - 1].Offset + newLeaves[i - 1].Size;
                 writeOffsets[i] = newLeaves[i].Offset;
             }
@@ -127,7 +127,7 @@ namespace {
 
             auto vals = leaves.arrayRef();
             auto sourceStat = leaves_stats_.arrayRef();
-            for  (int32_t i = 0; i < vals.size(); ++i) {
+            for  (uint32_t i = 0; i < vals.size(); ++i) {
                 vals[i] = calcer(sourceStat[i]);
             }
             return leaves;
@@ -206,7 +206,7 @@ namespace {
 
         void buildHistogramsForParts(ConstVecRef<int32_t> partIds, VecRef<Stat> dst) const {
             auto& threadPool = GlobalThreadPool<0>();
-            for (int32_t i = 0; i < partIds.size(); ++i) {
+            for (uint32_t i = 0; i < partIds.size(); ++i) {
                 const int32_t partId = partIds[i];
                 const auto& part = leaves_[partId];
                 ConstVecRef<int32_t> indices = indices_.arrayRef().slice(part.Offset, part.Size);
@@ -255,7 +255,7 @@ namespace {
 
                      with_guard(lock)
                      {
-                         for (int64_t i = 0; i < leaves_.size(); ++i) {
+                         for (uint64_t i = 0; i < leaves_.size(); ++i) {
                              leaves_stats_ref[i] += tmp[i];
                          }
                      }
@@ -308,7 +308,7 @@ ModelPtr GreedyObliviousTree::fit(const DataSet& dataSet,
         double bestScore = 0;
         int32_t bestIdx = -1;
 
-        for (int32_t i = 0; i < scores.size(); ++i) {
+        for (uint32_t i = 0; i < scores.size(); ++i) {
             if (scores[i] < bestScore) {
                 bestScore = scores[i];
                 bestIdx = i;

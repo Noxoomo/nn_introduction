@@ -166,7 +166,7 @@ ModelPtr GreedyLinearObliviousTreeLearner::fit(const DataSet& ds, const Target& 
 
     // Root is built
 
-    for (unsigned int d = 0; d < opts_.maxDepth; ++d) {
+    for (int d = 0; d < opts_.maxDepth; ++d) {
 //        for (int i = 0; i < nSamples_; ++i) {
 //            std::cout << i << " goes to " << leafId_[i] << std::endl;
 //        }
@@ -541,7 +541,7 @@ void GreedyLinearObliviousTreeLearner::updateNewLeaves(
     });
     TIME_BLOCK_END(FullUpdatesAssign)
 
-    if (oldNUsedFeatures != usedFeatures_.size()) {
+    if (oldNUsedFeatures != (int)usedFeatures_.size()) {
         // partial updates
 
         // corStats have already been reset
