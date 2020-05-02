@@ -222,18 +222,18 @@ namespace {
             TDataSet trainPool = MakePool(
                     featuresCount,
                     nTrainRows,
-                    trainData.data<float>(),
-                    trainTargets.data<float>(),
+                    trainData.data_ptr<float>(),
+                    trainTargets.data_ptr<float>(),
                     nullptr,
-                    trainBaselineDim != 0 ? trainBaseline.data<float>() : nullptr,
+                    trainBaselineDim != 0 ? trainBaseline.data_ptr<float>() : nullptr,
                     trainBaselineDim);
             TDataSet validationPool = MakePool(
                     featuresCount,
                     nValidationRows,
-                    validationData.data<float>(),
-                    validationTargets.data<float>(),
+                    validationData.data_ptr<float>(),
+                    validationTargets.data_ptr<float>(),
                     nullptr,
-                    validationBaselineDim != 0 ? validationBaseline.data<float>() : nullptr,
+                    validationBaselineDim != 0 ? validationBaseline.data_ptr<float>() : nullptr,
                     validationBaselineDim);
 
             std::cout << "Training catboost with options: " << catBoostOptions_ << std::endl;

@@ -19,10 +19,10 @@ namespace {
 
         void invokeBackward(torch::Tensor batch,
                             torch::Tensor featureDer) {
-            auto derNorm = featureDer.norm(2).to(torch::kCPU).data<float>()[0];
+            auto derNorm = featureDer.norm(2).to(torch::kCPU).data_ptr<float>()[0];
             out_ << i << " der norm " << derNorm << std::endl;
             auto batchDerCpu = featureDer.mean({0}).to(torch::kCPU).contiguous();
-            auto meanDers = batchDerCpu.data<float>();
+            auto meanDers = batchDerCpu.data_ptr<float>();
             const int fCount = featureDer.size(1);
             out_ << i << " " << "derSigns" << std::endl;
             for (int i = 0; i < fCount; ++i) {
@@ -100,31 +100,31 @@ torch::Tensor PolynomCuda::Forward(torch::Tensor batch) const {
     }
     if (Polynom_->getMonomType() == Monom::MonomType::SigmoidProbMonom) {
         SigmoidProbPolynomForward(Polynom_->Lambda_,
-                       transposed.data<float>(),
+                       transposed.data_ptr<float>(),
                        fCount,
                        batchSize,
-                       Features.data<int>(),
-                       Conditions.data<float>(),
-                       PolynomOffsets.data<int>(),
-                       PolynomValues.data<float>(),
+                       Features.data_ptr<int>(),
+                       Conditions.data_ptr<float>(),
+                       PolynomOffsets.data_ptr<int>(),
+                       PolynomValues.data_ptr<float>(),
                        polynomCount,
                        outDim,
-                       probs.data<float>(),
-                       result.data<float>()
+                       probs.data_ptr<float>(),
+                       result.data_ptr<float>()
         );
     } else if (Polynom_->getMonomType() == Monom::MonomType::ExpProbMonom) {
         ExpProbPolynomForward(Polynom_->Lambda_,
-                                  transposed.data<float>(),
+                                  transposed.data_ptr<float>(),
                                   fCount,
                                   batchSize,
-                                  Features.data<int>(),
-                                  Conditions.data<float>(),
-                                  PolynomOffsets.data<int>(),
-                                  PolynomValues.data<float>(),
+                                  Features.data_ptr<int>(),
+                                  Conditions.data_ptr<float>(),
+                                  PolynomOffsets.data_ptr<int>(),
+                                  PolynomValues.data_ptr<float>(),
                                   polynomCount,
                                   outDim,
-                                  probs.data<float>(),
-                                  result.data<float>()
+                                  probs.data_ptr<float>(),
+                                  result.data_ptr<float>()
         );
     } else if (Polynom_->getMonomType() == Monom::MonomType::LinearMonom) {
         LinearPolynomForward(Polynom_->Lambda_,
@@ -176,30 +176,30 @@ torch::Tensor PolynomCuda::Backward(torch::Tensor batch,
         SigmoidProbPolynomBackward(
                 batchSize,
                 Polynom_->Lambda_,
-                batch.data<float>(),
+                batch.data_ptr<float>(),
                 fCount,
-                outputDer.data<float>(),
+                outputDer.data_ptr<float>(),
                 outDim,
-                Features.data<int>(),
-                Conditions.data<float>(),
-                PolynomValues.data<float>(),
-                PolynomOffsets.data<int>(),
+                Features.data_ptr<int>(),
+                Conditions.data_ptr<float>(),
+                PolynomValues.data_ptr<float>(),
+                PolynomOffsets.data_ptr<int>(),
                 polynomCount,
-                result.data<float>());
+                result.data_ptr<float>());
     } else if (Polynom_->getMonomType() == Monom::MonomType::ExpProbMonom) {
         ExpProbPolynomBackward(
                 batchSize,
                 Polynom_->Lambda_,
-                batch.data<float>(),
+                batch.data_ptr<float>(),
                 fCount,
-                outputDer.data<float>(),
+                outputDer.data_ptr<float>(),
                 outDim,
-                Features.data<int>(),
-                Conditions.data<float>(),
-                PolynomValues.data<float>(),
-                PolynomOffsets.data<int>(),
+                Features.data_ptr<int>(),
+                Conditions.data_ptr<float>(),
+                PolynomValues.data_ptr<float>(),
+                PolynomOffsets.data_ptr<int>(),
                 polynomCount,
-                result.data<float>());
+                result.data_ptr<float>());
     } else if (Polynom_->getMonomType() == Monom::MonomType::LinearMonom) {
         LinearPolynomBackward(
                 batchSize,
