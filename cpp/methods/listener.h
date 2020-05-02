@@ -23,7 +23,7 @@ public:
 protected:
 
     void invoke(const T& event) const {
-        for (int64_t i = 0; i < listeners_.size(); ++i) {
+        for (uint64_t i = 0; i < listeners_.size(); ++i) {
             if (!listeners_[i].expired()) {
                 SharedPtr<Inner> ptr = listeners_[i].lock();
                 (*ptr)(event);
@@ -50,7 +50,7 @@ public:
         model.append(ds_, cursor_);
 
         std::cout << "iter " << iter_<<": ";
-        for (int32_t i = 0; i < metrics_.size(); ++i) {
+        for (uint32_t i = 0; i < metrics_.size(); ++i) {
             if (iter_ % metricPeriods_[i] == 0) {
                 double val = metrics_[i]->value(cursor_);
                 if (val < bestValue_[i]) {

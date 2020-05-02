@@ -92,7 +92,7 @@ public:
         return *grid_.get();
     }
 
-    GridPtr gridPtr() const {
+    GridPtr gridPtr() const override {
         return grid_;
     }
 

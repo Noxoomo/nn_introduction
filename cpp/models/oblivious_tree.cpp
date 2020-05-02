@@ -73,7 +73,7 @@ void ObliviousTree::appendTo(const Vec& x, Vec to) const {
 double ObliviousTree::value(const Vec& x) {
     std::vector<double> probs(splits_.size());
     auto xRef = x.arrayRef();
-    for (int64_t i = 0; i < splits_.size(); ++i) {
+    for (uint64_t i = 0; i < splits_.size(); ++i) {
         const auto binFeature = splits_[i];
         const auto border = grid_->condition(binFeature.featureId_, binFeature.conditionId_);
         const auto val = xRef[grid_->origFeatureIndex(binFeature.featureId_)];
@@ -110,7 +110,7 @@ void ObliviousTree::grad(const Vec& x, Vec to) {
     std::vector<double> probs_mult_buff(leaves_.dim(), 1);
 
     for (uint32_t b = 0; b < leaves_.dim(); ++b) {
-        for (int f = 0; f < probs.size(); f++) {
+        for (uint32_t f = 0; f < probs.size(); f++) {
             if (b >> f == 0) break;
             if (((b >> f) & 1) != 0) {
                 probs_mult_buff[b] *= probs[f];

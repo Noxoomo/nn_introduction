@@ -38,7 +38,7 @@ DataSet loadFeaturesTxt(const std::string& file) {
         if (linesCount == 0) {
             fCount = lineFeatures.size();
         } else {
-            assert(lineFeatures.size() == fCount);
+            assert(lineFeatures.size() == (size_t)fCount);
         }
 
         for (auto val : lineFeatures) {

@@ -71,6 +71,7 @@ public:
         std::swap(data_, other.data_);
         std::swap(idxs_, other.idxs_);
         std::swap(shift_pos_, other.shift_pos_);
+        return *this;
     }
 
     MultiDimArray(const MultiDimArray<N, T>& other) = delete;

@@ -73,7 +73,7 @@ namespace VecTools {
 
     template <class T, class I, class TC>
     inline void gatherCpuImpl(ConstVecRef<T> from, ConstVecRef<I> map, VecRef<TC> to) {
-        for (int64_t i = 0; i < map.size(); ++i) {
+        for (uint64_t i = 0; i < map.size(); ++i) {
             to[i] = from[map[i]];
         }
     }
@@ -81,7 +81,7 @@ namespace VecTools {
 
     template <class T, class I, class TC>
     inline void scatterCpuImpl(ConstVecRef<T> from, ConstVecRef<I> map, VecRef<TC> to) {
-        for (int64_t i = 0; i < map.size(); ++i) {
+        for (uint64_t i = 0; i < map.size(); ++i) {
             to[map[i]] = from[i];
         }
     }

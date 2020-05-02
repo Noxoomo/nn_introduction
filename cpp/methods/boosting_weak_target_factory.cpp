@@ -73,7 +73,7 @@ SharedPtr<Target> GradientBoostingBootstrappedWeakTargetFactory::create(
         nzWeights.resize(target.dim());
         nzIndices.resize(target.dim());
         std::iota(nzIndices.begin(), nzIndices.end(), 0);
-        for (int64_t i = 0; i < nzWeights.size(); ++i) {
+        for (uint64_t i = 0; i < nzWeights.size(); ++i) {
             nzWeights[i] = -log(uniform_(engine_) + 1e-20);
         }
     }
