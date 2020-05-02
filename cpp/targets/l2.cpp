@@ -7,7 +7,7 @@ void L2::makeStats(Buffer<L2Stat>* stats, Buffer<int32_t>* indices) const {
     } else {
         (*indices) = Buffer<int32_t>(nzTargets_.dim());
         auto indicesRef = indices->arrayRef();
-        for (int32_t i = 0; i < indicesRef.size(); ++i) {
+        for (uint32_t i = 0; i < indicesRef.size(); ++i) {
             indicesRef[i] = i;
         }
     }

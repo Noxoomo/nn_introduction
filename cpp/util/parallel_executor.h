@@ -82,7 +82,7 @@ inline void parallelForInThreadPool(ThreadPool& pool, int64_t from, int64_t to, 
         const int64_t endBlock = std::min<int64_t>((blockId + 1) * blockSize, to);
         if (startBlock != endBlock) {
             if (parallel) {
-                pool.enqueue([startBlock, endBlock, blockId, &task] {
+                pool.enqueue([startBlock, endBlock, &task] {
 //                    SemaphoreReleaseGuard srg(sema, endBlock - startBlock);
                     for (int64_t i = startBlock; i < endBlock; ++i) {
                         task(i);

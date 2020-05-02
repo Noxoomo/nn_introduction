@@ -88,7 +88,7 @@ public:
 
     void fill(const T& val) {
         auto dst = arrayRef();
-        for (int64_t i = 0; i < dst.size(); ++i) {
+        for (uint64_t i = 0; i < dst.size(); ++i) {
             dst[i] = val;
         }
     }
@@ -118,7 +118,7 @@ public:
     static Buffer fromVector(const std::vector<T>& vec) {
         Buffer x(static_cast<int64_t>(vec.size()));
         VecRef<T> dst = x.arrayRef();
-        for (int64_t i = 0; i < dst.size(); ++i) {
+        for (uint64_t i = 0; i < dst.size(); ++i) {
             dst[i] = vec[i];
         }
         return x;

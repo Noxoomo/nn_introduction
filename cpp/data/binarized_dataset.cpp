@@ -17,7 +17,7 @@ BinarizedDataSetPtr binarize(const DataSet& ds, GridPtr& gridPtr, int32_t maxGro
 
         for (int64_t i = 0; i < groups; ++i) {
             bds->updateLineForGroup(i, line, [&](ConstVecRef<int32_t> gridFeatures, VecRef<uint8_t> bins) {
-                for (int64_t f = 0; f < gridFeatures.size(); ++f) {
+                for (uint64_t f = 0; f < gridFeatures.size(); ++f) {
                     bins[f] = binarizedLine[gridFeatures[f]];
                 }
             });

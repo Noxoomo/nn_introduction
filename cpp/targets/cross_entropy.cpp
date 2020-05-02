@@ -49,7 +49,7 @@ CrossEntropy::CrossEntropy(const DataSet& ds, double border)
     , target_(ds.samplesCount()) {
     auto targetAccessor = target_.arrayRef();
     auto sourceAccessor = ds.target().arrayRef();
-    for (int64_t i  = 0; i < targetAccessor.size(); ++i) {
+    for (uint64_t i  = 0; i < targetAccessor.size(); ++i) {
         targetAccessor[i] = sourceAccessor[i] > border;
     }
 }

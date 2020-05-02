@@ -87,7 +87,8 @@ public:
     }
 
     Mx sampleMx(const std::set<int>& features) const {
-        auto indexes = torch::tensor(std::vector<long>(features.begin(), features.end()));
+        std::vector<int64_t> featuresVec(features.begin(), features.end());
+        auto indexes = torch::tensor(featuresVec);
         auto resTensor = data_.data().view({samplesCount(), featuresCount()}).transpose(0, 1).index_select(0, indexes).transpose(0, 1).contiguous().view({-1});
         auto tmpResVec = Vec(resTensor);
         return Mx(tmpResVec, samplesCount(), features.size());
