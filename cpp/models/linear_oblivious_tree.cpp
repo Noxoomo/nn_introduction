@@ -12,7 +12,7 @@ void LinearObliviousTree::applyToBds(const BinarizedDataSet& bds, Mx to, ApplyTy
     uint64_t xSliceStart = 0;
     uint64_t toSliceStart = 0;
 
-    for (uint64_t i = 0; i < ds.samplesCount(); ++i) {
+    for (int64_t i = 0; i < ds.samplesCount(); ++i) {
         ConstVecRef<float> x = dsRef.slice(xSliceStart, sampleDim);
         VecRef<float> y = toRef.slice(toSliceStart, targetDim);
 
@@ -37,7 +37,7 @@ void LinearObliviousTree::appendTo(const Vec& x, Vec to) const {
 int LinearObliviousTree::getLeaf(const ConstVecRef<float>& x) const {
     int lId = 0;
 
-    for (int i = 0; i < splits_.size(); ++i) {
+    for (uint32_t i = 0; i < splits_.size(); ++i) {
         const auto& s = splits_[i];
         auto fId = std::get<0>(s);
         auto condId = std::get<1>(s);
@@ -74,7 +74,7 @@ void LinearObliviousTree::printInfo() const {
         int condId = std::get<1>(splits_[i]);
         const auto border = grid_->condition(fId, condId);
         std::cout << "f[" << fId << "] > " << border;
-        if (i != splits_.size() - 1) {
+        if (i != (int)splits_.size() - 1) {
             std::cout << ", ";
         } else {
             std::cout << ")+";
@@ -84,7 +84,7 @@ void LinearObliviousTree::printInfo() const {
     std::cout << "[";
     for (int lId = 0; lId < (int)leaves_.size(); ++lId) {
         leaves_[lId].printInfo();
-        if (lId != leaves_.size() - 1) {
+        if (lId != (int)leaves_.size() - 1) {
             std::cout << ", ";
         }
     }

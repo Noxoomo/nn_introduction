@@ -23,8 +23,8 @@ class LinearObliviousTreeLeafLearner;
 
 struct GreedyLinearObliviousTreeLearnerOptions {
     int maxDepth = 6;
-    int biasCol = -1;
-    double l2reg = 0.0;
+    int biasCol = 0;
+    double l2reg = 2.0;
 
     static GreedyLinearObliviousTreeLearnerOptions fromJson(const json& params);
 };
@@ -39,7 +39,7 @@ public:
             , opts_(opts) {
     }
 
-    GreedyLinearObliviousTreeLearner(const GreedyLinearObliviousTreeLearner& other) = default;
+//    GreedyLinearObliviousTreeLearner(const GreedyLinearObliviousTreeLearner& other) = default;
 
     ModelPtr fit(const DataSet& dataSet, const Target& target) override;
 
@@ -77,7 +77,7 @@ private:
             const DataSet& ds, const BinarizedDataSet& bds,
             MultiDimArray<1, MultiDimArray<2, Stat>>& stats,
             UpdaterT updater) {
-        int nUsedFeatures = usedFeaturesOrdered_.size();
+//        int nUsedFeatures = (int)usedFeaturesOrdered_.size();
 
         // compute stats per [thread Id][leaf Id]
         parallelFor(0, nSamples_, [&](int thId, int sampleId) {

@@ -30,8 +30,8 @@
 
 GreedyLinearObliviousTreeLearnerOptions GreedyLinearObliviousTreeLearnerOptions::fromJson(const json& params) {
     GreedyLinearObliviousTreeLearnerOptions opts;
-    opts.l2reg = params["l2reg"];
-    opts.maxDepth = params["depth"];
+    opts.l2reg = params.value("l2reg", opts.l2reg);
+    opts.maxDepth = params.value("depth", opts.maxDepth);
     return opts;
 }
 
@@ -42,9 +42,10 @@ public:
             GridPtr grid,
             int nUsedFeatures)
             : grid_(std::move(grid))
-            , nUsedFeatures_(nUsedFeatures)
-            , stats_(MultiDimArray<1, LinearL2Stat>({(int)grid_->totalBins()}, nUsedFeatures + 1, nUsedFeatures)) {
+            , stats_(MultiDimArray<1, LinearL2Stat>({(int)grid_->totalBins()}, nUsedFeatures + 1, nUsedFeatures))
+            , nUsedFeatures_(nUsedFeatures) {
         id_ = 0;
+        (void)nUsedFeatures_;
     }
 
     double splitScore(const StatBasedLoss<LinearL2Stat>& target, int fId, int condId) {
@@ -63,7 +64,6 @@ public:
 
     std::pair<std::shared_ptr<LinearObliviousTreeLeafLearner>, std::shared_ptr<LinearObliviousTreeLeafLearner>>
     split(int32_t fId, int32_t condId, int nUsedFeatures) {
-        int origFId = grid_->origFeatureIndex(fId);
 
         auto left = std::make_shared<LinearObliviousTreeLeafLearner>(grid_, nUsedFeatures);
         auto right = std::make_shared<LinearObliviousTreeLeafLearner>(grid_, nUsedFeatures);
@@ -134,8 +134,6 @@ private:
 
 
 ModelPtr GreedyLinearObliviousTreeLearner::fit(const DataSet& ds, const Target& target) {
-    auto beginAll = std::chrono::steady_clock::now();
-
     auto tree = std::make_shared<LinearObliviousTree>(grid_);
 
     cacheDs(ds);
@@ -168,7 +166,7 @@ ModelPtr GreedyLinearObliviousTreeLearner::fit(const DataSet& ds, const Target& 
 
     // Root is built
 
-    for (unsigned int d = 0; d < opts_.maxDepth; ++d) {
+    for (int d = 0; d < opts_.maxDepth; ++d) {
 //        for (int i = 0; i < nSamples_; ++i) {
 //            std::cout << i << " goes to " << leafId_[i] << std::endl;
 //        }
@@ -195,7 +193,7 @@ ModelPtr GreedyLinearObliviousTreeLearner::fit(const DataSet& ds, const Target& 
         tree->splits_.emplace_back(std::make_tuple(splitFId, splitCond));
         splits_.insert(split);
 
-        int oldNUsedFeatures = usedFeatures_.size();
+        int oldNUsedFeatures = (int)usedFeatures_.size();
 
         int32_t splitOrigFId = grid_->origFeatureIndex(splitFId);
         if (usedFeatures_.count(splitOrigFId) == 0) {
@@ -391,7 +389,7 @@ void GreedyLinearObliviousTreeLearner::updateNewCorrelations(
         if (usedFeatures_.count(origFId)) return;
 
         LinearL2StatOpParams params = {};
-        for (int lId = 0; lId < leaves_.size(); ++lId) {
+        for (uint64_t lId = 0; lId < leaves_.size(); ++lId) {
             auto& stat = stats[lId][bin];
             leaves_[lId]->stats_[bin].append(stat.xxt.data(),
                                              stat.xy,
@@ -483,7 +481,7 @@ void GreedyLinearObliviousTreeLearner::initNewLeaves(GreedyLinearObliviousTreeLe
         ++samplesLeavesCnt_[leafId_[i]];
     });
 
-    for (int i = 0; i < leaves_.size(); ++i) {
+    for (uint64_t i = 0; i < leaves_.size(); ++i) {
         fullUpdate_[2 * i] = samplesLeavesCnt_[2 * i] <= samplesLeavesCnt_[2 * i + 1];
         fullUpdate_[2 * i + 1] = !fullUpdate_[2 * i];
     }
@@ -543,7 +541,7 @@ void GreedyLinearObliviousTreeLearner::updateNewLeaves(
     });
     TIME_BLOCK_END(FullUpdatesAssign)
 
-    if (oldNUsedFeatures != usedFeatures_.size()) {
+    if (oldNUsedFeatures != (int)usedFeatures_.size()) {
         // partial updates
 
         // corStats have already been reset

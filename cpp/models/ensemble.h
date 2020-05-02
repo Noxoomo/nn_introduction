@@ -50,7 +50,7 @@ public:
         }
     }
 
-    double value(const Vec& x) {
+    double value(const Vec& x) override {
         double res = 0;
         for (auto& model : models_) {
             res += model->value(x);
@@ -58,7 +58,7 @@ public:
         return res;
     }
 
-    void grad(const Vec& x, Vec to) {
+    void grad(const Vec& x, Vec to) override {
         for (auto& model : models_) {
             model->grad(x, to);
         }

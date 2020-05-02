@@ -17,7 +17,7 @@ struct TSymmetricTree {
 
     void Forward(const float* features, float* dst) const {
         int bin = 0;
-        for (int k = 0; k < Conditions.size(); ++k) {
+        for (int k = 0; k < (int)Conditions.size(); ++k) {
             if (features[Features[k]] > Conditions[k]) {
                 bin |= 1 << k;
             }

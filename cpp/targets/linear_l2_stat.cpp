@@ -80,6 +80,7 @@ LinearL2CorStat& LinearL2CorStat::appendImpl(const LinearL2CorStat &other,
     vectorizedAdd(xxt.data(), other.xxt.data(), filledSize_);
     xy += other.xy;
     sumX += other.sumX;
+    return *this;
 }
 
 LinearL2CorStat& LinearL2CorStat::removeImpl(const LinearL2CorStat &other,
@@ -90,6 +91,7 @@ LinearL2CorStat& LinearL2CorStat::removeImpl(const LinearL2CorStat &other,
     vectorizedRm(xxt.data(), other.xxt.data(), filledSize_);
     xy -= other.xy;
     sumX -= other.sumX;
+    return *this;
 }
 
 LinearL2CorStat& LinearL2CorStat::appendImpl(const float* x, float y, float weight,
@@ -102,6 +104,7 @@ LinearL2CorStat& LinearL2CorStat::appendImpl(const float* x, float y, float weig
     xxt[filledSize_ - 1] += opParams.fVal * wf;
     xy += y * wf;
     sumX += wf;
+    return *this;
 }
 
 LinearL2CorStat& LinearL2CorStat::removeImpl(const float* x, float y, float weight,
@@ -114,6 +117,7 @@ LinearL2CorStat& LinearL2CorStat::removeImpl(const float* x, float y, float weig
     xxt[filledSize_ - 1] -= opParams.fVal * wf;
     xy -= y * wf;
     sumX -= wf;
+    return *this;
 }
 
 
@@ -332,7 +336,7 @@ LinearL2GridStat::LinearL2GridStat(int nBins, int size, int filledSize)
         : nBins_(nBins)
         , size_(size)
         , filledSize_(filledSize) {
-    stats_.resize(nBins, LinearL2Stat(size, filledSize));
+    stats_.resize(nBins, LinearL2Stat(size_, filledSize_));
 }
 
 void LinearL2GridStat::reset() {
@@ -353,6 +357,7 @@ LinearL2GridStat& LinearL2GridStat::appendImpl(const LinearL2GridStat& other, co
     for (int i = 0; i < nBins_; ++i) {
         stats_[i].append(other.stats_[i], opParams);
     }
+    return *this;
 }
 
 LinearL2GridStat& LinearL2GridStat::removeImpl(const LinearL2GridStat& other, const LinearL2GridStatOpParams& opParams) {
@@ -360,14 +365,17 @@ LinearL2GridStat& LinearL2GridStat::removeImpl(const LinearL2GridStat& other, co
     for (int i = 0; i < nBins_; ++i) {
         stats_[i].remove(other.stats_[i], opParams);
     }
+    return *this;
 }
 
 LinearL2GridStat& LinearL2GridStat::appendImpl(SampleType x, TargetType y, WeightType weight, const LinearL2GridStatOpParams& opParams) {
     int bin = opParams.bin;
     stats_[bin].append(x, y, weight, opParams);
+    return *this;
 }
 
 LinearL2GridStat& LinearL2GridStat::removeImpl(SampleType x, TargetType y, WeightType weight, const LinearL2GridStatOpParams& opParams) {
     int bin = opParams.bin;
     stats_[bin].remove(x, y, weight, opParams);
+    return *this;
 }

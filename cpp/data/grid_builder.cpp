@@ -142,7 +142,7 @@ namespace {
 
 BinarizationConfig BinarizationConfig::fromJson(const json& params) {
     BinarizationConfig opts;
-    opts.bordersCount_ = params["borders_count"];
+    opts.bordersCount_ = params.value("borders_count", opts.bordersCount_);
     return opts;
 }
 
