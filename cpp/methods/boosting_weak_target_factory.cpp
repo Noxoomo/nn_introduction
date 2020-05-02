@@ -28,8 +28,7 @@ SharedPtr<Target> GradientBoostingWeakTargetFactory::create(
     const Vec cursor = startPoint;
     Vec der(cursor.dim());
     target.gradientTo(cursor, der);
-    const auto& l2Target = dynamic_cast<const LinearL2&>(target);
-    return std::static_pointer_cast<Target>(std::make_shared<LinearL2>(ds, der, l2Target.l2reg_));
+    return std::static_pointer_cast<Target>(std::make_shared<LinearL2>(ds, der, l2reg_));
 }
 
 template <class Rand>
@@ -84,5 +83,5 @@ SharedPtr<Target> GradientBoostingBootstrappedWeakTargetFactory::create(
     const auto& pointwiseTarget = dynamic_cast<const PointwiseTarget&>(target);
     pointwiseTarget.subsetDer(startPoint, indices, der);
     // TODO this god damn params...
-    return std::static_pointer_cast<Target>(std::make_shared<LinearL2>(ds, der, weights, indices, 2.0));
+    return std::static_pointer_cast<Target>(std::make_shared<LinearL2>(ds, der, weights, indices, l2reg_));
 }

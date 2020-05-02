@@ -40,16 +40,16 @@ inline std::unique_ptr<GreedyLinearObliviousTreeLearner> createWeakLinearLearner
     return std::make_unique<GreedyLinearObliviousTreeLearner>(std::move(grid), opts);
 }
 
-inline std::unique_ptr<EmpiricalTargetFactory> createWeakTarget() {
-    return std::make_unique<GradientBoostingWeakTargetFactory>();
+inline std::unique_ptr<EmpiricalTargetFactory> createWeakTarget(double l2reg) {
+    return std::make_unique<GradientBoostingWeakTargetFactory>(l2reg);
 }
 
-inline std::unique_ptr<EmpiricalTargetFactory> createBootstrapWeakTarget() {
+inline std::unique_ptr<EmpiricalTargetFactory> createBootstrapWeakTarget(double l2reg) {
     BootstrapOptions options;
 //    srand(time(NULL));
 //    options.seed_ = std::rand() % 10000;
     options.seed_ = 42;
-    return std::make_unique<GradientBoostingBootstrappedWeakTargetFactory>(options);
+    return std::make_unique<GradientBoostingBootstrappedWeakTargetFactory>(options, l2reg);
 }
 
 TEST(FeaturesTxt, TestTrainMseFeaturesTxt) {
@@ -63,7 +63,7 @@ TEST(FeaturesTxt, TestTrainMseFeaturesTxt) {
     auto grid = buildGrid(ds, config);
 
     BoostingConfig boostingConfig;
-    Boosting boosting(boostingConfig, createWeakTarget(), createWeakLearner(6, grid));
+    Boosting boosting(boostingConfig, createWeakTarget(0.0), createWeakLearner(6, grid));
 
     auto metricsCalcer = std::make_shared<BoostingMetricsCalcer>(test);
     metricsCalcer->addMetric(L2(test), "l2");
@@ -83,7 +83,7 @@ TEST(FeaturesTxt, TestTrainWithBootstrapMseFeaturesTxt) {
     auto grid = buildGrid(ds, config);
 
     BoostingConfig boostingConfig;
-    Boosting boosting(boostingConfig, createBootstrapWeakTarget(), createWeakLearner(6, grid));
+    Boosting boosting(boostingConfig, createBootstrapWeakTarget(0.0), createWeakLearner(6, grid));
 
     auto metricsCalcer = std::make_shared<BoostingMetricsCalcer>(test);
     metricsCalcer->addMetric(L2(test), "l2");
@@ -105,7 +105,7 @@ TEST(FeaturesTxt, TestTrainWithBootstrapLogLikelihoodFeaturesTxt) {
 
     BoostingConfig boostingConfig;
 //    Boosting boosting(boostingConfig, createBootstrapWeakTarget(), createWeakLearner(6, grid));
-    Boosting boosting(boostingConfig, createWeakTarget(), createWeakLearner(6, grid));
+    Boosting boosting(boostingConfig, createWeakTarget(0.0), createWeakLearner(6, grid));
 
     auto metricsCalcer = std::make_shared<BoostingMetricsCalcer>(test);
     metricsCalcer->addMetric(CrossEntropy(test, 0.1), "CrossEntropy");
@@ -132,7 +132,7 @@ TEST(FeaturesTxt, TestTrainMseMoscow) {
     std::cout << " build grid " << std::endl;
 
     BoostingConfig boostingConfig;
-    Boosting boosting(boostingConfig, createBootstrapWeakTarget(), createWeakLearner(6, grid));
+    Boosting boosting(boostingConfig, createBootstrapWeakTarget(0.0), createWeakLearner(6, grid));
 
     auto metricsCalcer = std::make_shared<BoostingMetricsCalcer>(test);
     metricsCalcer->addMetric(L2(test), "l2");
@@ -184,7 +184,7 @@ TEST(BoostingLinearTrees, SimpleDs) {
     BoostingConfig boostingConfig;
     boostingConfig.iterations_ = 1;
     boostingConfig.step_ = 1;
-    Boosting boosting(boostingConfig, createWeakTarget(), createWeakLinearLearner(4, 0, l2reg, grid));
+    Boosting boosting(boostingConfig, createWeakTarget(l2reg), createWeakLinearLearner(4, 0, l2reg, grid));
 
     auto trainMetricsCalcer = std::make_shared<BoostingMetricsCalcer>(ds);
     trainMetricsCalcer->addMetric(L2(ds), "l2-train");
@@ -216,7 +216,7 @@ TEST(BoostingLinearTrees, FeaturesTxt) {
     BoostingConfig boostingConfig;
     boostingConfig.iterations_ = 500;
     boostingConfig.step_ = 0.008;
-    Boosting boosting(boostingConfig, createBootstrapWeakTarget(), createWeakLinearLearner(6, 0, l2reg, grid));
+    Boosting boosting(boostingConfig, createBootstrapWeakTarget(l2reg), createWeakLinearLearner(6, 0, l2reg, grid));
 
     auto testMetricsCalcer = std::make_shared<BoostingMetricsCalcer>(test);
     testMetricsCalcer->addMetric(L2(test), "l2-test");
@@ -245,7 +245,7 @@ TEST(BoostingLinearTrees, FeaturesTxtBootsrap) {
     BoostingConfig boostingConfig;
     boostingConfig.iterations_ = 2000;
     boostingConfig.step_ = 0.003;
-    Boosting boosting(boostingConfig, createBootstrapWeakTarget(), createWeakLinearLearner(6, 0, l2reg, grid));
+    Boosting boosting(boostingConfig, createBootstrapWeakTarget(l2reg), createWeakLinearLearner(6, 0, l2reg, grid));
 
     auto testMetricsCalcer = std::make_shared<BoostingMetricsCalcer>(test);
     testMetricsCalcer->addMetric(L2(test), "l2-test");
@@ -279,7 +279,7 @@ TEST(Serialize, Ensemble) {
     BoostingConfig boostingConfig;
     boostingConfig.iterations_ = 3;
     boostingConfig.step_ = 0.5;
-    Boosting boosting(boostingConfig, createWeakTarget(), createWeakLinearLearner(4, 0, l2reg, grid));
+    Boosting boosting(boostingConfig, createWeakTarget(l2reg), createWeakLinearLearner(4, 0, l2reg, grid));
 
     LinearL2 target(ds, l2reg);
     auto ensemble = std::dynamic_pointer_cast<Ensemble>(boosting.fit(ds, target));
@@ -332,7 +332,7 @@ TEST(Serialize, DuringFit) {
     BoostingConfig boostingConfig;
     boostingConfig.iterations_ = 3;
     boostingConfig.step_ = 0.5;
-    Boosting boosting(boostingConfig, createWeakTarget(), createWeakLinearLearner(4, 0, l2reg, grid));
+    Boosting boosting(boostingConfig, createWeakTarget(l2reg), createWeakLinearLearner(4, 0, l2reg, grid));
 
     std::ofstream fout("test1.out", std::ios::binary);
     auto boostingSerializer = std::make_shared<BoostingSerializer>(fout, 1.0, 1);

@@ -60,19 +60,19 @@
   ],
 
   "eval_model": {
-    "binarization": {
+    "grid_config": {
       "borders_count": 3
     },
-    "boosting": {
+    "boosting_config": {
       "step": 0.1,
       "iterations": 100
     },
-    "bootstrap": {
+    "bootstrap_options": {
       "sample_rate": 0.7,
       "seed": 42,
       "type": "bayessian"
     },
-    "linear_trees": {
+    "tree_config": {
       "l2reg": 2.0,
       "depth": 6
     }

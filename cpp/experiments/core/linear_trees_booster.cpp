@@ -49,10 +49,10 @@ private:
 LinearTreesBoosterOptions LinearTreesBoosterOptions::fromJson(const json& params) {
     LinearTreesBoosterOptions opts;
 
-    opts.binarizationCfg = BinarizationConfig::fromJson(params["binarization"]);
-    opts.boostingCfg = BoostingConfig::fromJson(params["boosting"]);
-    opts.boostrapOpts = BootstrapOptions::fromJson(params["bootstrap"]);
-    opts.greedyLinearTreesOpts = GreedyLinearObliviousTreeLearnerOptions::fromJson(params["linear_trees"]);
+    opts.binarizationCfg = BinarizationConfig::fromJson(params["grid_config"]);
+    opts.boostingCfg = BoostingConfig::fromJson(params["boosting_config"]);
+    opts.boostrapOpts = BootstrapOptions::fromJson(params["bootstrap_options"]);
+    opts.greedyLinearTreesOpts = GreedyLinearObliviousTreeLearnerOptions::fromJson(params["tree_config"]);
 
     return opts;
 }
@@ -63,8 +63,9 @@ static std::unique_ptr<GreedyLinearObliviousTreeLearner> createWeakLinearLearner
     return std::make_unique<GreedyLinearObliviousTreeLearner>(std::move(grid), opts);
 }
 
-static std::unique_ptr<EmpiricalTargetFactory> createBootstrapWeakTarget(BootstrapOptions opts) {
-    return std::make_unique<GradientBoostingBootstrappedWeakTargetFactory>(opts);
+static std::unique_ptr<EmpiricalTargetFactory> createBootstrapWeakTarget(
+        BootstrapOptions opts, double l2reg) {
+    return std::make_unique<GradientBoostingBootstrappedWeakTargetFactory>(opts, l2reg);
 }
 
 LinearTreesBooster::LinearTreesBooster(const LinearTreesBoosterOptions& opts)
@@ -76,7 +77,7 @@ ModelPtr LinearTreesBooster::fit(const DataSet& trainDs, const DataSet& testDs) 
     auto grid = buildGrid(trainDs, opts_.binarizationCfg);
 
     Boosting boosting(opts_.boostingCfg,
-                      createBootstrapWeakTarget(opts_.boostrapOpts),
+                      createBootstrapWeakTarget(opts_.boostrapOpts, opts_.greedyLinearTreesOpts.l2reg),
                       createWeakLinearLearner(grid, opts_.greedyLinearTreesOpts));
 
     auto testMetricsCalcer = std::make_shared<BoostingMetricsCalcer>(testDs);

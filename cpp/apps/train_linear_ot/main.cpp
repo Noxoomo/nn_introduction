@@ -9,19 +9,20 @@
 #include <methods/greedy_linear_oblivious_trees.h>
 #include <targets/cross_entropy.h>
 #include <util/json.h>
+#include <experiments/core/linear_trees_booster.h>
 
 inline std::unique_ptr<GreedyLinearObliviousTreeLearner> createWeakLearner(GridPtr grid, GreedyLinearObliviousTreeLearnerOptions opts) {
   return std::make_unique<GreedyLinearObliviousTreeLearner>(grid, opts);
 }
 
-inline std::unique_ptr<EmpiricalTargetFactory> createWeakTarget() {
-  return std::make_unique<GradientBoostingWeakTargetFactory>();
+inline std::unique_ptr<EmpiricalTargetFactory> createWeakTarget(double l2reg) {
+  return std::make_unique<GradientBoostingWeakTargetFactory>(l2reg);
 }
 
 inline std::unique_ptr<EmpiricalTargetFactory>
-createBootstrapWeakTarget(BootstrapOptions options) {
+createBootstrapWeakTarget(BootstrapOptions options, double l2reg) {
   return std::make_unique<GradientBoostingBootstrappedWeakTargetFactory>(
-      options);
+      options, l2reg);
 }
 
 int main(int /*argc*/, char* argv[]) {
@@ -39,13 +40,11 @@ int main(int /*argc*/, char* argv[]) {
   auto grid = buildGrid(ds, config);
   std::cout << " build grid " << std::endl;
 
-  BoostingConfig boostingConfig =
-      BoostingConfig::fromJson(params["boosting_config"]);
-  BootstrapOptions bootstrapOptions =
-      BootstrapOptions::fromJson(params["bootstrap_options"]);
+  experiments::LinearTreesBoosterOptions opts = experiments::LinearTreesBoosterOptions::fromJson(params);
+
   Boosting boosting(
-      boostingConfig, createBootstrapWeakTarget(bootstrapOptions),
-      createWeakLearner(grid, GreedyLinearObliviousTreeLearnerOptions::fromJson(params["tree_config"])));
+      opts.boostingCfg, createBootstrapWeakTarget(opts.boostrapOpts, opts.greedyLinearTreesOpts.l2reg),
+      createWeakLearner(grid, opts.greedyLinearTreesOpts));
 
   std::string target = params.value("target", "mse");
   std::unique_ptr<Target> objective;
