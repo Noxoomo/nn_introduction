@@ -16,6 +16,8 @@
 #include <targets/cross_entropy.h>
 #include <targets/linear_l2.h>
 #include <metrics/accuracy.h>
+#include <models/ensemble.h>
+#include <models/linear_oblivious_tree.h>
 
 #define EPS 1e-5
 #define PATH_PREFIX "../../../../"
@@ -258,4 +260,109 @@ TEST(BoostingLinearTrees, FeaturesTxtBootsrap) {
 
     LinearL2 target(ds, l2reg);
     auto ensemble = boosting.fit(ds, target);
+}
+
+// TODO actually this test should be in models, but it's just easier to write it here
+TEST(Serialize, Ensemble) {
+    auto ds = simpleDs();
+
+    std::vector<int32_t> indices({0, 1, 2, 3, 4, 5, 6});
+
+    ds.addBiasColumn();
+
+    BinarizationConfig config;
+    config.bordersCount_ = 32;
+    auto grid = buildGrid(ds, config);
+
+    const double l2reg = 1e-5;
+
+    BoostingConfig boostingConfig;
+    boostingConfig.iterations_ = 3;
+    boostingConfig.step_ = 0.5;
+    Boosting boosting(boostingConfig, createWeakTarget(), createWeakLinearLearner(4, 0, l2reg, grid));
+
+    LinearL2 target(ds, l2reg);
+    auto ensemble = std::dynamic_pointer_cast<Ensemble>(boosting.fit(ds, target));
+
+    std::ofstream fout("test.out", std::ios::binary);
+    ensemble->serialize(fout, [&](ModelPtr model) {
+        auto linearTree = std::dynamic_pointer_cast<LinearObliviousTree>(model);
+        linearTree->serialize(fout);
+    });
+    fout.close();
+
+    std::ifstream fin("test.out", std::ios::binary);
+    auto newEnsemble = Ensemble::deserialize(fin, [&]() {
+        return LinearObliviousTree::deserialize(fin, grid);
+    });
+    fin.close();
+
+    ASSERT_TRUE(newEnsemble);
+
+    std::cout << "old ensemble:" << std::endl;
+    ensemble->visitModels([&](ModelPtr model) {
+        auto linearTree = std::dynamic_pointer_cast<LinearObliviousTree>(model);
+        linearTree->printInfo();
+    });
+
+    std::cout << "new ensemble:" << std::endl;
+    newEnsemble->visitModels([&](ModelPtr model) {
+        auto linearTree = std::dynamic_pointer_cast<LinearObliviousTree>(model);
+        linearTree->printInfo();
+    });
+
+    for (int i = 0; i < ds.samplesCount(); ++i) {
+        ASSERT_NEAR(ensemble->value(ds.sample(i)), newEnsemble->value(ds.sample(i)), 1e-6);
+    }
+}
+
+TEST(Serialize, DuringFit) {
+    auto ds = simpleDs();
+
+    std::vector<int32_t> indices({0, 1, 2, 3, 4, 5, 6});
+
+    ds.addBiasColumn();
+
+    BinarizationConfig config;
+    config.bordersCount_ = 32;
+    auto grid = buildGrid(ds, config);
+
+    const double l2reg = 1e-5;
+
+    BoostingConfig boostingConfig;
+    boostingConfig.iterations_ = 3;
+    boostingConfig.step_ = 0.5;
+    Boosting boosting(boostingConfig, createWeakTarget(), createWeakLinearLearner(4, 0, l2reg, grid));
+
+//    std::ofstream fout("test1.out", std::ios::binary);
+//    auto boostingSerializer = std::make_shared<BoostingSerializer>(fout, 1.0, 1);
+//    boosting.addListener(boostingSerializer);
+
+    LinearL2 target(ds, l2reg);
+    auto ensemble = std::dynamic_pointer_cast<Ensemble>(boosting.fit(ds, target));
+//    fout.close();
+
+    std::ifstream fin("test1.out", std::ios::binary);
+    auto newEnsemble = Ensemble::deserialize(fin, [&]() {
+        return LinearObliviousTree::deserialize(fin, grid);
+    });
+    fin.close();
+
+    ASSERT_TRUE(newEnsemble);
+
+    std::cout << "old ensemble:" << std::endl;
+    ensemble->visitModels([&](ModelPtr model) {
+        auto linearTree = std::dynamic_pointer_cast<LinearObliviousTree>(model);
+        linearTree->printInfo();
+    });
+
+    std::cout << "new ensemble:" << std::endl;
+    newEnsemble->visitModels([&](ModelPtr model) {
+        auto linearTree = std::dynamic_pointer_cast<LinearObliviousTree>(model);
+        linearTree->printInfo();
+    });
+
+    for (int i = 0; i < ds.samplesCount(); ++i) {
+        ASSERT_NEAR(ensemble->value(ds.sample(i)), newEnsemble->value(ds.sample(i)), 1e-6);
+    }
 }

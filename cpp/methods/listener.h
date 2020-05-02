@@ -4,6 +4,7 @@
 #include <core/func.h>
 #include <vector>
 #include <memory>
+#include <models/linear_oblivious_tree.h>
 
 template <class T>
 class Listener : public Object {
@@ -135,6 +136,32 @@ private:
     int iter_ = 0;
 };
 
+class BoostingSerializer : public Listener<Model> {
+public:
+    explicit BoostingSerializer(std::ostream& out, double scale, int flushPeriod = 10)
+            : out_(out)
+            , flushPeriod_(flushPeriod) {
+        out.write("e{", 2);
+        out.write((char*)&scale, sizeof(scale));
+        out.write("}", 1);
+        out.flush();
+    }
+
+    void operator()(const Model& model) override {
+        ++iter_;
+        auto linearModel = dynamic_cast<const LinearObliviousTree&>(model);
+        linearModel.serialize(out_);
+
+        if (iter_ % flushPeriod_ == 0) {
+            out_.flush();
+        }
+    }
+
+private:
+    std::ostream& out_;
+    int flushPeriod_;
+    int iter_ = 0;
+};
 
 class IterPrinter : public Listener<Model> {
 public:

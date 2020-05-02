@@ -2,14 +2,25 @@
 
 #include "model.h"
 
+#include <util/io.h>
+
 class Ensemble : public Stub<Model, Ensemble> {
 public:
 
-    Ensemble(std::vector<ModelPtr>&& models)
+    Ensemble(std::vector<ModelPtr> models)
     : Stub<Model, Ensemble>(
         models.front()->xdim(),
         models.front()->ydim())
     , models_(std::move(models)) {
+
+    }
+
+    Ensemble(std::vector<ModelPtr> models, double scale)
+            : Stub<Model, Ensemble>(
+            models.front()->xdim(),
+            models.front()->ydim())
+            , models_(std::move(models))
+            , scale_(scale) {
 
     }
 
@@ -58,13 +69,62 @@ public:
     }
 
     template <typename TVisitor>
-    ModelPtr visitModels(TVisitor visitor) const {
+    void visitModels(TVisitor visitor) const {
         for (const auto& model : models_) {
             visitor(model);
+        }
+    }
+
+    template <typename TSerializer>
+    void serialize(std::ostream& out, TSerializer serializer) const {
+        out.write("e{", 2);
+        out.write((char*)&scale_, sizeof(scale_));
+        out.write("}", 1);
+        for (const auto& model : models_) {
+            serializer(model);
+        }
+    }
+
+    template <typename TDeserializer>
+    static std::shared_ptr<Ensemble> deserialize(std::istream& in, TDeserializer deserializer) {
+        double scale;
+        if (!couldRead(in, &scale, sizeof(scale), "e")) {
+            return nullptr;
+        }
+
+        std::vector<ModelPtr> models;
+        char ch;
+        while (true) {
+            auto model = deserializer();
+            if (model) {
+                models.emplace_back(std::move(model));
+            } else {
+                break;
+            }
+        }
+
+        if (models.empty()) {
+            return nullptr;
+        }
+        return std::make_shared<Ensemble>(std::move(models), scale);
+    }
+
+    template <typename TSerializer>
+    void serializeLast(std::ostream& out, TSerializer serializer, int nLast = 1) const {
+        if (!serializeLastCalled_) {
+            serializeLastCalled_ = true;
+            out.write("e{", 2);
+            out.write((char*)&scale_, sizeof(scale_));
+            out.write("}", 1);
+        }
+        for (int i = std::max(0, (int)(models_.size()) - nLast); i < (int)models_.size(); ++i) {
+            serializer(models_[i]);
         }
     }
 
 private:
     std::vector<ModelPtr> models_;
     double scale_ = 1.0;
+
+    mutable bool serializeLastCalled_ = false;
 };
