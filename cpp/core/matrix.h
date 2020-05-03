@@ -90,6 +90,15 @@ public:
         }
     }
 
+    template <class Mapper>
+    void mapColumn(int64_t columnIdx, Mapper&& mapper) {
+      VecRef<float> data = arrayRef();
+      for (int64_t i = 0; i < ydim(); ++i) {
+        const auto idx = seqIndex(columnIdx, i);
+        data[idx] = mapper(data[idx]);
+      }
+    }
+
     void addColumn(const Vec& column, bool last = false);
 
     int64_t xdim() const {

@@ -20,11 +20,19 @@ int main(int /*argc*/, char* argv[]) {
     // This is required at the moment
     ds.addBiasColumn();
 
+    if (params.value("normalize", false)) {
+        Vec mu(ds.featuresCount());
+        Vec sd(ds.featuresCount());
+        ds.computeNormalization(mu.arrayRef(), sd.arrayRef());
+        ds.normalizeColumns(mu.arrayRef(), sd.arrayRef());
+    }
+
     GridPtr grid;
 
     if (params.contains("build_grid_from")) {
         auto gridds = loadFeaturesTxt(params["build_grid_from"]);
         auto binarizationCfg = BinarizationConfig::fromJson(params);
+        // TODO should we also normalize it? I guess yes, but I only use it for tests now
         grid = buildGrid(gridds, binarizationCfg);
     }
 

@@ -33,6 +33,28 @@ public:
         });
     }
 
+    void computeNormalization(VecRef<float> mu, VecRef<float> sd) const {
+      for (int fIndex = 0; fIndex < featuresCount(); ++fIndex) {
+        double sum = 0;
+        double sum2 = 0;
+        visitColumn(fIndex, [&](int, float val) {
+          sum += val;
+          sum2 += val * val;
+        });
+        mu[fIndex] = sum / samplesCount();
+        sd[fIndex] = std::max<double>(sum2 / samplesCount() - mu[fIndex] * mu[fIndex], 1e-10);
+        sd[fIndex] = sqrt(sd[fIndex]);
+      }
+    }
+
+    void normalizeColumns(ConstVecRef<float> mu, ConstVecRef<float> sd) {
+        for (int fIndex = 0; fIndex < featuresCount(); ++fIndex) {
+            mapColumn(fIndex, [&](float val) {
+                return (val - mu[fIndex]) / sd[fIndex];
+            });
+        }
+    }
+
     void addColumn(const Vec& col) {
         data_.addColumn(col, true);
         dataRef_ = data_.arrayRef();
@@ -47,6 +69,11 @@ public:
     template <class Visitor>
     void visitColumn(int fIndex, Visitor&& visitor) const {
         data_.iterateOverColumn(fIndex, visitor);
+    }
+
+    template <class Mapper>
+    void mapColumn(int fIndex, Mapper&& mapper) {
+        data_.mapColumn(fIndex, mapper);
     }
 
     void fillSample(int64_t line, const std::vector<int>& indxs, std::vector<float>& x) const {
