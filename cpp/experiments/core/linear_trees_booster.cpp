@@ -94,6 +94,8 @@ ModelPtr LinearTreesBooster::fit(const DataSet& trainDs, const DataSet& testDs) 
 
     CrossEntropy target(trainDs, 0.5);
     auto ensemble = boosting.fit(trainDs, target);
+
+    return ensemble;
 }
 
 }
