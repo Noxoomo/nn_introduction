@@ -39,11 +39,10 @@ int LinearObliviousTree::getLeaf(const ConstVecRef<float>& x) const {
 
     for (uint32_t i = 0; i < splits_.size(); ++i) {
         const auto& s = splits_[i];
-        auto fId = std::get<0>(s);
-        auto condId = std::get<1>(s);
+        auto origFId = std::get<0>(s);
+        auto border = std::get<1>(s);
 
-        const auto border = grid_->condition(fId, condId);
-        const auto val = x[grid_->origFeatureIndex(fId)];
+        const auto val = x[origFId];
         if (val > border) {
             lId |= 1 << (splits_.size() - i - 1);
         }
@@ -70,10 +69,9 @@ void LinearObliviousTree::grad(const Vec& x, Vec to) {
 void LinearObliviousTree::printInfo() const {
     std::cout << leaves_.size() << "->(";
     for (int i = 0; i < (int)splits_.size(); ++i) {
-        int fId = std::get<0>(splits_[i]);
-        int condId = std::get<1>(splits_[i]);
-        const auto border = grid_->condition(fId, condId);
-        std::cout << "f[" << fId << "] > " << border;
+        int origFId = std::get<0>(splits_[i]);
+        double border = std::get<1>(splits_[i]);
+        std::cout << "f[" << origFId << "] > " << border;
         if (i != (int)splits_.size() - 1) {
             std::cout << ", ";
         } else {
@@ -97,9 +95,9 @@ std::vector<std::tuple<TSymmetricTree, int>> LinearObliviousTree::toSymmetricTre
     int i = 0;
     for (int origFId : leaves_[0].usedFeaturesInOrder_) {
         TSymmetricTree tree;
-        for (const auto& [splitFId, splitCondId] : splits_) {
-            tree.Features.push_back(grid_->origFeatureIndex(splitFId));
-            tree.Conditions.push_back(grid_->borders(splitFId)[splitCondId]);
+        for (const auto& [splitOrigFId, splitCond] : splits_) {
+            tree.Features.push_back(splitOrigFId);
+            tree.Conditions.push_back(splitCond);
         }
 
         for (const auto& l : leaves_) {

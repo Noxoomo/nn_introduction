@@ -190,12 +190,13 @@ ModelPtr GreedyLinearObliviousTreeLearner::fit(const DataSet& ds, const Target& 
         currentScore = splitScore;
         int32_t splitFId = std::get<1>(split);
         int32_t splitCond = std::get<2>(split);
-        tree->splits_.emplace_back(std::make_tuple(splitFId, splitCond));
+        int32_t splitOrigFId = grid_->origFeatureIndex(splitFId);
+        double border = grid_->borders(splitFId)[splitCond];
+        tree->splits_.emplace_back(std::make_tuple(splitOrigFId, border));
         splits_.insert(split);
 
         int oldNUsedFeatures = (int)usedFeatures_.size();
 
-        int32_t splitOrigFId = grid_->origFeatureIndex(splitFId);
         if (usedFeatures_.count(splitOrigFId) == 0) {
             usedFeatures_.insert(splitOrigFId);
             usedFeaturesOrdered_.push_back(splitOrigFId);

@@ -1,0 +1,23 @@
+{
+  "checkpoint_from_file": "ensemble.out",
+  "checkpoint_to_file": "ensemble.out",
+  "train": "../../../../test_data/featuresTxt/train",
+  "test": "../../../../test_data/featuresTxt/test",
+
+  "grid_config": {
+    "borders_count": 32
+  },
+  "boosting_config": {
+    "step": 0.003,
+    "iterations": 2000
+  },
+  "bootstrap_options": {
+    "sample_rate": 0.7,
+    "seed": 42,
+    "type": "poisson"
+  },
+  "tree_config": {
+    "l2reg": 2.0,
+    "depth": 6
+  }
+}

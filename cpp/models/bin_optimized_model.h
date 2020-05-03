@@ -34,13 +34,23 @@ protected:
     virtual void applyToBds(const BinarizedDataSet& ds, Mx to, ApplyType type) const = 0;
 
     virtual void applyToDs(const DataSet& ds, Mx to) const {
-        const auto& bds = cachedBinarize(ds, gridPtr(), 1);
-        applyToBds(bds, to, ApplyType::Set);
+        if (gridPtr()) {
+            // TODO cachedBinarize... hardcode sizes for now
+            const auto& bds = cachedBinarize(ds, gridPtr(), gridPtr()->origFeaturesCount());
+            applyToBds(bds, to, ApplyType::Set);
+        } else {
+            Model::applyToDs(ds, to);
+        }
     }
 
     virtual void appendToDs(const DataSet& ds, Mx to) const {
-        const auto& bds = cachedBinarize(ds, gridPtr(), 1);
-        applyToBds(bds, to, ApplyType::Append);
+        if (gridPtr()) {
+            // TODO cachedBinarize... hardcode sizes for now
+            const auto& bds = cachedBinarize(ds, gridPtr(), gridPtr()->origFeaturesCount());
+            applyToBds(bds, to, ApplyType::Append);
+        } else {
+            Model::appendToDs(ds, to);
+        }
     }
 
 protected:

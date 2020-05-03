@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <stdexcept>
 
 #include "bin_optimized_model.h"
 #include <data/grid.h>
@@ -110,6 +111,7 @@ public:
     double weight_;
 };
 
+// TODO separate into two: one is pure inference, without a grid, another is BinOptimized and stores grid
 struct LinearObliviousTree final
         : public Stub<BinOptimizedModel, LinearObliviousTree>
         , std::enable_shared_from_this<LinearObliviousTree> {
@@ -118,6 +120,8 @@ public:
     LinearObliviousTree(const LinearObliviousTree& other, double scale)
             : Stub<BinOptimizedModel, LinearObliviousTree>(other.gridPtr()->origFeaturesCount(), 1) {
         grid_ = other.grid_;
+        xdim_ = other.xdim_;
+        ydim_ = other.ydim_;
         scale_ = scale;
         leaves_ = other.leaves_;
         splits_ = other.splits_;
@@ -125,6 +129,8 @@ public:
 
     LinearObliviousTree(GridPtr grid, std::vector<LinearObliviousTreeLeaf> leaves)
             : Stub<BinOptimizedModel, LinearObliviousTree>(grid->origFeaturesCount(), 1)
+            , xdim_(grid->origFeaturesCount())
+            , ydim_(1)
             , grid_(std::move(grid))
             , leaves_(std::move(leaves)) {
         scale_ = 1;
@@ -132,11 +138,23 @@ public:
 
     explicit LinearObliviousTree(GridPtr grid)
             : Stub<BinOptimizedModel, LinearObliviousTree>(grid->origFeaturesCount(), 1)
-            , grid_(std::move(grid)) {
+            , grid_(std::move(grid))
+            , xdim_(grid_->origFeaturesCount())
+            , ydim_(1) {
+
+    }
+
+    LinearObliviousTree(int xdim, int ydim)
+            : Stub<BinOptimizedModel, LinearObliviousTree>(xdim, ydim)
+            , xdim_(xdim)
+            , ydim_(ydim) {
 
     }
 
     Grid grid() const {
+        if (!grid_) {
+            throw std::runtime_error("No grid");
+        }
         return *grid_.get();
     }
 
@@ -171,6 +189,9 @@ public:
     void serialize(std::ostream& out) const {
         out.write("t{", 2);
 
+        out.write((char*)&xdim_, sizeof(xdim_));
+        out.write((char*)&ydim_, sizeof(ydim_));
+
         out.write((char*)&scale_, sizeof(scale_));
 
         int splitsSize = splits_.size();
@@ -179,9 +200,9 @@ public:
         out.write("}", 1);
 
         for (const auto& split : splits_) {
-            int32_t splitFId = std::get<0>(split);
-            int32_t splitCondId = std::get<1>(split);
-            out.write((char*)&splitFId, sizeof(splitFId));
+            int32_t splitOrigFId = std::get<0>(split);
+            double splitCondId = std::get<1>(split);
+            out.write((char*)&splitOrigFId, sizeof(splitOrigFId));
             out.write((char*)&splitCondId, sizeof(splitCondId));
         }
 
@@ -202,6 +223,16 @@ public:
             return nullptr;
         }
 
+        int xdim;
+        if (!in.read((char*)&xdim, sizeof(xdim))) {
+            return nullptr;
+        }
+
+        int ydim;
+        if (!in.read((char*)&ydim, sizeof(ydim))) {
+            return nullptr;
+        }
+
         double scale;
         if (!in.read((char*)&scale, sizeof(scale))) {
             return nullptr;
@@ -212,17 +243,17 @@ public:
             return nullptr;
         }
 
-        std::vector<std::tuple<int32_t, int32_t>> splits;
+        std::vector<std::tuple<int32_t, double>> splits;
         for (int i = 0; i < splitsSize; ++i) {
-            int32_t splitFId;
-            int32_t splitCondId;
-            if (!in.read((char*)&splitFId, sizeof(splitFId))) {
+            int32_t splitOrigFId;
+            double splitCond;
+            if (!in.read((char*)&splitOrigFId, sizeof(splitOrigFId))) {
                 return nullptr;
             }
-            if (!in.read((char*)&splitCondId, sizeof(splitCondId))) {
+            if (!in.read((char*)&splitCond, sizeof(splitCond))) {
                 return nullptr;
             }
-            splits.emplace_back(std::make_tuple(splitFId, splitCondId));
+            splits.emplace_back(std::make_tuple(splitOrigFId, splitCond));
         }
 
         int nLeaves;
@@ -243,18 +274,29 @@ public:
             return nullptr;
         }
 
-        LinearObliviousTree tree(std::move(grid));
-        tree.scale_ = scale;
-        tree.splits_ = std::move(splits);
-        tree.leaves_ = std::move(leaves);
+        std::shared_ptr<LinearObliviousTree> tree;
 
-        return std::make_shared<LinearObliviousTree>(std::move(tree));
+        if (grid) {
+            assert(xdim == grid->origFeaturesCount());
+            tree = std::make_shared<LinearObliviousTree>(grid);
+        } else {
+            std::cout << "without grid" << std::endl;
+            tree = std::make_shared<LinearObliviousTree>(xdim, ydim);
+        }
+
+        tree->scale_ = scale;
+        tree->splits_ = std::move(splits);
+        tree->leaves_ = std::move(leaves);
+
+        return tree;
     }
 
     GridPtr grid_;
+    int xdim_ = 1;
+    int ydim_ = 1;
     double scale_ = 1;
 
-    std::vector<std::tuple<int32_t, int32_t>> splits_;
+    std::vector<std::tuple<int32_t, double>> splits_;
 
     std::vector<LinearObliviousTreeLeaf> leaves_;
 };

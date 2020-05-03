@@ -293,7 +293,7 @@ TEST(Serialize, Ensemble) {
 
     std::ifstream fin("test.out", std::ios::binary);
     auto newEnsemble = Ensemble::deserialize(fin, [&]() {
-        return LinearObliviousTree::deserialize(fin, grid);
+        return LinearObliviousTree::deserialize(fin, nullptr);
     });
     fin.close();
 
@@ -382,7 +382,7 @@ TEST(Serialize, ContinueBoosting) {
 
     BoostingConfig boostingConfig;
     boostingConfig.iterations_ = 3;
-    boostingConfig.step_ = 0.5;
+    boostingConfig.step_ = 0.01;
     Boosting boosting(boostingConfig, createWeakTarget(l2reg), createWeakLinearLearner(4, 0, l2reg, grid));
 
     std::ofstream fout("test1.out", std::ios::binary);
