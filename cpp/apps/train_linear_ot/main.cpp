@@ -35,6 +35,14 @@ int main(int /*argc*/, char* argv[]) {
   auto ds = loadFeaturesTxt(params.value("train", "features.txt"));
   auto test = loadFeaturesTxt(params.value("test", "featuresTest.txt"));
 
+  if (params.value("normalize", false)) {
+    Vec mu(ds.featuresCount());
+    Vec sd(ds.featuresCount());
+    ds.computeNormalization(mu.arrayRef(), sd.arrayRef());
+    ds.normalizeColumns(mu.arrayRef(), sd.arrayRef());
+    test.normalizeColumns(mu.arrayRef(), sd.arrayRef());
+  }
+
   std::cout << " load data in memory " << std::endl;
   BinarizationConfig config = BinarizationConfig::fromJson(params["grid_config"]);
   auto grid = buildGrid(ds, config);
