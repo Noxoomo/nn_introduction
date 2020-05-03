@@ -6,8 +6,6 @@
 #include <vec_tools/transform.h>
 #include <methods/greedy_oblivious_tree.h>
 
-namespace experiments {
-
 // TODO move it somewhere
 class BinaryAcc : public Stub<Func, BinaryAcc> {
 public:
@@ -96,6 +94,4 @@ ModelPtr LinearTreesBooster::fit(const DataSet& trainDs, const DataSet& testDs) 
     auto ensemble = boosting.fit(trainDs, target);
 
     return ensemble;
-}
-
 }

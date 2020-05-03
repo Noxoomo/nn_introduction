@@ -13,6 +13,8 @@ add_library(methods
         boosting_weak_target_factory.cpp
         greedy_linear_oblivious_trees.h
         greedy_linear_oblivious_trees.cpp
+        linear_trees_booster.h
+        linear_trees_booster.cpp
 )
 
 #add_library(trees_kernels

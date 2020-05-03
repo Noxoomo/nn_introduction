@@ -12,7 +12,7 @@
 #include <iostream>
 #include <core/matrix.h>
 #include <data/dataset.h>
-#include <core/linear_trees_booster.h>
+#include <methods/linear_trees_booster.h>
 
 int main(int argc, const char* argv[]) {
     using namespace experiments;

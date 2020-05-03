@@ -88,26 +88,3 @@ void LinearObliviousTree::printInfo() const {
     }
     std::cout << "]" << std::endl;
 }
-
-std::vector<std::tuple<TSymmetricTree, int>> LinearObliviousTree::toSymmetricTrees() const {
-    std::vector<std::tuple<TSymmetricTree, int>> res;
-
-    int i = 0;
-    for (int origFId : leaves_[0].usedFeaturesInOrder_) {
-        TSymmetricTree tree;
-        for (const auto& [splitOrigFId, splitCond] : splits_) {
-            tree.Features.push_back(splitOrigFId);
-            tree.Conditions.push_back(splitCond);
-        }
-
-        for (const auto& l : leaves_) {
-            tree.Leaves.push_back(l.w_(i, 0));
-            tree.Weights.push_back(0); // TODO do we need to keep weights?
-        }
-
-        res.emplace_back(std::make_tuple(std::move(tree), origFId));
-        ++i;
-    }
-
-    return res;
-}

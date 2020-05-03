@@ -43,8 +43,6 @@ add_library(experiments_core
         layer_norm.h
         layer_norm.cpp
         params.h
-        linear_trees_booster.h
-        linear_trees_booster.cpp
 
         networks/lenet.h
         networks/lenet.cpp

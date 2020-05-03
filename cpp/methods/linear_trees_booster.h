@@ -7,8 +7,6 @@
 #include <data/dataset.h>
 #include <util/json.h>
 
-namespace experiments {
-
 struct LinearTreesBoosterOptions {
     BoostingConfig boostingCfg;
     BinarizationConfig binarizationCfg;
@@ -30,5 +28,3 @@ private:
     LinearTreesBoosterOptions opts_;
 
 };
-
-}

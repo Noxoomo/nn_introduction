@@ -10,7 +10,7 @@
 #include <targets/cross_entropy.h>
 #include <targets/linear_l2.h>
 #include <util/json.h>
-#include <experiments/core/linear_trees_booster.h>
+#include <methods/linear_trees_booster.h>
 
 inline std::unique_ptr<GreedyLinearObliviousTreeLearner> createWeakLearner(GridPtr grid, GreedyLinearObliviousTreeLearnerOptions opts) {
     return std::make_unique<GreedyLinearObliviousTreeLearner>(grid, opts);
@@ -45,7 +45,7 @@ int main(int /*argc*/, char* argv[]) {
     ds.addBiasColumn();
     test.addBiasColumn();
 
-    experiments::LinearTreesBoosterOptions opts = experiments::LinearTreesBoosterOptions::fromJson(params);
+    LinearTreesBoosterOptions opts = LinearTreesBoosterOptions::fromJson(params);
 
     std::cout << " load data in memory " << std::endl;
 

@@ -7,7 +7,6 @@
 #include <data/grid.h>
 #include <core/vec_factory.h>
 #include <core/func.h>
-#include <catboost_wrapper.h>
 #include <util/io.h>
 
 #include <eigen3/Eigen/Core>
@@ -177,8 +176,6 @@ public:
     void grad(const Vec& x, Vec to) override;
 
     void printInfo() const;
-
-    std::vector<std::tuple<TSymmetricTree, int>> toSymmetricTrees() const;
 
     friend class GreedyLinearObliviousTreeLearner;
 
