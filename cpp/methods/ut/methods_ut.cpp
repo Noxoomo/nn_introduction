@@ -366,3 +366,65 @@ TEST(Serialize, DuringFit) {
         ASSERT_NEAR(ensemble->value(ds.sample(i)), newEnsemble->value(ds.sample(i)), 1e-6);
     }
 }
+
+TEST(Serialize, ContinueBoosting) {
+    auto ds = simpleDs();
+
+    std::vector<int32_t> indices({0, 1, 2, 3, 4, 5, 6});
+
+    ds.addBiasColumn();
+
+    BinarizationConfig config;
+    config.bordersCount_ = 32;
+    auto grid = buildGrid(ds, config);
+
+    const double l2reg = 1e-5;
+
+    BoostingConfig boostingConfig;
+    boostingConfig.iterations_ = 3;
+    boostingConfig.step_ = 0.5;
+    Boosting boosting(boostingConfig, createWeakTarget(l2reg), createWeakLinearLearner(4, 0, l2reg, grid));
+
+    std::ofstream fout("test1.out", std::ios::binary);
+    auto boostingSerializer = std::make_shared<BoostingSerializer>(fout, 1.0, 1);
+    boosting.addListener(boostingSerializer);
+
+    LinearL2 target(ds, l2reg);
+    auto ensemble = std::dynamic_pointer_cast<Ensemble>(boosting.fit(ds, target));
+    fout.close();
+
+    std::ifstream fin("test1.out", std::ios::binary);
+    auto newEnsemble = Ensemble::deserialize(fin, [&]() {
+        return LinearObliviousTree::deserialize(fin, grid);
+    });
+    fin.close();
+
+    ASSERT_TRUE(newEnsemble);
+
+    // Fitting with old config shouldn't make any effect
+    newEnsemble = std::dynamic_pointer_cast<Ensemble>(boosting.fitFrom(newEnsemble, ds, target));
+    ASSERT_EQ(newEnsemble->size(), 3);
+    for (int i = 0; i < ds.samplesCount(); ++i) {
+        ASSERT_NEAR(ensemble->value(ds.sample(i)), newEnsemble->value(ds.sample(i)), 1e-6);
+    }
+
+    // Fit for another 7 iterations
+    boostingConfig.iterations_ = 10;
+    boostingConfig.step_ = 0.1;
+    Boosting newBoosting(boostingConfig, createWeakTarget(l2reg), createWeakLinearLearner(4, 0, l2reg, grid));
+    newEnsemble = std::dynamic_pointer_cast<Ensemble>(newBoosting.fitFrom(newEnsemble, ds, target));
+
+    std::cout << "old ensemble:" << std::endl;
+    ensemble->visitModels([&](ModelPtr model) {
+        auto linearTree = std::dynamic_pointer_cast<LinearObliviousTree>(model);
+        linearTree->printInfo();
+    });
+
+    std::cout << "new ensemble:" << std::endl;
+    newEnsemble->visitModels([&](ModelPtr model) {
+        auto linearTree = std::dynamic_pointer_cast<LinearObliviousTree>(model);
+        linearTree->printInfo();
+    });
+
+    ASSERT_EQ(newEnsemble->size(), 10);
+}

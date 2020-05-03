@@ -10,12 +10,20 @@ BoostingConfig BoostingConfig::fromJson(const json& params) {
 }
 
 ModelPtr Boosting::fit(const DataSet& dataSet, const Target& target)  {
+    return fitFrom(std::vector<ModelPtr>(), dataSet, target);
+}
+
+ModelPtr Boosting::fitFrom(std::vector<ModelPtr> models, const DataSet& dataSet, const Target& target)  {
     assert(&dataSet == &target.owner());
     Mx cursor(dataSet.samplesCount(),  1);
-    std::vector<ModelPtr> models;
 
-    for (int32_t iter = 0; iter < config_.iterations_; ++iter) {
+    int64_t iter = 0;
+    for (; iter < (int64_t)models.size(); ++iter) {
+        invoke(*models.back());
+        models.back()->append(dataSet, cursor);
+    }
 
+    for (; iter < config_.iterations_; ++iter) {
         auto weakTarget = weak_target_->create(dataSet, target, cursor);
 
         auto model = weak_learner_->fit(dataSet, *weakTarget);
@@ -28,6 +36,15 @@ ModelPtr Boosting::fit(const DataSet& dataSet, const Target& target)  {
     }
 
     return std::make_shared<Ensemble>(std::move(models));
+}
+
+ModelPtr Boosting::fitFrom(std::shared_ptr<Ensemble> ensemble, const DataSet& dataSet, const Target& target)  {
+    assert(&dataSet == &target.owner());
+    std::vector<ModelPtr> models;
+    ensemble->visitModels([&](ModelPtr model) {
+        models.emplace_back(std::move(model));
+    });
+    return fitFrom(models, dataSet, target);
 }
 
 Boosting::Boosting(

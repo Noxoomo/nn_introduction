@@ -3,9 +3,9 @@
 #include "optimizer.h"
 #include "listener.h"
 #include <memory>
-#include <models/model.h>
 #include <targets/target.h>
 #include <models/model.h>
+#include <models/ensemble.h>
 #include <data/dataset.h>
 #include <util/json.h>
 
@@ -25,6 +25,8 @@ public:
         std::unique_ptr<Optimizer>&& weak_learner_);
 
     ModelPtr fit(const DataSet& dataSet, const Target& target) override;
+    ModelPtr fitFrom(std::vector<ModelPtr> models, const DataSet& dataSet, const Target& target);
+    ModelPtr fitFrom(std::shared_ptr<Ensemble> ensemble, const DataSet& dataSet, const Target& target);
 
 private:
     BoostingConfig config_;
