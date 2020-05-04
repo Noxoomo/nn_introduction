@@ -2,6 +2,8 @@
 #include <core/vec_factory.h>
 #include <vec_tools/sort.h>
 #include <util/exception.h>
+#include <iostream>
+#include <util/io.h>
 
 namespace {
 
@@ -177,43 +179,104 @@ std::vector<float> buildBorders(const BinarizationConfig& config, Vec* vals) {
     return borders;
 }
 
-
-
-GridPtr buildGrid(const DataSet& ds, const BinarizationConfig& config) {
+static GridPtr buildGridFromBorders(int fCount, const std::vector<std::pair<int, std::vector<float>>>& fborders) {
     std::vector<BinaryFeature> binFeatures;
     std::vector<Feature> features;
     std::vector<std::vector<float>> borders;
 
-    Vec column(ds.samplesCount());
-
     int32_t nzFeatureId = 0;
 
-    for (int32_t fIndex = 0; fIndex < ds.featuresCount(); ++fIndex) {
+    for (const auto& finfo : fborders) {
+        int origFId = finfo.first;
+        const std::vector<float>& featureBorders = finfo.second;
+
+        std::cout << "fId=" << nzFeatureId << ", borders: ";
+        for (auto border : featureBorders) {
+            std::cout << border << ", ";
+        }
+        std::cout << std::endl;
+
+        if (featureBorders.empty()) {
+            throw std::runtime_error("nzFeature can't have zero borders");
+        }
+
+        borders.push_back(featureBorders);
+        const auto binCount = borders.back().size();
+        features.emplace_back(nzFeatureId, binCount, origFId);
+        for (uint32_t bin = 0; bin < binCount; ++bin) {
+            binFeatures.emplace_back(nzFeatureId, bin);
+        }
+        ++nzFeatureId;
+    }
+
+    return std::make_shared<Grid>(
+            fCount,
+            std::move(binFeatures),
+            std::move(features),
+            std::move(borders));
+}
+
+GridPtr buildGrid(const DataSet& ds, const BinarizationConfig& config) {
+    std::vector<std::pair<int, std::vector<float>>> borders;
+
+    Vec column(ds.samplesCount());
+
+    for (int32_t fIndex = 0; fIndex < (int32_t)ds.featuresCount(); ++fIndex) {
         ds.copyColumn(fIndex, &column);
 
         auto featureBorders = buildBorders(config, &column);
 //        std::vector<float> featureBorders = jmllFBorders[fIndex];
         if (!featureBorders.empty()) {
-            std::cout << "fId=" << nzFeatureId << ", borders: ";
-            for (auto border : featureBorders) {
-                std::cout << border << ", ";
-            }
-            std::cout << std::endl;
-            borders.push_back(featureBorders);
-            const auto binCount = borders.back().size();
-            features.push_back(Feature(nzFeatureId, binCount, fIndex));
-            for (uint32_t bin = 0; bin < binCount; ++bin) {
-                binFeatures.emplace_back(nzFeatureId, bin);
-            }
-            ++nzFeatureId;
+            borders.emplace_back(std::make_pair(fIndex, featureBorders));
         }
-
     }
 
-    return std::make_shared<Grid>(
-        ds.featuresCount(),
-        std::move(binFeatures),
-        std::move(features),
-        std::move(borders));
+    return buildGridFromBorders(ds.featuresCount(), borders);
 }
 
+GridPtr buildGridFromStream(std::istream& in) {
+    std::vector<std::pair<int, std::vector<float>>> borders;
+
+    if (!checkStrPresent(in, "g{")) {
+        return nullptr;
+    }
+
+    int fCount;
+    if (!in.read((char*)&fCount, sizeof(fCount))) {
+        return nullptr;
+    }
+
+    int nzFCount;
+    if (!couldRead(in, &nzFCount, sizeof(nzFCount), "s")) {
+        return nullptr;
+    }
+
+    for (int fId = 0; fId < nzFCount; ++fId) {
+        int origFId;
+        if (!in.read((char*)&origFId, sizeof(origFId))) {
+            return nullptr;
+        }
+
+        int size;
+        if (!couldRead(in, &size, sizeof(size), "s")) {
+            return nullptr;
+        }
+
+        std::vector<float> fborders;
+        for (int borderId = 0; borderId < size; ++borderId) {
+            float border;
+            if (!in.read((char*)&border, sizeof(border))) {
+                return nullptr;
+            }
+            fborders.push_back(border);
+        }
+
+        borders.emplace_back(std::make_pair(origFId, fborders));
+    }
+
+    if (!checkStrPresent(in, "}")) {
+        return nullptr;
+    }
+
+    return buildGridFromBorders(fCount, borders);
+}

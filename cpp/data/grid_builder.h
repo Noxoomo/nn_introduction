@@ -1,5 +1,6 @@
 #pragma once
 
+#include <iostream>
 #include "dataset.h"
 #include "grid.h"
 #include <core/vec.h>
@@ -23,3 +24,5 @@ struct BinarizationConfig {
 std::vector<float> buildBorders(const BinarizationConfig& config, Vec* vals);
 
 GridPtr buildGrid(const DataSet& ds, const BinarizationConfig& config);
+
+GridPtr buildGridFromStream(std::istream& in);

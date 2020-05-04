@@ -292,8 +292,8 @@ TEST(Serialize, Ensemble) {
     fout.close();
 
     std::ifstream fin("test.out", std::ios::binary);
-    auto newEnsemble = Ensemble::deserialize(fin, [&]() {
-        return LinearObliviousTree::deserialize(fin, nullptr);
+    auto newEnsemble = Ensemble::deserialize(fin, [&fin](GridPtr newGrid) {
+        return LinearObliviousTree::deserialize(fin, std::move(newGrid));
     });
     fin.close();
 
@@ -343,8 +343,8 @@ TEST(Serialize, DuringFit) {
     fout.close();
 
     std::ifstream fin("test1.out", std::ios::binary);
-    auto newEnsemble = Ensemble::deserialize(fin, [&]() {
-        return LinearObliviousTree::deserialize(fin, grid);
+    auto newEnsemble = Ensemble::deserialize(fin, [&fin](GridPtr newGrid) {
+        return LinearObliviousTree::deserialize(fin, std::move(newGrid));
     });
     fin.close();
 
@@ -394,8 +394,8 @@ TEST(Serialize, ContinueBoosting) {
     fout.close();
 
     std::ifstream fin("test1.out", std::ios::binary);
-    auto newEnsemble = Ensemble::deserialize(fin, [&]() {
-        return LinearObliviousTree::deserialize(fin, grid);
+    auto newEnsemble = Ensemble::deserialize(fin, [&fin](GridPtr newGrid) {
+        return LinearObliviousTree::deserialize(fin, std::move(newGrid));
     });
     fin.close();
 

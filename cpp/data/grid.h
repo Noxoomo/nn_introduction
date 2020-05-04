@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <vector>
+#include <iostream>
 #include <core/vec.h>
 #include <core/object.h>
 #include <core/buffer.h>
@@ -98,6 +99,8 @@ public:
     void binarize(ConstVecRef<float> row, VecRef<uint8_t> dst) const;
 //
 //    void binarizeColumn(int32_t fIndex, const Vec& column, torch::Tensor* dst) const;
+
+    void serialize(std::ostream& out) const;
 
 
     Grid(

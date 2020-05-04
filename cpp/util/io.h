@@ -33,3 +33,10 @@ inline bool couldRead(std::istream& in, void* obj, std::size_t size, const std::
     }
     return checkStrPresent(in, "}");
 }
+
+inline void writeEnclosed(std::ostream& out, void* obj, std::size_t size, std::string enclosing) {
+    enclosing += "{";
+    out.write(enclosing.data(), enclosing.size());
+    out.write((char*)obj, size);
+    out.write("}", 1);
+}

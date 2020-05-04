@@ -8,7 +8,6 @@
 #include <methods/boosting_weak_target_factory.h>
 #include <methods/greedy_linear_oblivious_trees.h>
 #include <targets/cross_entropy.h>
-#include <targets/linear_l2.h>
 #include <util/json.h>
 #include <methods/linear_trees_booster.h>
 
@@ -76,8 +75,8 @@ int main(int /*argc*/, char* argv[]) {
     if (params.contains("checkpoint_from_file")) {
         std::ifstream in(params["checkpoint_from_file"], std::ios::binary);
         if (in.good()) {
-            oldEnsemble = Ensemble::deserialize(in, [&in, grid]() {
-                return LinearObliviousTree::deserialize(in, grid);
+            oldEnsemble = Ensemble::deserialize(in, [&in](GridPtr oldGrid) {
+                return LinearObliviousTree::deserialize(in, std::move(oldGrid));
             });
         }
         in.close();

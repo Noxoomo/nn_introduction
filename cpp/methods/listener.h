@@ -149,6 +149,18 @@ public:
 
     void operator()(const Model& model) override {
         ++iter_;
+
+        if (iter_ == 1) {
+            std::cout << "dumping grid" << std::endl;
+            const auto& boModel = dynamic_cast<const BinOptimizedModel&>(model);
+            if (boModel.gridPtr()) {
+                out_.write("y", 1);
+                boModel.gridPtr()->serialize(out_);
+            } else {
+                out_.write("n", 1);
+            }
+        }
+
         auto linearModel = dynamic_cast<const LinearObliviousTree&>(model);
         linearModel.serialize(out_);
 

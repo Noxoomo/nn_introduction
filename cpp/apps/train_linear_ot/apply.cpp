@@ -27,18 +27,9 @@ int main(int /*argc*/, char* argv[]) {
         ds.normalizeColumns(mu.arrayRef(), sd.arrayRef());
     }
 
-    GridPtr grid;
-
-    if (params.contains("build_grid_from")) {
-        auto gridds = loadFeaturesTxt(params["build_grid_from"]);
-        auto binarizationCfg = BinarizationConfig::fromJson(params);
-        // TODO should we also normalize it? I guess yes, but I only use it for tests now
-        grid = buildGrid(gridds, binarizationCfg);
-    }
-
     std::ifstream fin(params["checkpoint_from_file"], std::ios::binary);
-    std::shared_ptr<Ensemble> ensemble = Ensemble::deserialize(fin, [&]() {
-        return LinearObliviousTree::deserialize(fin, grid);
+    std::shared_ptr<Ensemble> ensemble = Ensemble::deserialize(fin, [&](GridPtr oldGrid) {
+        return LinearObliviousTree::deserialize(fin, std::move(oldGrid));
     });
     fin.close();
 

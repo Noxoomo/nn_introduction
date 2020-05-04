@@ -1,8 +1,10 @@
 #pragma once
 
 #include "model.h"
+#include "bin_optimized_model.h"
 
 #include <util/io.h>
+#include <data/grid_builder.h>
 
 class Ensemble : public Stub<Model, Ensemble> {
 public:
@@ -80,6 +82,15 @@ public:
         out.write("e{", 2);
         out.write((char*)&scale_, sizeof(scale_));
         out.write("}", 1);
+        if (!models_.empty()) {
+            out.write("wg", 2);
+            auto model = std::dynamic_pointer_cast<BinOptimizedModel>(models_.back());
+            if (model && model->gridPtr()) {
+                model->gridPtr()->serialize(out);
+            }
+        } else {
+            out.write("ng", 2);
+        }
         for (const auto& model : models_) {
             serializer(model);
         }
@@ -92,10 +103,22 @@ public:
             return nullptr;
         }
 
+        char hasGrid;
+        if (!in.read(&hasGrid, 1)) {
+            return nullptr;
+        }
+
+        GridPtr grid;
+        if (hasGrid == 'y') {
+            grid = buildGridFromStream(in);
+        } else {
+            std::cout << "Building ensemble without a grid" << std::endl;
+        }
+
         std::vector<ModelPtr> models;
         char ch;
         while (true) {
-            auto model = deserializer();
+            auto model = deserializer(grid);
             if (model) {
                 models.emplace_back(std::move(model));
             } else {
@@ -116,6 +139,19 @@ public:
             out.write("e{", 2);
             out.write((char*)&scale_, sizeof(scale_));
             out.write("}", 1);
+            if (!models_.empty()) {
+                std::cout << "dumping grid" << std::endl;
+                auto model = std::dynamic_pointer_cast<BinOptimizedModel>(models_.back());
+                if (model && model->gridPtr()) {
+                    out.write("y", 1);
+                    model->gridPtr()->serialize(out);
+                } else {
+                    out.write("n", 1);
+                }
+            } else {
+                std::cout << "not sdumping grid" << std::endl;
+                out.write("n", 1);
+            }
         }
         for (int i = std::max(0, (int)(models_.size()) - nLast); i < (int)models_.size(); ++i) {
             serializer(models_[i]);

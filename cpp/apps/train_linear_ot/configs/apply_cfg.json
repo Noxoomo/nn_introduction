@@ -3,10 +3,6 @@
   "save_predictions_to": "/tmp/whatever.txt",
   "dataset":  "../../../../test_data/featuresTxt/test",
 
-  "comment1": "this one is optional, I only use it for tests, to make them run faster",
-  "comment2": "we don't serialize grid at the moment (though maybe we should)",
-  "build_grid_from":  "../../../../test_data/featuresTxt/train",
-
   "grid_config": {
     "borders_count": 32
   }
