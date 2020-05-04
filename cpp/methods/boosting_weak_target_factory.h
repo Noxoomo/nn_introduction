@@ -55,9 +55,9 @@ public:
                                      const Mx& startPoint) override;
 private:
     BootstrapOptions options_;
+    double l2reg_;
     std::default_random_engine engine_;
     std::uniform_real_distribution<double> uniform_ = std::uniform_real_distribution<double>(0, 1);
     std::poisson_distribution<int> poisson_ = std::poisson_distribution<int>(1);
 
-    double l2reg_;
 };

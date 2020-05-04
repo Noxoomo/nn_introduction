@@ -25,7 +25,7 @@ public:
 
         int correct = 0;
 
-        for (int i = 0; i < targetRef.size(); ++i) {
+        for (uint64_t i = 0; i < targetRef.size(); ++i) {
             double val = 0.0;
             if (pRef[i] > threshold_) {
                 val = 1.0;

@@ -128,9 +128,9 @@ public:
 
     LinearObliviousTree(GridPtr grid, std::vector<LinearObliviousTreeLeaf> leaves)
             : Stub<BinOptimizedModel, LinearObliviousTree>(grid->origFeaturesCount(), 1)
+            , grid_(std::move(grid))
             , xdim_(grid->origFeaturesCount())
             , ydim_(1)
-            , grid_(std::move(grid))
             , leaves_(std::move(leaves)) {
         scale_ = 1;
     }

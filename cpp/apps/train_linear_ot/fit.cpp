@@ -72,8 +72,9 @@ int main(int /*argc*/, char* argv[]) {
 
     std::shared_ptr<Ensemble> oldEnsemble;
 
-    if (params.contains("checkpoint_from_file")) {
-        std::ifstream in(params["checkpoint_from_file"], std::ios::binary);
+    std::string checkpointPath = params.value("checkpoint_from_file", "");
+    if (checkpointPath.size()) {
+        std::ifstream in(checkpointPath, std::ios::binary);
         if (in.good()) {
             oldEnsemble = Ensemble::deserialize(in, [&in](GridPtr oldGrid) {
                 return LinearObliviousTree::deserialize(in, std::move(oldGrid));
@@ -85,8 +86,8 @@ int main(int /*argc*/, char* argv[]) {
     std::unique_ptr<std::ofstream> out;
     std::shared_ptr<BoostingSerializer> boostingSerializer;
 
-    if (params.contains("checkpoint_to_file")) {
-        out = std::make_unique<std::ofstream>(params["checkpoint_to_file"], std::ios::binary);
+    if (checkpointPath.size()) {
+        out = std::make_unique<std::ofstream>(checkpointPath, std::ios::binary);
         boostingSerializer = std::make_shared<BoostingSerializer>(*out, 1.0, 1);
         boosting.addListener(boostingSerializer);
     }

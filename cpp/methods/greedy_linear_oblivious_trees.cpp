@@ -156,7 +156,6 @@ ModelPtr GreedyLinearObliviousTreeLearner::fit(const DataSet& ds, const Target& 
         throw std::runtime_error("provide bias col!");
     }
 
-    std::cout << "start fit" << std::endl;
 
     TIME_BLOCK_START(BUILDING_ROOT)
     buildRoot(bds, ds, ys, ws);
@@ -230,8 +229,8 @@ ModelPtr GreedyLinearObliviousTreeLearner::fit(const DataSet& ds, const Target& 
 
     tree->leaves_ = std::move(inferenceLeaves);
 
-    std::cout << "Resulting tree:" << std::endl;
-    tree->printInfo();
+//    std::cout << "Resulting tree:" << std::endl;
+//    tree->printInfo();
 
     return tree;
 }
