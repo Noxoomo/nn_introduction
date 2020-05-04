@@ -21,6 +21,3 @@ target_link_libraries(train_cnn_linear "${TORCH_LIBRARIES}" experiments methods)
 
 add_executable(check_cuda_libtorch check_cuda_libtorch.cpp)
 target_link_libraries(check_cuda_libtorch "${TORCH_LIBRARIES}")
-
-add_executable(test_linear_trees_app test_linear_trees.cpp)
-target_link_libraries(test_linear_trees_app "${TORCH_LIBRARIES}" core methods data ${CATBOOST})
