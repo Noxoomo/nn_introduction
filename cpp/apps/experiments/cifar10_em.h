@@ -32,7 +32,7 @@ private:
         // TODO don't hardcode consts, construct from params
         torch::optim::SGDOptions opt(params_[SgdStepSizeKey]);
         opt.momentum_ = 0.9;
-//        opt.weight_decay_ = 5e-4;
+        opt.weight_decay_ = 5e-4;
         // TODO dropout
 //        auto optim = std::make_shared<torch::optim::Adam>(reprModel->parameters(), opt);
         auto optim = std::make_shared<torch::optim::SGD>(reprModel->parameters(), opt);
