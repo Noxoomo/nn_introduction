@@ -36,7 +36,8 @@ int main(int /*argc*/, char* argv[]) {
         grid = buildGrid(gridds, binarizationCfg);
     }
 
-    std::ifstream fin(params["checkpoint_from_file"], std::ios::binary);
+    std::string checkpoint_path = params["checkpoint_from_file"];
+    std::ifstream fin(checkpoint_path, std::ios::binary);
     std::shared_ptr<Ensemble> ensemble = Ensemble::deserialize(fin, [&]() {
         return LinearObliviousTree::deserialize(fin, grid);
     });
@@ -51,7 +52,8 @@ int main(int /*argc*/, char* argv[]) {
     std::cout << "L2: " << target.value(prediction) << std::endl;
 
     if (params.contains("save_predictions_to")) {
-        std::ofstream out(params["save_predictions_to"]);
+        std::string outPath = params["save_predictions_to"];
+        std::ofstream out(outPath);
         auto predRef = prediction.arrayRef();
         for (int i = 0; i < (int)predRef.size(); ++i) {
             out << predRef[i] << "\n";
