@@ -3,7 +3,6 @@ cmake_version()
 project(cpp_root)
 
 add_subdirectory(apps)
-add_subdirectory(apps/train_catboost)
 
 add_subdirectory(core)
 add_subdirectory(vec_tools)

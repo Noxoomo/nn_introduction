@@ -14,6 +14,28 @@
 #include <data/dataset.h>
 #include <methods/linear_trees_booster.h>
 
+
+TensorPairDataset getRepr(TensorPairDataset& ds, const experiments::ModelPtr& reprModel) {
+    auto mds = ds.map(getDefaultCifar10TrainTransform());
+    auto dloader = torch::data::make_data_loader(mds, torch::data::DataLoaderOptions(256));
+    std::vector<torch::Tensor> reprList;
+    std::vector<torch::Tensor> targetsList;
+
+    for (auto& batch : *dloader) {
+        auto res = reprModel->forward(batch.data.to(torch::kCUDA));
+        auto target = batch.target;
+        reprList.push_back(res.to(torch::kCPU));
+        targetsList.push_back(target);
+    }
+
+    auto repr = torch::cat(reprList, 0);
+    auto targets = torch::cat(targetsList, 0);
+    reprList.clear();
+    targetsList.clear();
+
+    return {repr.view({repr.sizes()[0], -1}).contiguous(), targets};
+}
+
 int main(int argc, const char* argv[]) {
     using namespace experiments;
 
@@ -100,20 +122,18 @@ int main(int argc, const char* argv[]) {
 
     std::cout << "getting train ds repr" << std::endl;
 
-    auto trainRepr = conv->forward(dataset.first.data()).to(torch::kCPU);
-    trainRepr = trainRepr.view({trainRepr.sizes()[0], -1});
-    Vec trainReprVec(trainRepr);
-    Mx reprTrainDsMx(trainReprVec, trainRepr.sizes()[0], trainRepr.sizes()[1]);
-    DataSet trainDs(reprTrainDsMx, Vec(dataset.first.targets().to(torch::kCPU).to(torch::kFloat)));
+    auto trainRepr = getRepr(dataset.first, conv);
+    Vec trainReprVec(trainRepr.data());
+    Mx reprTrainDsMx(trainReprVec, trainRepr.data().sizes()[0], trainRepr.data().sizes()[1]);
+    DataSet trainDs(reprTrainDsMx, Vec(trainRepr.targets().to(torch::kFloat)));
     trainDs.addBiasColumn();
 
     std::cout << "getting test ds repr" << std::endl;
 
-    auto testRepr = conv->forward(dataset.second.data()).to(torch::kCPU);
-    testRepr = testRepr.view({testRepr.sizes()[0], -1});
-    Vec testReprVec(testRepr);
-    Mx reprTestDsMx(testReprVec, testRepr.sizes()[0], testRepr.sizes()[1]);
-    DataSet testDs(reprTestDsMx, Vec(dataset.second.targets().to(torch::kCPU).to(torch::kFloat)));
+    auto testRepr = getRepr(dataset.second, conv);
+    Vec testReprVec(testRepr.data());
+    Mx reprTestDsMx(testReprVec, testRepr.data().sizes()[0], testRepr.data().sizes()[1]);
+    DataSet testDs(reprTestDsMx, Vec(testRepr.targets().to(torch::kFloat)));
     testDs.addBiasColumn();
 
     std::cout << "parsing options" << std::endl;
