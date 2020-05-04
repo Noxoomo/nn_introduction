@@ -93,7 +93,7 @@ public:
         }
 
         std::vector<ModelPtr> models;
-        char ch;
+
         while (true) {
             auto model = deserializer();
             if (model) {

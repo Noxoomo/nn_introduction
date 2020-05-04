@@ -10,8 +10,6 @@
 #include <data/grid_builder.h>
 
 int main(int /*argc*/, char* argv[]) {
-    auto start = std::chrono::system_clock::now();
-
     auto params = readJson(argv[1]);
     torch::set_num_threads(params.value("num_threads", std::thread::hardware_concurrency()));
 
