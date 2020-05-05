@@ -18,11 +18,9 @@
 
 inline std::unique_ptr<GreedyLinearObliviousTreeLearner> createWeakLinearLearner(
         int32_t depth,
-        int biasCol,
         double l2reg,
         GridPtr grid) {
     GreedyLinearObliviousTreeLearnerOptions opts;
-    opts.biasCol = biasCol;
     opts.maxDepth = depth;
     opts.l2reg = l2reg;
     return std::make_unique<GreedyLinearObliviousTreeLearner>(std::move(grid), opts);
@@ -60,8 +58,6 @@ TEST(LinearPolynom, ValGrad) {
 
     std::vector<int32_t> indices({0, 1, 2, 3, 4, 5, 6});
 
-    ds.addBiasColumn();
-
     BinarizationConfig config;
     config.bordersCount_ = 32;
     auto grid = buildGrid(ds, config);
@@ -71,7 +67,7 @@ TEST(LinearPolynom, ValGrad) {
     BoostingConfig boostingConfig;
     boostingConfig.iterations_ = 3;
     boostingConfig.step_ = 0.5;
-    Boosting boosting(boostingConfig, createWeakTarget(l2reg), createWeakLinearLearner(3, 0, l2reg, grid));
+    Boosting boosting(boostingConfig, createWeakTarget(l2reg), createWeakLinearLearner(3,  l2reg, grid));
 
     auto trainMetricsCalcer = std::make_shared<BoostingMetricsCalcer>(ds);
     trainMetricsCalcer->addMetric(L2(ds), "l2-train");
@@ -82,7 +78,7 @@ TEST(LinearPolynom, ValGrad) {
 
     auto polynom = LinearTreesToPolynom(*std::dynamic_pointer_cast<Ensemble>(ensemble));
 
-    for (int i = 0; i < ds.samplesCount(); ++i) {
+    for (int i = 0; i < (int)ds.samplesCount(); ++i) {
         Vec val(1);
         polynom.Forward(ds.sample(i).arrayRef(), val.arrayRef());
         std::cout << "val for sample #" << i << ": " << ensemble->value(ds.sample(i)) << " " << val(0) << std::endl;
@@ -109,8 +105,6 @@ TEST(LinearPolynomGpu, ValGrad) {
 
     std::vector<int32_t> indices({0, 1, 2, 3, 4, 5, 6});
 
-    ds.addBiasColumn();
-
     BinarizationConfig config;
     config.bordersCount_ = 32;
     auto grid = buildGrid(ds, config);
@@ -120,7 +114,7 @@ TEST(LinearPolynomGpu, ValGrad) {
     BoostingConfig boostingConfig;
     boostingConfig.iterations_ = 3;
     boostingConfig.step_ = 0.5;
-    Boosting boosting(boostingConfig, createWeakTarget(l2reg), createWeakLinearLearner(3, 0, l2reg, grid));
+    Boosting boosting(boostingConfig, createWeakTarget(l2reg), createWeakLinearLearner(3,  l2reg, grid));
 
     auto trainMetricsCalcer = std::make_shared<BoostingMetricsCalcer>(ds);
     trainMetricsCalcer->addMetric(L2(ds), "l2-train");
@@ -132,11 +126,10 @@ TEST(LinearPolynomGpu, ValGrad) {
     auto polynom = std::make_shared<Polynom>(LinearTreesToPolynom(*std::dynamic_pointer_cast<Ensemble>(ensemble)));
     auto gpuPolynom = PolynomCuda(polynom);
 
-    // TODO why `/ 2`???
     for (int i = 0; i < ds.samplesCount(); ++i) {
         auto val = gpuPolynom.Forward(ds.sample(i).data().view({1, -1}).to(torch::kCUDA)).to(torch::kCPU);
         std::cout << "val for sample #" << i << ": " << ensemble->value(ds.sample(i)) << " " << val.data_ptr<float>()[0] << std::endl;
-        ASSERT_NEAR(ensemble->value(ds.sample(i)), val.data_ptr<float>()[0] / 2, 1e-4);
+        ASSERT_NEAR(ensemble->value(ds.sample(i)), val.data_ptr<float>()[0], 1e-4);
     }
 
     for (int i = 0; i < ds.samplesCount(); ++i) {

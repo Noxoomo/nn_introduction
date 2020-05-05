@@ -152,7 +152,6 @@ public:
 
             VecTools::copyTo(owner_.nzTargets_, to);
             to -= x;
-            to *= 2;
             return to;
         }
 

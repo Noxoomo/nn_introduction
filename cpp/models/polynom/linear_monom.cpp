@@ -19,9 +19,12 @@ void LinearMonom::Forward(double lambda, ConstVecRef<float> features, VecRef<flo
         }
     }
 
-    // TODO I don't understand why I need this `/ 2`
     for (int dim = 0; dim < (int)dst.size(); ++dim) {
-        dst[dim] += features[origFId_] * Values_[dim] / 2;
+        if (origFId_ != -1) {
+            dst[dim] += features[origFId_] * Values_[dim];
+        } else {
+            dst[dim] += Values_[dim];
+        }
     }
 }
 
@@ -30,7 +33,7 @@ void LinearMonom::Backward(double lambda, ConstVecRef<float> features, ConstVecR
     // TODO lambda unused?
 
     // TODO we treat f = 0 as bias
-    if (origFId_ == 0) {
+    if (origFId_ == -1) {
         return;
     }
 
@@ -57,7 +60,7 @@ std::vector<std::tuple<TSymmetricTree, int>> LinearToSymmetricTrees(const Linear
         }
 
         for (const auto& l : loTree.leaves_) {
-            tree.Leaves.push_back(l.w_(i, 0));
+            tree.Leaves.push_back(l.w_(i, 0) * loTree.scale_);
             tree.Weights.push_back(0); // TODO do we need to keep weights?
         }
 

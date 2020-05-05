@@ -63,7 +63,7 @@ double LinearObliviousTree::value(const Vec& x) {
 void LinearObliviousTree::grad(const Vec& x, Vec to) {
     VecRef<float> toRef = to.arrayRef();
     int lId = getLeaf(x.arrayRef());
-    leaves_[lId].grad(toRef);
+    leaves_[lId].grad(toRef, scale_);
 }
 
 void LinearObliviousTree::printInfo() const {

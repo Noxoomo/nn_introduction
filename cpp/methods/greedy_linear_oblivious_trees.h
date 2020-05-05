@@ -23,7 +23,6 @@ class LinearObliviousTreeLeafLearner;
 
 struct GreedyLinearObliviousTreeLearnerOptions {
     int maxDepth = 6;
-    int biasCol = 0;
     double l2reg = 2.0;
 
     static GreedyLinearObliviousTreeLearnerOptions fromJson(const json& params);

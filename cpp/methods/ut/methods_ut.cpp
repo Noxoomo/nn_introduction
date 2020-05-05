@@ -30,11 +30,9 @@ inline std::unique_ptr<GreedyObliviousTree> createWeakLearner(
 
 inline std::unique_ptr<GreedyLinearObliviousTreeLearner> createWeakLinearLearner(
         int32_t depth,
-        int biasCol,
         double l2reg,
         GridPtr grid) {
     GreedyLinearObliviousTreeLearnerOptions opts;
-    opts.biasCol = biasCol;
     opts.maxDepth = depth;
     opts.l2reg = l2reg;
     return std::make_unique<GreedyLinearObliviousTreeLearner>(std::move(grid), opts);
@@ -173,8 +171,6 @@ TEST(BoostingLinearTrees, SimpleDs) {
 
     std::vector<int32_t> indices({0, 1, 2, 3, 4, 5, 6});
 
-    ds.addBiasColumn();
-
     BinarizationConfig config;
     config.bordersCount_ = 32;
     auto grid = buildGrid(ds, config);
@@ -184,7 +180,7 @@ TEST(BoostingLinearTrees, SimpleDs) {
     BoostingConfig boostingConfig;
     boostingConfig.iterations_ = 1;
     boostingConfig.step_ = 1;
-    Boosting boosting(boostingConfig, createWeakTarget(l2reg), createWeakLinearLearner(4, 0, l2reg, grid));
+    Boosting boosting(boostingConfig, createWeakTarget(l2reg), createWeakLinearLearner(4, l2reg, grid));
 
     auto trainMetricsCalcer = std::make_shared<BoostingMetricsCalcer>(ds);
     trainMetricsCalcer->addMetric(L2(ds), "l2-train");
@@ -204,9 +200,6 @@ TEST(BoostingLinearTrees, FeaturesTxt) {
     EXPECT_EQ(ds.samplesCount(), 12465);
     EXPECT_EQ(ds.featuresCount(), 50);
 
-    ds.addBiasColumn();
-    test.addBiasColumn();
-
     BinarizationConfig config;
     config.bordersCount_ = 32;
     auto grid = buildGrid(ds, config);
@@ -216,7 +209,7 @@ TEST(BoostingLinearTrees, FeaturesTxt) {
     BoostingConfig boostingConfig;
     boostingConfig.iterations_ = 500;
     boostingConfig.step_ = 0.008;
-    Boosting boosting(boostingConfig, createBootstrapWeakTarget(l2reg), createWeakLinearLearner(6, 0, l2reg, grid));
+    Boosting boosting(boostingConfig, createBootstrapWeakTarget(l2reg), createWeakLinearLearner(6, l2reg, grid));
 
     auto testMetricsCalcer = std::make_shared<BoostingMetricsCalcer>(test);
     testMetricsCalcer->addMetric(L2(test), "l2-test");
@@ -245,7 +238,7 @@ TEST(BoostingLinearTrees, FeaturesTxtBootsrap) {
     BoostingConfig boostingConfig;
     boostingConfig.iterations_ = 2000;
     boostingConfig.step_ = 0.003;
-    Boosting boosting(boostingConfig, createBootstrapWeakTarget(l2reg), createWeakLinearLearner(6, 0, l2reg, grid));
+    Boosting boosting(boostingConfig, createBootstrapWeakTarget(l2reg), createWeakLinearLearner(6, l2reg, grid));
 
     auto testMetricsCalcer = std::make_shared<BoostingMetricsCalcer>(test);
     testMetricsCalcer->addMetric(L2(test), "l2-test");
@@ -279,7 +272,7 @@ TEST(Serialize, Ensemble) {
     BoostingConfig boostingConfig;
     boostingConfig.iterations_ = 3;
     boostingConfig.step_ = 0.5;
-    Boosting boosting(boostingConfig, createWeakTarget(l2reg), createWeakLinearLearner(4, 0, l2reg, grid));
+    Boosting boosting(boostingConfig, createWeakTarget(l2reg), createWeakLinearLearner(4, l2reg, grid));
 
     LinearL2 target(ds, l2reg);
     auto ensemble = std::dynamic_pointer_cast<Ensemble>(boosting.fit(ds, target));
@@ -332,7 +325,7 @@ TEST(Serialize, DuringFit) {
     BoostingConfig boostingConfig;
     boostingConfig.iterations_ = 3;
     boostingConfig.step_ = 0.5;
-    Boosting boosting(boostingConfig, createWeakTarget(l2reg), createWeakLinearLearner(4, 0, l2reg, grid));
+    Boosting boosting(boostingConfig, createWeakTarget(l2reg), createWeakLinearLearner(4, l2reg, grid));
 
     std::ofstream fout("test1.out", std::ios::binary);
     auto boostingSerializer = std::make_shared<BoostingSerializer>(fout, 1.0, 1);
@@ -383,7 +376,7 @@ TEST(Serialize, ContinueBoosting) {
     BoostingConfig boostingConfig;
     boostingConfig.iterations_ = 3;
     boostingConfig.step_ = 0.01;
-    Boosting boosting(boostingConfig, createWeakTarget(l2reg), createWeakLinearLearner(4, 0, l2reg, grid));
+    Boosting boosting(boostingConfig, createWeakTarget(l2reg), createWeakLinearLearner(4, l2reg, grid));
 
     std::ofstream fout("test1.out", std::ios::binary);
     auto boostingSerializer = std::make_shared<BoostingSerializer>(fout, 1.0, 1);
@@ -411,7 +404,7 @@ TEST(Serialize, ContinueBoosting) {
     // Fit for another 7 iterations
     boostingConfig.iterations_ = 10;
     boostingConfig.step_ = 0.1;
-    Boosting newBoosting(boostingConfig, createWeakTarget(l2reg), createWeakLinearLearner(4, 0, l2reg, grid));
+    Boosting newBoosting(boostingConfig, createWeakTarget(l2reg), createWeakLinearLearner(4, l2reg, grid));
     newEnsemble = std::dynamic_pointer_cast<Ensemble>(newBoosting.fitFrom(newEnsemble, ds, target));
 
     std::cout << "old ensemble:" << std::endl;

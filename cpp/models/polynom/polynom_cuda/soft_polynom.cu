@@ -577,7 +577,12 @@ __global__ void LinearPolynomProbsImpl(
 
             float prob = 0.0f;
             if (!zeroProb) {
-                prob = __ldg(features + origFId * batchSize);
+                // TODO we store fID = -1 as our bias column, but it's a hack and we need to get rid of this
+                if (origFId != -1) {
+                    prob = __ldg(features + origFId * batchSize);
+                } else {
+                    prob = 1.0f;
+                }
             }
 
             probs[polynomId * batchSize] = prob;
@@ -699,8 +704,8 @@ __global__ void LinearPolynomBackwardImpl(float lambda,
         const int depth = nextOffset - offset;
         const int origFId = origFIds[polynomId];
 
-        // TODO for now we treat origFId=0 as bias
-        if (origFId != 0) {
+        // TODO for now we treat origFId=-1 as bias
+        if (origFId != -1) {
 
             bool isZero = false;
 

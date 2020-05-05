@@ -28,20 +28,21 @@ public:
     double value(const ConstVecRef<float>& x) const {
         double res = 0.0;
 
-        for (int i = 0; i < w_.size(); ++i) {
+        for (int i = 1; i < (int)w_.size(); ++i) {
             int f = usedFeaturesInOrder_[i];
             res += x[f] * w_(i, 0);
         }
+        res += w_(0, 0); // bias
 
         return res;
     }
 
-    void grad(VecRef<float> to) {
+    void grad(VecRef<float> to, double scale) {
         int i = 0;
         for (int f : usedFeaturesInOrder_) {
-            // TODO we treat f = 0 as bias
-            if (f != 0) {
-                to[f] += w_(i, 0);
+            // TODO we treat f = -1 as bias
+            if (f != -1) {
+                to[f] += w_(i, 0) * scale;
             }
             ++i;
         }

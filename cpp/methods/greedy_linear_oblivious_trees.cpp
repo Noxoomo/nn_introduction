@@ -151,12 +151,6 @@ ModelPtr GreedyLinearObliviousTreeLearner::fit(const DataSet& ds, const Target& 
     auto wsVec = target.weights();
     auto ws = wsVec.arrayRef();
 
-    if (opts_.biasCol == -1) {
-        // TODO
-        throw std::runtime_error("provide bias col!");
-    }
-
-
     TIME_BLOCK_START(BUILDING_ROOT)
     buildRoot(bds, ds, ys, ws);
     TIME_BLOCK_END(BUILDING_ROOT)
@@ -315,11 +309,17 @@ void GreedyLinearObliviousTreeLearner::resetStats(int nLeaves, int filledSize) {
 }
 
 void GreedyLinearObliviousTreeLearner::updateXs(int origFId) {
-    int pos = usedFeatures_.size() - 1;
-    auto fColumn = fColumnsRefs_[origFId];
-    parallelFor(0, nSamples_, [&](int i) {
-        xs_[i][pos] = fColumn[indices_[i]];
-    });
+    if (origFId == -1) { // bias
+        parallelFor(0, nSamples_, [&](int i) {
+            xs_[i][0] = 1;
+        });
+    } else {
+        int pos = (int)usedFeatures_.size() - 1;
+        auto fColumn = fColumnsRefs_[origFId];
+        parallelFor(0, nSamples_, [&](int i) {
+            xs_[i][pos] = fColumn[indices_[i]];
+        });
+    }
 }
 
 float* GreedyLinearObliviousTreeLearner::curX(int sampleId) {
@@ -332,9 +332,11 @@ void GreedyLinearObliviousTreeLearner::buildRoot(
         ConstVecRef<float> ys,
         ConstVecRef<float> ws) {
     auto root = std::make_shared<LinearObliviousTreeLeafLearner>(this->grid_, 1);
-    usedFeatures_.insert(opts_.biasCol);
-    usedFeaturesOrdered_.push_back(opts_.biasCol);
-    updateXs(opts_.biasCol);
+
+    // TODO again, dirty hack. Handling bias here..
+    usedFeatures_.insert(-1);
+    usedFeaturesOrdered_.push_back(-1);
+    updateXs(-1);
 
     LinearL2StatOpParams params;
     params.vecAddMode = LinearL2StatOpParams::FullCorrelation;

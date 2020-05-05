@@ -19,7 +19,7 @@ public:
         // only need this parameter in order to correctly track
         // device of those models which don't have real parameters
         dummy_ = torch::zeros({});
-        dummy_ = register_buffer("dummy", dummy_);
+        dummy_ = register_parameter("dummy", dummy_, false);
 //        lastNonlinearity_ = true;
 //        lastBias_ = torch::zeros({});
 //        lastBias_ = register_parameter("lastBias", lastBias_, false);
