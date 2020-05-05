@@ -26,10 +26,10 @@ public:
 
             fireScheduledParamModifiers(i);
 
-            // E step
-            optimizeRepresentationModel(ds, loss);
             // M step
             optimizeDecisionModel(ds, loss);
+            // E step
+            optimizeRepresentationModel(ds, loss);
 
             fireListeners(i);
         }
@@ -126,6 +126,7 @@ private:
 
     void optimizeDecisionModel(TensorPairDataset& ds, const LossPtr& loss) {
         if (params_["em_iterations"]["m_iters"] == 0) {
+            std::cout << "skipping decision model optimization" << std::endl;
             return;
         }
 

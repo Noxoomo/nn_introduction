@@ -71,16 +71,37 @@ LinearTreesBooster::LinearTreesBooster(const LinearTreesBoosterOptions& opts)
 
 }
 
-ModelPtr LinearTreesBooster::fit(const DataSet& trainDs, const DataSet& testDs) {
+ModelPtr LinearTreesBooster::fit(const DataSet& trainDs) {
     auto grid = buildGrid(trainDs, opts_.binarizationCfg);
 
     Boosting boosting(opts_.boostingCfg,
                       createBootstrapWeakTarget(opts_.boostrapOpts, opts_.greedyLinearTreesOpts.l2reg),
                       createWeakLinearLearner(grid, opts_.greedyLinearTreesOpts));
 
-    auto testMetricsCalcer = std::make_shared<BoostingMetricsCalcer>(testDs);
-    testMetricsCalcer->addMetric(CrossEntropy(testDs), "cross_entropy-test");
-    testMetricsCalcer->addMetric(BinaryAcc(testDs), "acc-test", 1);
+    auto trainMetricsCalcer = std::make_shared<BoostingMetricsCalcer>(trainDs);
+    trainMetricsCalcer->addMetric(CrossEntropy(trainDs), "cross_entropy-train");
+    trainMetricsCalcer->addMetric(BinaryAcc(trainDs), "acc-train");
+    boosting.addListener(trainMetricsCalcer);
+
+    auto fitTimeCalcer = std::make_shared<BoostingFitTimeTracker>();
+    boosting.addListener(fitTimeCalcer);
+
+    CrossEntropy target(trainDs, 0.5);
+    auto ensemble = boosting.fit(trainDs, target);
+
+    return ensemble;
+}
+
+ModelPtr LinearTreesBooster::fit(const DataSet& trainDs, const DataSet& valDs) {
+    auto grid = buildGrid(trainDs, opts_.binarizationCfg);
+
+    Boosting boosting(opts_.boostingCfg,
+                      createBootstrapWeakTarget(opts_.boostrapOpts, opts_.greedyLinearTreesOpts.l2reg),
+                      createWeakLinearLearner(grid, opts_.greedyLinearTreesOpts));
+
+    auto testMetricsCalcer = std::make_shared<BoostingMetricsCalcer>(valDs);
+    testMetricsCalcer->addMetric(CrossEntropy(valDs), "cross_entropy-val");
+    testMetricsCalcer->addMetric(BinaryAcc(valDs), "acc-val", 1);
     boosting.addListener(testMetricsCalcer);
 
     auto trainMetricsCalcer = std::make_shared<BoostingMetricsCalcer>(trainDs);

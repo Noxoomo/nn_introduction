@@ -20,7 +20,8 @@ class LinearTreesBooster {
 public:
     LinearTreesBooster(const LinearTreesBoosterOptions& opts);
 
-    ModelPtr fit(const DataSet& trainDs, const DataSet& testDs);
+    ModelPtr fit(const DataSet& trainDs);
+    ModelPtr fit(const DataSet& trainDs, const DataSet& valDs);
 
     ~LinearTreesBooster() = default;
 

@@ -10,6 +10,9 @@
 #include <string>
 #include <memory>
 #include <iostream>
+#include <methods/linear_trees_booster.h>
+#include <core/polynom_model.h>
+#include <models/polynom/linear_monom.h>
 
 // CommonEm
 
@@ -55,26 +58,65 @@ private:
     }
 
     experiments::OptimizerPtr getDecisionOptimizer(const experiments::ModelPtr& decisionModel) override {
-//        auto transform = torch::data::transforms::Stack<>();
-//        using TransT = decltype(transform);
-//
-//        experiments::OptimizerArgs<TransT> args(transform, opts_.decisionIterations);
-//
-//        torch::optim::AdamOptions opt(0.0005);
-////        opt.weight_decay_ = 5e-4;
-//        auto optim = std::make_shared<torch::optim::Adam>(decisionModel->parameters(), opt);
-//        args.torchOptim_ = optim;
-//
-//        auto lr = &(optim->options.learning_rate_);
-//        args.lrPtrGetter_ = [=]() { return lr; };
-//
-//        const auto batchSize= 256;
-//        auto dloaderOptions = torch::data::DataLoaderOptions(batchSize);
-//        args.dloaderOptions_ = std::move(dloaderOptions);
-//
-//        auto optimizer = std::make_shared<experiments::DefaultOptimizer<TransT>>(args);
-//        attachDefaultListeners(optimizer, decisionParams_);
-        return std::make_shared<experiments::NoopOptimizer>();
+        auto polynomModel = std::dynamic_pointer_cast<PolynomModel>(decisionModel);
+
+        if (polynomModel) {
+            return getLinearPolynomOptimizer(decisionModel);
+        } else {
+            return std::make_shared<experiments::NoopOptimizer>();
+        }
+    }
+
+    class LinearTreesOptimizer : public experiments::Optimizer {
+    public:
+        explicit LinearTreesOptimizer(const LinearTreesBoosterOptions& opts)
+                : opts_(opts) {
+
+        }
+
+        void train(TensorPairDataset& tpds, LossPtr loss, experiments::ModelPtr model) const override {
+            auto polynomModel = std::dynamic_pointer_cast<PolynomModel>(model);
+            if (!polynomModel) {
+                throw std::runtime_error("model should be polynom");
+            }
+
+            auto flatData = tpds.data().to(torch::kCPU).view({(long)tpds.size().value(), -1}).contiguous();
+            Mx dsdata(Vec(flatData), flatData.sizes()[0], flatData.sizes()[1]);
+            DataSet ds(dsdata, Vec(tpds.targets().to(torch::kCPU).contiguous()));
+
+            LinearTreesBooster booster(opts_);
+            auto ensemble = booster.fit(ds);
+            auto polynom = std::make_shared<Polynom>(LinearTreesToPolynom(*std::dynamic_pointer_cast<Ensemble>(ensemble)));
+            polynomModel->reset(polynom);
+        }
+
+        void train(TensorPairDataset& trainTpds, TensorPairDataset& valTpds, LossPtr loss, experiments::ModelPtr model) const override {
+            auto polynomModel = std::dynamic_pointer_cast<PolynomModel>(model);
+            if (!polynomModel) {
+                throw std::runtime_error("model should be polynom");
+            }
+
+            auto flatTrainData = trainTpds.data().to(torch::kCPU).view({(long)trainTpds.size().value(), -1}).contiguous();
+            Mx trainDsData(Vec(flatTrainData), flatTrainData.sizes()[0], flatTrainData.sizes()[1]);
+            DataSet trainDs(trainDsData, Vec(trainTpds.targets().to(torch::kCPU).contiguous()));
+
+            auto flatValData = valTpds.data().to(torch::kCPU).view({(long)valTpds.size().value(), -1}).contiguous();
+            Mx valDsData(Vec(flatValData), flatValData.sizes()[0], flatValData.sizes()[1]);
+            DataSet valDs(valDsData, Vec(valTpds.targets().to(torch::kCPU).contiguous()));
+
+            LinearTreesBooster booster(opts_);
+            auto ensemble = booster.fit(trainDs, valDs);
+            auto polynom = std::make_shared<Polynom>(LinearTreesToPolynom(*std::dynamic_pointer_cast<Ensemble>(ensemble)));
+            polynomModel->reset(polynom);
+        }
+
+    private:
+        LinearTreesBoosterOptions opts_;
+    };
+
+    experiments::OptimizerPtr getLinearPolynomOptimizer(const experiments::ModelPtr& decisionModel) {
+        LinearTreesBoosterOptions opts = LinearTreesBoosterOptions::fromJson(params_["decision_model_optimizer"]);
+        return std::make_shared<LinearTreesOptimizer>(opts);
     }
 
 };

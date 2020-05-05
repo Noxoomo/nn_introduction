@@ -9,6 +9,7 @@
 #include "params.h"
 
 #include <models/polynom/polynom.h>
+#include <models/polynom/monom.h>
 
 #include <algorithm>
 #include <stdexcept>
@@ -226,6 +227,9 @@ ModelPtr createModel(const json& modelParams) {
         model = createConvModel(modelParams);
     } else if (arch == "Id") {
         model = std::make_shared<IdClassifier>();
+    } else if (arch == "polynom") {
+        const std::string& monomType = modelParams["monom_type"];
+        model = std::make_shared<PolynomModel>(Monom::getMonomType(monomType));
     } else {
         throw std::runtime_error("Unknown model arch " + arch);
     }

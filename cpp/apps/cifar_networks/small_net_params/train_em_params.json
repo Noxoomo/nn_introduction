@@ -18,7 +18,8 @@
       }
     },
     "m_model": {
-      "model_arch": "Id",
+      "model_arch": "polynom",
+      "monom_type": "LinearMonom",
       "num_classes": 2,
       "device": "GPU"
     },
@@ -56,6 +57,12 @@
       "type": "int",
       "values": [10, 300, 500],
       "iters": [0, 1, 2]
+    },
+    {
+      "field": "em_iterations.m_iters",
+      "type": "int",
+      "values": [1, 1, 1],
+      "iters": [0, 1, 2]
     }
   ],
 
@@ -64,13 +71,32 @@
       "borders_count": 3
     },
     "boosting_config": {
-      "step": 0.1,
-      "iterations": 100
+      "step": 0.5,
+      "iterations": 500
     },
     "bootstrap_options": {
       "sample_rate": 0.7,
       "seed": 42,
-      "type": "bayessian"
+      "type": "poisson"
+    },
+    "tree_config": {
+      "l2reg": 2.0,
+      "depth": 6
+    }
+  },
+
+  "decision_model_optimizer": {
+    "grid_config": {
+      "borders_count": 3
+    },
+    "boosting_config": {
+      "step": 0.5,
+      "iterations": 500
+    },
+    "bootstrap_options": {
+      "sample_rate": 0.7,
+      "seed": 42,
+      "type": "poisson"
     },
     "tree_config": {
       "l2reg": 2.0,
