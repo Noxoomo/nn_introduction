@@ -126,7 +126,6 @@ int main(int argc, const char* argv[]) {
     Vec trainReprVec(trainRepr.data());
     Mx reprTrainDsMx(trainReprVec, trainRepr.data().sizes()[0], trainRepr.data().sizes()[1]);
     DataSet trainDs(reprTrainDsMx, Vec(trainRepr.targets().to(torch::kFloat)));
-    trainDs.addBiasColumn();
 
     std::cout << "getting test ds repr" << std::endl;
 
@@ -134,12 +133,10 @@ int main(int argc, const char* argv[]) {
     Vec testReprVec(testRepr.data());
     Mx reprTestDsMx(testReprVec, testRepr.data().sizes()[0], testRepr.data().sizes()[1]);
     DataSet testDs(reprTestDsMx, Vec(testRepr.targets().to(torch::kFloat)));
-    testDs.addBiasColumn();
 
     std::cout << "parsing options" << std::endl;
 
     LinearTreesBoosterOptions opts = LinearTreesBoosterOptions::fromJson(params["eval_model"]);
-    opts.greedyLinearTreesOpts.biasCol = 0;
     LinearTreesBooster ltBooster(opts);
 
     std::cout << "fitting ensemble" << std::endl;
