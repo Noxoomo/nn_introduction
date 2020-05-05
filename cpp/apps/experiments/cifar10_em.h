@@ -82,7 +82,7 @@ private:
 
             auto flatData = tpds.data().to(torch::kCPU).view({(long)tpds.size().value(), -1}).contiguous();
             Mx dsdata(Vec(flatData), flatData.sizes()[0], flatData.sizes()[1]);
-            DataSet ds(dsdata, Vec(tpds.targets().to(torch::kCPU).contiguous()));
+            DataSet ds(dsdata, Vec(tpds.targets().to(torch::kCPU).to(torch::kFloat).contiguous()));
 
             LinearTreesBooster booster(opts_);
             auto ensemble = booster.fit(ds);
@@ -98,11 +98,11 @@ private:
 
             auto flatTrainData = trainTpds.data().to(torch::kCPU).view({(long)trainTpds.size().value(), -1}).contiguous();
             Mx trainDsData(Vec(flatTrainData), flatTrainData.sizes()[0], flatTrainData.sizes()[1]);
-            DataSet trainDs(trainDsData, Vec(trainTpds.targets().to(torch::kCPU).contiguous()));
+            DataSet trainDs(trainDsData, Vec(trainTpds.targets().to(torch::kCPU).to(torch::kFloat).contiguous()));
 
             auto flatValData = valTpds.data().to(torch::kCPU).view({(long)valTpds.size().value(), -1}).contiguous();
             Mx valDsData(Vec(flatValData), flatValData.sizes()[0], flatValData.sizes()[1]);
-            DataSet valDs(valDsData, Vec(valTpds.targets().to(torch::kCPU).contiguous()));
+            DataSet valDs(valDsData, Vec(valTpds.targets().to(torch::kCPU).to(torch::kFloat).contiguous()));
 
             LinearTreesBooster booster(opts_);
             auto ensemble = booster.fit(trainDs, valDs);
