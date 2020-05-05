@@ -8,13 +8,15 @@
 class PolynomModel : public experiments::Model {
 public:
     explicit PolynomModel(PolynomPtr polynom)
-            : polynom_(std::move(polynom))
+            : Model()
+            , polynom_(std::move(polynom))
             , monomType_(polynom_->getMonomType()) {
 
     }
 
     PolynomModel(Monom::MonomType monomType)
-            : monomType_(monomType) {
+            : Model()
+            , monomType_(monomType) {
 
     }
 

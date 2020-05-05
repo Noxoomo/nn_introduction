@@ -28,8 +28,8 @@ inline std::unique_ptr<GreedyLinearObliviousTreeLearner> createWeakLinearLearner
     return std::make_unique<GreedyLinearObliviousTreeLearner>(std::move(grid), opts);
 }
 
-inline std::unique_ptr<EmpiricalTargetFactory> createWeakTarget() {
-    return std::make_unique<GradientBoostingWeakTargetFactory>();
+inline std::unique_ptr<EmpiricalTargetFactory> createWeakTarget(double l2reg) {
+    return std::make_unique<GradientBoostingWeakTargetFactory>(l2reg);
 }
 
 DataSet simpleDs() {
@@ -71,7 +71,7 @@ TEST(LinearPolynom, ValGrad) {
     BoostingConfig boostingConfig;
     boostingConfig.iterations_ = 3;
     boostingConfig.step_ = 0.5;
-    Boosting boosting(boostingConfig, createWeakTarget(), createWeakLinearLearner(3, 0, l2reg, grid));
+    Boosting boosting(boostingConfig, createWeakTarget(l2reg), createWeakLinearLearner(3, 0, l2reg, grid));
 
     auto trainMetricsCalcer = std::make_shared<BoostingMetricsCalcer>(ds);
     trainMetricsCalcer->addMetric(L2(ds), "l2-train");
@@ -120,7 +120,7 @@ TEST(LinearPolynomGpu, ValGrad) {
     BoostingConfig boostingConfig;
     boostingConfig.iterations_ = 3;
     boostingConfig.step_ = 0.5;
-    Boosting boosting(boostingConfig, createWeakTarget(), createWeakLinearLearner(3, 0, l2reg, grid));
+    Boosting boosting(boostingConfig, createWeakTarget(l2reg), createWeakLinearLearner(3, 0, l2reg, grid));
 
     auto trainMetricsCalcer = std::make_shared<BoostingMetricsCalcer>(ds);
     trainMetricsCalcer->addMetric(L2(ds), "l2-train");
