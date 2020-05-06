@@ -57,7 +57,7 @@ int main(int argc, const char* argv[]) {
 
     // Init trainer
 
-    Cifar10EM emTrainer(model, params);
+    Cifar10EM emTrainer(model, params, dataset.second);
 
     // Attach Listeners
 
@@ -120,26 +120,26 @@ int main(int argc, const char* argv[]) {
 
     // Eval with trees
 
-    std::cout << "getting train ds repr" << std::endl;
-
-    auto trainRepr = getRepr(dataset.first, conv);
-    Vec trainReprVec(trainRepr.data());
-    Mx reprTrainDsMx(trainReprVec, trainRepr.data().sizes()[0], trainRepr.data().sizes()[1]);
-    DataSet trainDs(reprTrainDsMx, Vec(trainRepr.targets().to(torch::kFloat)));
-
-    std::cout << "getting test ds repr" << std::endl;
-
-    auto testRepr = getRepr(dataset.second, conv);
-    Vec testReprVec(testRepr.data());
-    Mx reprTestDsMx(testReprVec, testRepr.data().sizes()[0], testRepr.data().sizes()[1]);
-    DataSet testDs(reprTestDsMx, Vec(testRepr.targets().to(torch::kFloat)));
-
-    std::cout << "parsing options" << std::endl;
-
-    LinearTreesBoosterOptions opts = LinearTreesBoosterOptions::fromJson(params["eval_model"]);
-    LinearTreesBooster ltBooster(opts);
-
-    std::cout << "fitting ensemble" << std::endl;
-
-    auto ensemble = ltBooster.fit(trainDs, testDs);
+//    std::cout << "getting train ds repr" << std::endl;
+//
+//    auto trainRepr = getRepr(dataset.first, conv);
+//    Vec trainReprVec(trainRepr.data());
+//    Mx reprTrainDsMx(trainReprVec, trainRepr.data().sizes()[0], trainRepr.data().sizes()[1]);
+//    DataSet trainDs(reprTrainDsMx, Vec(trainRepr.targets().to(torch::kFloat)));
+//
+//    std::cout << "getting test ds repr" << std::endl;
+//
+//    auto testRepr = getRepr(dataset.second, conv);
+//    Vec testReprVec(testRepr.data());
+//    Mx reprTestDsMx(testReprVec, testRepr.data().sizes()[0], testRepr.data().sizes()[1]);
+//    DataSet testDs(reprTestDsMx, Vec(testRepr.targets().to(torch::kFloat)));
+//
+//    std::cout << "parsing options" << std::endl;
+//
+//    LinearTreesBoosterOptions opts = LinearTreesBoosterOptions::fromJson(params["eval_model"]);
+//    LinearTreesBooster ltBooster(opts);
+//
+//    std::cout << "fitting ensemble" << std::endl;
+//
+//    auto ensemble = ltBooster.fit(trainDs, testDs);
 }

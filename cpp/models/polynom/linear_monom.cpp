@@ -61,6 +61,7 @@ std::vector<std::tuple<TSymmetricTree, int>> LinearToSymmetricTrees(const Linear
 
         for (const auto& l : loTree.leaves_) {
             tree.Leaves.push_back(l.w_(i, 0) * loTree.scale_);
+            tree.Leaves.push_back(0); // TODO this one is a hack for binary classificatioon
             tree.Weights.push_back(0); // TODO do we need to keep weights?
         }
 

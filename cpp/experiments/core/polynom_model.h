@@ -31,6 +31,10 @@ public:
         polynom_->Lambda_ = lambda;
     }
 
+    Monom::MonomType getMonomType() {
+        return monomType_;
+    }
+
 private:
     PolynomPtr polynom_;
     PolynomCudaPtr polynomCuda_;

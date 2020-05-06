@@ -136,7 +136,7 @@ TEST(LinearPolynomGpu, ValGrad) {
         Vec gradExpected(ds.featuresCount());
         ensemble->grad(ds.sample(i), gradExpected);
 
-        auto outputGrads = VecFactory::fromVector({1});
+        auto outputGrads = VecFactory::fromVector({1, 1});
         auto gradActual = gpuPolynom.Backward(ds.sample(i).data().view({1, -1}).to(torch::kCUDA),
                 outputGrads.data().view({1, -1})).to(torch::kCPU);
 

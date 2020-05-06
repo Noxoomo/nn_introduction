@@ -105,6 +105,29 @@ protected:
     std::vector<IterationListener> listeners_;
     std::vector<experiments::EpochEndCallback> reprEpochEndcallbacks_;
 
+    TensorPairDataset getRepr(TensorPairDataset& ds) {
+        auto reprModel = model_->eStepModel();
+
+        auto mds = ds.map(getDefaultCifar10TrainTransform());
+        auto dloader = torch::data::make_data_loader(mds, torch::data::DataLoaderOptions(256));
+        std::vector<torch::Tensor> reprList;
+        std::vector<torch::Tensor> targetsList;
+
+        for (auto& batch : *dloader) {
+            auto res = reprModel->forward(batch.data.to(torch::kCUDA));
+            auto target = batch.target;
+            reprList.push_back(res.to(torch::kCPU));
+            targetsList.push_back(target);
+        }
+
+        auto repr = torch::cat(reprList, 0);
+        auto targets = torch::cat(targetsList, 0);
+        reprList.clear();
+        targetsList.clear();
+
+        return {repr.view({repr.sizes()[0], -1}).contiguous(), targets};
+    }
+
 private:
     void optimizeRepresentationModel(TensorPairDataset& ds, const LossPtr& loss) {
         if (params_["em_iterations"]["e_iters"] == 0) {
@@ -138,29 +161,12 @@ private:
 
         std::cout << "getting representations" << std::endl;
 
-        int batchSize = params_[BatchSizeKey];
-
-        auto mds = ds.map(reprTransform_);
-        auto dloader = torch::data::make_data_loader(mds, torch::data::DataLoaderOptions(batchSize));
-        auto device = representationsModel->parameters().data()->device();
-
-        std::vector<torch::Tensor> reprList;
-        std::vector<torch::Tensor> targetsList;
-
-        for (auto& batch : *dloader) {
-            auto res = representationsModel->forward(batch.data.to(device)).to(torch::kCPU);
-            auto target = batch.target;
-            reprList.push_back(res);
-            targetsList.push_back(target);
-        }
-
-        auto repr = torch::cat(reprList, 0);
-        auto targets = torch::cat(targetsList, 0);
+        auto trainDsRepr = getRepr(ds);
 
         std::cout << "optimizing decision model" << std::endl;
 
         auto decisionFuncOptimizer = getDecisionOptimizer(decisionModel);
-        decisionFuncOptimizer->train(repr, targets, loss, decisionModel);
+        decisionFuncOptimizer->train(trainDsRepr, loss, decisionModel);
     }
 
     void prepareDecisionMode(TensorPairDataset& ds, const LossPtr& loss) {

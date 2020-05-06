@@ -9,27 +9,47 @@
         "device": "GPU"
       },
       "classifier": {
-        "num_classes": 2,
+        "num_classes": 10,
         "main": {
-          "model_arch": "MLP",
-          "dims": [400, 2],
+          "model_arch": "Id",
           "device": "GPU"
         }
       }
     },
     "m_model": {
       "model_arch": "polynom",
-      "monom_type": "LinearMonom",
-      "num_classes": 2,
+      "monom_type": "SigmoidProbMonom",
+      "lambda": 0.1,
+      "num_classes": 10,
       "device": "GPU"
     },
     "checkpoint_file": "small_net_checkpoint.pt",
     "load_from_checkpoint": false
   },
 
+  "catboost_params": {
+    "boosting_type": "Plain",
+    "iterations": 1000,
+    "depth": 6,
+    "devices": "0",
+    "task_type": "GPU",
+    "gpu_ram_part": 0.5,
+    "eval_metric": "Accuracy",
+    "od_type": "IncToDec",
+    "loss_function": "MultiClass",
+    "learning_rate": 0.001,
+    "use_best_model": false,
+    "feature_border_type": "Uniform",
+    "rsm": 1,
+    "random_strength": 1,
+    "bootstrap_type": "Bernoulli",
+    "subsample": 1,
+    "leaf_estimation_method": "Simple",
+    "metric_period": 100
+  },
+
   "dataset": {
     "name": "cifar-10",
-    "base_classes": [0, 1, 2, 8, 9],
     "training_limit": -1,
     "test_limit": -1
   },
