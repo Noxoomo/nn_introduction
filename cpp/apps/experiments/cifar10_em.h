@@ -28,6 +28,8 @@ private:
     experiments::OptimizerPtr getLinearPolynomOptimizer(const experiments::ModelPtr& decisionModel);
     experiments::OptimizerPtr getCatboostPolynomOptimizer(const std::shared_ptr<PolynomModel>& model);
 
+    void pretrainReprModel(TensorPairDataset& ds, const LossPtr& loss) override;
+
     // TODO move this optimizers out of here
 
     class LinearTreesOptimizer : public experiments::Optimizer {

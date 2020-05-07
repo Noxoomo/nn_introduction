@@ -9,7 +9,7 @@
         "device": "GPU"
       },
       "classifier": {
-        "num_classes": 10,
+        "num_classes": 0,
         "main": {
           "model_arch": "Id",
           "device": "GPU"
@@ -19,7 +19,7 @@
     "m_model": {
       "model_arch": "polynom",
       "monom_type": "SigmoidProbMonom",
-      "lambda": 0.1,
+      "lambda": 1.0,
       "num_classes": 10,
       "device": "GPU"
     },
@@ -37,7 +37,7 @@
     "eval_metric": "Accuracy",
     "od_type": "IncToDec",
     "loss_function": "MultiClass",
-    "learning_rate": 0.001,
+    "learning_rate": 0.01,
     "use_best_model": false,
     "feature_border_type": "Uniform",
     "rsm": 1,
@@ -58,10 +58,10 @@
   "reports_per_epoch": 10,
   "em_iterations": {
     "global_iters": 3,
-    "e_iters": 0,
+    "e_iters": 5,
     "m_iters": 0
   },
-  "sgd_step": 0.01,
+  "sgd_step": 0.1,
   "dropout": 0.0,
   "device": "GPU",
 

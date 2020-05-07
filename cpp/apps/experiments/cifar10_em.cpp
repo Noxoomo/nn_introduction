@@ -84,6 +84,14 @@ experiments::OptimizerPtr Cifar10EM::getCatboostPolynomOptimizer(const std::shar
             getRepr(valDs_));
 }
 
+void Cifar10EM::pretrainReprModel(TensorPairDataset& ds, const LossPtr& loss) {
+    using namespace experiments;
+    auto model = std::make_shared<ConvModel>(model_->eStepModel(),
+            std::make_shared<Classifier>(std::make_shared<MLP>(std::vector<int>({400, 10}))));
+    auto optim = getReprOptimizer(model);
+    optim->train(ds, loss, model);
+}
+
 void Cifar10EM::LinearTreesOptimizer::train(TensorPairDataset& tpds, LossPtr loss, experiments::ModelPtr model) const {
     auto polynomModel = std::dynamic_pointer_cast<PolynomModel>(model);
     if (!polynomModel) {

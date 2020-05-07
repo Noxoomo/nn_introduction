@@ -18,7 +18,8 @@ public:
     virtual void train(TensorPairDataset& ds, const LossPtr& loss) {
 //        VERIFY(model_->classifier()->baseline() == nullptr, "error: baseline unimplemented here");
 
-        prepareDecisionMode(ds, loss);
+        pretrainReprModel(ds, loss);
+        prepareDecisionModel(ds, loss);
 
         int iterations = params_["em_iterations"]["global_iters"];
         for (int i = 0; i < iterations; ++i) {
@@ -128,6 +129,14 @@ protected:
         return {repr.view({repr.sizes()[0], -1}).contiguous(), targets};
     }
 
+    virtual void prepareDecisionModel(TensorPairDataset& ds, const LossPtr& loss) {
+
+    }
+
+    virtual void pretrainReprModel(TensorPairDataset& ds, const LossPtr& loss) {
+
+    }
+
 private:
     void optimizeRepresentationModel(TensorPairDataset& ds, const LossPtr& loss) {
         if (params_["em_iterations"]["e_iters"] == 0) {
@@ -167,10 +176,6 @@ private:
 
         auto decisionFuncOptimizer = getDecisionOptimizer(decisionModel);
         decisionFuncOptimizer->train(trainDsRepr, loss, decisionModel);
-    }
-
-    void prepareDecisionMode(TensorPairDataset& ds, const LossPtr& loss) {
-        // TODO skip for now
     }
 
     void fireScheduledParamModifiers(int iter) {
