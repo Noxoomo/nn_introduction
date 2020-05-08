@@ -88,6 +88,8 @@ void Cifar10EM::pretrainReprModel(TensorPairDataset& ds, const LossPtr& loss) {
     using namespace experiments;
     auto model = std::make_shared<ConvModel>(model_->eStepModel(),
             std::make_shared<Classifier>(std::make_shared<MLP>(std::vector<int>({400, 10}))));
+    model->to(model_->eStepModel()->device());
+    model->train(true);
     auto optim = getReprOptimizer(model);
     optim->train(ds, loss, model);
 }

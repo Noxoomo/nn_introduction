@@ -61,19 +61,24 @@ int main(int argc, const char* argv[]) {
 
     // Attach Listeners
 
+    const int pretrainItersMax = params["em_iterations"]["e_iters"];
+    int pretrainIters = 0;
+
     auto mds = dataset.second.map(getDefaultCifar10TestTransform());
-    emTrainer.attachReprEpochEndCallback([&](int epoch, experiments::Model& model) {
-        model.eval();
+    emTrainer.attachReprEpochEndCallback([&](int epoch, experiments::Model& reprModel) {
+        pretrainIters++;
+        experiments::Model& evalModel = (pretrainIters <= pretrainItersMax) ? reprModel : *model;
+
+        evalModel.eval();
 
         auto dloader = torch::data::make_data_loader(mds, torch::data::DataLoaderOptions(batchSize));
         int rightAnswersCnt = 0;
 
         for (auto& batch : *dloader) {
             auto data = batch.data;
-            data = data.to(device);
             torch::Tensor target = batch.target;
 
-            torch::Tensor prediction = model.forward(data);
+            torch::Tensor prediction = evalModel.forward(data);
             prediction = torch::argmax(prediction, 1);
 
             prediction = prediction.to(torch::kCPU);

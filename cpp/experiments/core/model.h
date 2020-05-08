@@ -18,8 +18,8 @@ public:
     Model() {
         // only need this parameter in order to correctly track
         // device of those models which don't have real parameters
-        dummy_ = torch::zeros({});
-        dummy_ = register_parameter("dummy", dummy_, false);
+        dummy_ = torch::zeros({}, torch::requires_grad(true));
+        dummy_ = register_parameter("dummy", dummy_, true);
 //        lastNonlinearity_ = true;
 //        lastBias_ = torch::zeros({});
 //        lastBias_ = register_parameter("lastBias", lastBias_, false);
