@@ -18,10 +18,10 @@ struct LinearTreesBoosterOptions {
 
 class LinearTreesBooster {
 public:
-    LinearTreesBooster(const LinearTreesBoosterOptions& opts);
+    explicit LinearTreesBooster(const LinearTreesBoosterOptions& opts);
 
-    ModelPtr fit(const DataSet& trainDs);
-    ModelPtr fit(const DataSet& trainDs, const DataSet& valDs);
+    ModelPtr fit(const DataSet& trainDs) const;
+    ModelPtr fit(const DataSet& trainDs, const DataSet& valDs) const;
 
     ~LinearTreesBooster() = default;
 

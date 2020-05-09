@@ -48,7 +48,7 @@ void LinearMonom::Backward(double lambda, ConstVecRef<float> features, ConstVecR
     }
 }
 
-std::vector<std::tuple<TSymmetricTree, int>> LinearToSymmetricTrees(const LinearObliviousTree& loTree) {
+std::vector<std::tuple<TSymmetricTree, int>> LinearToSymmetricTrees(const LinearObliviousTree& loTree, double scale) {
     std::vector<std::tuple<TSymmetricTree, int>> res;
 
     int i = 0;
@@ -60,8 +60,8 @@ std::vector<std::tuple<TSymmetricTree, int>> LinearToSymmetricTrees(const Linear
         }
 
         for (const auto& l : loTree.leaves_) {
-            tree.Leaves.push_back(l.w_(i, 0) * loTree.scale_);
             tree.Leaves.push_back(0); // TODO this one is a hack for binary classificatioon
+            tree.Leaves.push_back(l.w_(i, 0) * loTree.scale_ * scale);
             tree.Weights.push_back(0); // TODO do we need to keep weights?
         }
 
@@ -77,7 +77,7 @@ Polynom LinearTreesToPolynom(const Ensemble& ensemble) {
 
     ensemble.visitModels([&](ModelPtr model) {
         auto lModel = std::dynamic_pointer_cast<LinearObliviousTree>(model);
-        auto symmetricTrees = LinearToSymmetricTrees(*lModel);
+        auto symmetricTrees = LinearToSymmetricTrees(*lModel, ensemble.scale());
         for (const auto& treePair : symmetricTrees) {
             builder.AddTree(std::get<0>(treePair), std::get<1>(treePair));
         }

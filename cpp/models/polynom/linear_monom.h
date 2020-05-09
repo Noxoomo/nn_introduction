@@ -20,5 +20,5 @@ public:
 
 };
 
-std::vector<std::tuple<TSymmetricTree, int>> LinearToSymmetricTrees(const LinearObliviousTree& loTree);
+std::vector<std::tuple<TSymmetricTree, int>> LinearToSymmetricTrees(const LinearObliviousTree& loTree, double scale);
 Polynom LinearTreesToPolynom(const Ensemble& ensemble);

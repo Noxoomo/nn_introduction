@@ -1,6 +1,5 @@
 #include "linear_trees_booster.h"
 
-#include <targets/linear_l2.h>
 #include <targets/cross_entropy.h>
 #include <methods/greedy_linear_oblivious_trees.h>
 #include <vec_tools/transform.h>
@@ -9,25 +8,24 @@
 // TODO move it somewhere
 class BinaryAcc : public Stub<Func, BinaryAcc> {
 public:
-    explicit BinaryAcc(const DataSet& ds, double threshold = 0.5)
+    explicit BinaryAcc(const DataSet& ds, double threshold = 0.0)
             : Stub<Func, BinaryAcc>(ds.featuresCount())
             , ds_(ds)
             , threshold_(threshold) {
 
     }
 
-    void valueTo(const Vec& vec, double& res) const {
+    void valueTo(const Vec& x, double& res) const {
         // TODO maybe a better way with libtorch to do this? Like torch::where
 
-        auto p = VecTools::sigmoidCopy(vec);
-        auto pRef = p.arrayRef();
+        auto xRef = x.arrayRef();
         auto targetRef = ds_.target().arrayRef();
 
         int correct = 0;
 
         for (uint64_t i = 0; i < targetRef.size(); ++i) {
             double val = 0.0;
-            if (pRef[i] > threshold_) {
+            if (xRef[i] > threshold_) {
                 val = 1.0;
             }
 
@@ -42,6 +40,7 @@ public:
 private:
     const DataSet& ds_;
     double threshold_;
+
 };
 
 LinearTreesBoosterOptions LinearTreesBoosterOptions::fromJson(const json& params) {
@@ -71,7 +70,7 @@ LinearTreesBooster::LinearTreesBooster(const LinearTreesBoosterOptions& opts)
 
 }
 
-ModelPtr LinearTreesBooster::fit(const DataSet& trainDs) {
+ModelPtr LinearTreesBooster::fit(const DataSet& trainDs) const {
     auto grid = buildGrid(trainDs, opts_.binarizationCfg);
 
     Boosting boosting(opts_.boostingCfg,
@@ -86,13 +85,13 @@ ModelPtr LinearTreesBooster::fit(const DataSet& trainDs) {
     auto fitTimeCalcer = std::make_shared<BoostingFitTimeTracker>();
     boosting.addListener(fitTimeCalcer);
 
-    CrossEntropy target(trainDs, 0.5);
+    CrossEntropy target(trainDs);
     auto ensemble = boosting.fit(trainDs, target);
 
     return ensemble;
 }
 
-ModelPtr LinearTreesBooster::fit(const DataSet& trainDs, const DataSet& valDs) {
+ModelPtr LinearTreesBooster::fit(const DataSet& trainDs, const DataSet& valDs) const {
     auto grid = buildGrid(trainDs, opts_.binarizationCfg);
 
     Boosting boosting(opts_.boostingCfg,
@@ -106,13 +105,13 @@ ModelPtr LinearTreesBooster::fit(const DataSet& trainDs, const DataSet& valDs) {
 
     auto trainMetricsCalcer = std::make_shared<BoostingMetricsCalcer>(trainDs);
     trainMetricsCalcer->addMetric(CrossEntropy(trainDs), "cross_entropy-train", 1, BoostingMetricsCalcer::MetricType::Maximization);
-    testMetricsCalcer->addMetric(BinaryAcc(trainDs), "acc-train", 1, BoostingMetricsCalcer::MetricType::Maximization);
+    trainMetricsCalcer->addMetric(BinaryAcc(trainDs), "acc-train", 1, BoostingMetricsCalcer::MetricType::Maximization);
     boosting.addListener(trainMetricsCalcer);
 
     auto fitTimeCalcer = std::make_shared<BoostingFitTimeTracker>();
     boosting.addListener(fitTimeCalcer);
 
-    CrossEntropy target(trainDs, 0.5);
+    CrossEntropy target(trainDs);
     auto ensemble = boosting.fit(trainDs, target);
 
     return ensemble;

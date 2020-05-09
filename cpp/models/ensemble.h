@@ -158,6 +158,10 @@ public:
         }
     }
 
+    double scale() const {
+        return scale_;
+    }
+
 private:
     std::vector<ModelPtr> models_;
     double scale_ = 1.0;
