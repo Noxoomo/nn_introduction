@@ -40,10 +40,9 @@ private:
 
 class BoostingMetricsCalcer : public Listener<Model> {
 public:
-
-    BoostingMetricsCalcer(const DataSet& ds)
-    : ds_(ds)
-    , cursor_(ds.target().dim(), 1) {
+    explicit BoostingMetricsCalcer(const DataSet& ds)
+            : ds_(ds)
+            , cursor_(ds.target().dim(), 1) {
 
     }
 
@@ -54,9 +53,16 @@ public:
         for (uint32_t i = 0; i < metrics_.size(); ++i) {
             if (iter_ % metricPeriods_[i] == 0) {
                 double val = metrics_[i]->value(cursor_);
-                if (val < bestValue_[i]) {
-                    bestValue_[i] = val;
-                    bestIter_[i] = iter_;
+                if (metricType_[i] == MetricType::Minimization) {
+                    if (val < bestValue_[i]) {
+                        bestValue_[i] = val;
+                        bestIter_[i] = iter_;
+                    }
+                } else {
+                    if (val > bestValue_[i]) {
+                        bestValue_[i] = val;
+                        bestIter_[i] = iter_;
+                    }
                 }
                 std::cout << std::setprecision(5) << metricName[i] << "=" << val << ", best: (" << bestValue_[i] << ", " << bestIter_[i] << ")";
                 if (i + 1 != metrics_.size()) {
@@ -69,18 +75,32 @@ public:
         ++iter_;
     }
 
-    void addMetric(const Func& func, const std::string& name, int metricPeriod = 1) {
+    enum MetricType {
+        Maximization,
+        Minimization,
+    };
+
+    void addMetric(const Func& func, const std::string& name, int metricPeriod = 1,
+            MetricType metricType = MetricType::Minimization) {
         metrics_.push_back(func);
         metricName.push_back(name);
         metricPeriods_.push_back(metricPeriod);
+        metricType_.push_back(metricType);
         bestIter_.push_back(-1);
-        bestValue_.push_back(1e9);
+
+        if (metricType == MetricType::Minimization) {
+            bestValue_.push_back(1e9);
+        } else {
+            bestValue_.push_back(-1e9);
+        }
     }
 
 private:
+    // TODO make "Metric" type
     std::vector<int> metricPeriods_;
     std::vector<SharedPtr<Func>> metrics_;
     std::vector<std::string> metricName;
+    std::vector<MetricType> metricType_;
 
     std::vector<double> bestValue_;
     std::vector<int> bestIter_;

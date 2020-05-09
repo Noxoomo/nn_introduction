@@ -72,7 +72,7 @@ experiments::OptimizerPtr Cifar10EM::getDecisionOptimizer(const experiments::Mod
 
 experiments::OptimizerPtr Cifar10EM::getLinearPolynomOptimizer(const experiments::ModelPtr& decisionModel) {
     LinearTreesBoosterOptions opts = LinearTreesBoosterOptions::fromJson(params_["decision_model_optimizer"]);
-    return std::make_shared<LinearTreesOptimizer>(opts);
+    return std::make_shared<LinearTreesOptimizer>(opts, getRepr(valDs_));
 }
 
 experiments::OptimizerPtr Cifar10EM::getCatboostPolynomOptimizer(const std::shared_ptr<PolynomModel>& model) {
@@ -95,19 +95,7 @@ void Cifar10EM::pretrainReprModel(TensorPairDataset& ds, const LossPtr& loss) {
 }
 
 void Cifar10EM::LinearTreesOptimizer::train(TensorPairDataset& tpds, LossPtr loss, experiments::ModelPtr model) const {
-    auto polynomModel = std::dynamic_pointer_cast<PolynomModel>(model);
-    if (!polynomModel) {
-        throw std::runtime_error("model should be polynom");
-    }
-
-    auto flatData = tpds.data().to(torch::kCPU).view({(long)tpds.size().value(), -1}).contiguous();
-    Mx dsdata(Vec(flatData), flatData.sizes()[0], flatData.sizes()[1]);
-    DataSet ds(dsdata, Vec(tpds.targets().to(torch::kCPU).to(torch::kFloat).contiguous()));
-
-    LinearTreesBooster booster(opts_);
-    auto ensemble = booster.fit(ds);
-    auto polynom = std::make_shared<Polynom>(LinearTreesToPolynom(*std::dynamic_pointer_cast<Ensemble>(ensemble)));
-    polynomModel->reset(polynom);
+    train(tpds, valDs_, loss, model);
 }
 
 void Cifar10EM::LinearTreesOptimizer::train(TensorPairDataset& trainTpds, TensorPairDataset& valTpds,

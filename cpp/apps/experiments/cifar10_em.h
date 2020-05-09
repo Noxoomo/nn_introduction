@@ -34,8 +34,10 @@ private:
 
     class LinearTreesOptimizer : public experiments::Optimizer {
     public:
-        explicit LinearTreesOptimizer(const LinearTreesBoosterOptions& opts)
-                : opts_(opts) {
+        explicit LinearTreesOptimizer(const LinearTreesBoosterOptions& opts,
+                                      TensorPairDataset valDs)
+                : opts_(opts)
+                , valDs_(std::move(valDs)) {
 
         }
 
@@ -45,6 +47,8 @@ private:
 
     private:
         LinearTreesBoosterOptions opts_;
+        mutable TensorPairDataset valDs_; // TODO this shouldn't be here, but I need a quick fix
+
     };
 
     class CatBoostOptimizer : public experiments::Optimizer {

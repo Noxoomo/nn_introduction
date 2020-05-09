@@ -36,7 +36,7 @@ public:
             }
         }
 
-        res = 1 - correct * 1.0 / targetRef.size();
+        res = correct * 1.0 / targetRef.size();
     }
 
 private:
@@ -79,8 +79,8 @@ ModelPtr LinearTreesBooster::fit(const DataSet& trainDs) {
                       createWeakLinearLearner(grid, opts_.greedyLinearTreesOpts));
 
     auto trainMetricsCalcer = std::make_shared<BoostingMetricsCalcer>(trainDs);
-    trainMetricsCalcer->addMetric(CrossEntropy(trainDs), "cross_entropy-train");
-    trainMetricsCalcer->addMetric(BinaryAcc(trainDs), "acc-train");
+    trainMetricsCalcer->addMetric(CrossEntropy(trainDs), "cross_entropy-train", 1, BoostingMetricsCalcer::MetricType::Maximization);
+    trainMetricsCalcer->addMetric(BinaryAcc(trainDs), "acc-train", 1, BoostingMetricsCalcer::MetricType::Maximization);
     boosting.addListener(trainMetricsCalcer);
 
     auto fitTimeCalcer = std::make_shared<BoostingFitTimeTracker>();
@@ -100,12 +100,13 @@ ModelPtr LinearTreesBooster::fit(const DataSet& trainDs, const DataSet& valDs) {
                       createWeakLinearLearner(grid, opts_.greedyLinearTreesOpts));
 
     auto testMetricsCalcer = std::make_shared<BoostingMetricsCalcer>(valDs);
-    testMetricsCalcer->addMetric(CrossEntropy(valDs), "cross_entropy-val");
-    testMetricsCalcer->addMetric(BinaryAcc(valDs), "acc-val", 1);
+    testMetricsCalcer->addMetric(CrossEntropy(valDs), "cross_entropy-val", 1, BoostingMetricsCalcer::MetricType::Maximization);
+    testMetricsCalcer->addMetric(BinaryAcc(valDs), "acc-val", 1, BoostingMetricsCalcer::MetricType::Maximization);
     boosting.addListener(testMetricsCalcer);
 
     auto trainMetricsCalcer = std::make_shared<BoostingMetricsCalcer>(trainDs);
-    trainMetricsCalcer->addMetric(CrossEntropy(trainDs), "cross_entropy-train");
+    trainMetricsCalcer->addMetric(CrossEntropy(trainDs), "cross_entropy-train", 1, BoostingMetricsCalcer::MetricType::Maximization);
+    testMetricsCalcer->addMetric(BinaryAcc(trainDs), "acc-train", 1, BoostingMetricsCalcer::MetricType::Maximization);
     boosting.addListener(trainMetricsCalcer);
 
     auto fitTimeCalcer = std::make_shared<BoostingFitTimeTracker>();
