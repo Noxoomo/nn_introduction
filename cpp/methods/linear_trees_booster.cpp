@@ -135,7 +135,7 @@ ModelPtr LinearTreesBooster::fit(const DataSet& trainDs, const DataSet& valDs) c
         std::cout << *polynom << std::endl;
         auto polynomModel = std::make_shared<PolynomModel>(Monom::MonomType::LinearMonom);
         polynomModel->reset(polynom);
-        auto tIdxs = torch::ones({1});
+        auto tIdxs = torch::ones({1}, torch::kLong);
         auto res = polynomModel->forward(valDs.tensorData().view({valDs.samplesCount(), -1})).index_select(1, tIdxs);
         Vec cursor(res);
         std::cout << "polynom acc: " << std::setprecision(5) << BinaryAcc(valDs).value(cursor) << std::endl;
