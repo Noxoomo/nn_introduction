@@ -118,15 +118,16 @@ ModelPtr LinearTreesBooster::fit(const DataSet& trainDs, const DataSet& valDs) c
     CrossEntropy target(trainDs);
     auto ensemble = boosting.fit(trainDs, target);
 
+    /*
+    Mx cursor1(valDs.samplesCount(), 1);
     {
-        Mx cursor(valDs.samplesCount(), 1);
-        ensemble->apply(valDs, cursor);
+        ensemble->apply(valDs, cursor1);
         std::cout << "ensemble size: " << std::dynamic_pointer_cast<Ensemble>(ensemble)->size() << std::endl;
         std::dynamic_pointer_cast<Ensemble>(ensemble)->visitModels([&](ModelPtr model) {
             auto cmodel = std::dynamic_pointer_cast<LinearObliviousTree>(model);
             cmodel->printInfo();
         });
-        std::cout << "ensemble acc: " << std::setprecision(5) << BinaryAcc(valDs).value(cursor) << std::endl;
+        std::cout << "ensemble acc: " << std::setprecision(5) << BinaryAcc(valDs).value(cursor1) << std::endl;
     }
 
     {
@@ -137,9 +138,30 @@ ModelPtr LinearTreesBooster::fit(const DataSet& trainDs, const DataSet& valDs) c
         polynomModel->reset(polynom);
         auto tIdxs = torch::ones({1}, torch::kLong);
         auto res = polynomModel->forward(valDs.tensorData().view({valDs.samplesCount(), -1})).index_select(1, tIdxs);
-        Vec cursor(res);
+        Vec cursor(res.view({-1}));
         std::cout << "polynom acc: " << std::setprecision(5) << BinaryAcc(valDs).value(cursor) << std::endl;
+
+        float mxdiff = 0;
+        int idx;
+        for (int i = 0; i < cursor.size(); ++i) {
+            if (std::abs(cursor(i) - cursor1.get(i,0).value()) > mxdiff) {
+                idx = i;
+                mxdiff = std::abs(cursor(i) - cursor1.get(i,0).value())
+            }
+        }
+
+        std::cout << "mxdiff = " << mxdiff << std::endl;
+        std::cout << "ensemble val: " << cursor1.get(idx, 0).value() << ", poly val: " << cursor(idx) << std::endl;
+
+        auto sample = valDs.sample(idx).data();
+
+        for (int i = 0; i < valDs.featuresCount(); ++i) {
+            std::cout << "f[" << i << "]: " << sample[i] << std::endl;
+        }
+
+        exit(1);
     }
+     */
 
     return ensemble;
 }

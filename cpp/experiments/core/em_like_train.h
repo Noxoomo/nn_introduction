@@ -29,6 +29,7 @@ public:
 
             // M step
             optimizeDecisionModel(ds, loss);
+            fireListeners(i);
             // E step
             optimizeRepresentationModel(ds, loss);
 

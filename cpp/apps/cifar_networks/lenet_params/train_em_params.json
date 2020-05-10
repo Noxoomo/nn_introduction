@@ -9,21 +9,28 @@
         "device": "GPU"
       },
       "classifier": {
-        "num_classes": 0,
+        "num_classes": 10,
         "main": {
-          "model_arch": "Id",
+          "model_arch": "MLP",
+          "num_classes": 10,
+          "dims": [400, 10],
           "device": "GPU"
         }
       }
     },
     "m_model": {
-      "model_arch": "polynom",
-      "monom_type": "ExpProbMonom",
-      "lambda": 0.1,
+      "model_arch": "Id",
       "num_classes": 10,
       "device": "GPU"
     },
-    "checkpoint_file": "small_net_checkpoint.pt",
+    "m_model_unused": {
+      "model_arch": "polynom",
+      "monom_type": "SigmoidProbMonom",
+      "lambda": 1.0,
+      "num_classes": 10,
+      "device": "GPU"
+    },
+    "checkpoint_file": "lenet_checkpoint.pt",
     "load_from_checkpoint": false
   },
 
@@ -57,8 +64,8 @@
   "batch_size": 128,
   "reports_per_epoch": 10,
   "em_iterations": {
-    "global_iters": 3,
-    "e_iters": 5,
+    "global_iters": 4,
+    "e_iters": 0,
     "m_iters": 0
   },
   "sgd_step": 0.1,
@@ -69,19 +76,19 @@
     {
       "field": "sgd_step",
       "type": "double",
-      "values": [0.01, 0.001, 0.0001],
-      "iters": [0, 1, 2]
+      "values": [0.1, 0.01, 0.001, 0.0001],
+      "iters": [0, 1, 2, 3]
     },
     {
       "field": "em_iterations.e_iters",
       "type": "int",
-      "values": [10, 300, 500],
-      "iters": [0, 1, 2]
+      "values": [150, 100, 100, 200],
+      "iters": [0, 1, 2, 3]
     },
     {
       "field": "em_iterations.m_iters",
       "type": "int",
-      "values": [1, 1, 1],
+      "values": [0, 0, 0],
       "iters": [0, 1, 2]
     }
   ],

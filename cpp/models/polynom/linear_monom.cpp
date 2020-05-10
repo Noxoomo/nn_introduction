@@ -58,6 +58,8 @@ std::vector<std::tuple<TSymmetricTree, int>> LinearToSymmetricTrees(const Linear
             tree.Features.push_back(splitOrigFId);
             tree.Conditions.push_back(splitCond);
         }
+        std::reverse(tree.Features.begin(), tree.Features.end());
+        std::reverse(tree.Conditions.begin(), tree.Conditions.end());
 
         if (i == 0 && origFId != -1) {
             throw std::runtime_error("-1");

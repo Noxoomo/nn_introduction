@@ -86,6 +86,13 @@ experiments::OptimizerPtr Cifar10EM::getCatboostPolynomOptimizer(const std::shar
 
 void Cifar10EM::pretrainReprModel(TensorPairDataset& ds, const LossPtr& loss) {
     using namespace experiments;
+
+    if (params_["em_iterations"]["e_iters"] == 0) {
+        std::cout << "no pretrain" << std::endl;
+        return;
+    }
+
+    // TODO move to params, don't hardcode
     auto model = std::make_shared<ConvModel>(model_->eStepModel(),
             std::make_shared<Classifier>(std::make_shared<MLP>(std::vector<int>({400, 10}))));
     model->to(model_->eStepModel()->device());

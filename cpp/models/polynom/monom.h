@@ -32,7 +32,7 @@ struct BinarySplit {
 };
 
 inline std::ostream& operator<<(std::ostream& out, const BinarySplit& s) {
-    out << "f[" << s.Feature << "] > " << s.Condition << " ";
+    out << std::setprecision(7) << "f[" << s.Feature << "] > " << s.Condition << " ";
     return out;
 }
 
@@ -161,9 +161,9 @@ public:
 };
 
 inline std::ostream& operator<<(std::ostream& out, const Monom& m) {
-    out << m.Structure_ << "->[{";
+    out << "{" << m.origFId_ << "}:" << m.Structure_ << "->[{";
     for (auto val : m.Values_) {
-        out << val << ", ";
+        out << std::setprecision(7) << val << ", ";
     }
     out << "}]";
     return out;
