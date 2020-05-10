@@ -16,7 +16,7 @@
 
 // CommonEm
 
-class Cifar10EM final : public EMLikeTrainer<decltype(getDefaultCifar10TrainTransform())> {
+class Cifar10EM final : public EMLikeTrainer<decltype(getDefaultCifar10TestTransform())> {
 public:
     Cifar10EM(experiments::EmModelPtr model,
               const json& params,

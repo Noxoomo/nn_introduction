@@ -31,6 +31,11 @@ struct BinarySplit {
     }
 };
 
+inline std::ostream& operator<<(std::ostream& out, const BinarySplit& s) {
+    out << "f[" << s.Feature << "] > " << s.Condition << " ";
+    return out;
+}
+
 struct PolynomStructure {
     std::vector<BinarySplit> Splits;
 
@@ -74,10 +79,19 @@ struct PolynomStructure {
     }
 };
 
+inline std::ostream& operator<<(std::ostream& out, const PolynomStructure& str) {
+    out << "(";
+    for (auto s : str.Splits) {
+        out << s;
+    }
+    out << ")";
+    return out;
+}
+
 template <>
 struct std::hash<PolynomStructure> {
     inline size_t operator()(const PolynomStructure& value) const {
-        return value.GetHash();
+        return value.GetHash() + 445;
     }
 };
 
@@ -87,15 +101,15 @@ inline void hash_combine(std::size_t& seed) { }
 template <typename T, typename... Rest>
 inline void hash_combine(std::size_t& seed, const T& v, Rest... rest) {
     std::hash<T> hasher;
-    seed ^= hasher(v) + 0x9e3779b9 + (seed<<6) + (seed>>2);
+    seed ^= hasher(v) + 0x9e3779b9 + (seed<<6) + (seed>>2) + 321;
     hash_combine(seed, rest...);
 }
 
 template <>
 struct std::hash<std::tuple<PolynomStructure, int>> {
     inline size_t operator()(const std::tuple<PolynomStructure, int>& tuple) const {
-        std::size_t ret = 0;
-        hash_combine(ret, std::get<0>(tuple), std::get<1>(tuple));
+        std::size_t ret = 0x1e7734b5;
+        hash_combine(ret, std::get<0>(tuple), std::get<1>(tuple) + 123);
         return ret;
     }
 };
@@ -133,11 +147,9 @@ public:
     virtual void Backward(double lambda, ConstVecRef<float> features, ConstVecRef<float> outputsDer, VecRef<float> featuresDer) const = 0;
 
     virtual MonomType getMonomType() const = 0;
-
     static MonomType getMonomType(const std::string& strMonomType);
 
     static MonomPtr createMonom(MonomType monomType);
-
     static MonomPtr createMonom(MonomType monomType, PolynomStructure structure, std::vector<double> values, int origFId);
 
     virtual ~Monom() = default;
@@ -147,3 +159,12 @@ public:
     std::vector<double> Values_;
     int origFId_;
 };
+
+inline std::ostream& operator<<(std::ostream& out, const Monom& m) {
+    out << m.Structure_ << "->[{";
+    for (auto val : m.Values_) {
+        out << val << ", ";
+    }
+    out << "}]";
+    return out;
+}

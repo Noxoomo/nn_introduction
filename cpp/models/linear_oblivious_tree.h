@@ -28,11 +28,11 @@ public:
     double value(const ConstVecRef<float>& x) const {
         double res = 0.0;
 
+        res += w_(0, 0); // bias
         for (int i = 1; i < (int)w_.size(); ++i) {
             int f = usedFeaturesInOrder_[i];
             res += x[f] * w_(i, 0);
         }
-        res += w_(0, 0); // bias
 
         return res;
     }
@@ -48,10 +48,10 @@ public:
         }
     }
 
-    void printInfo() const {
+    void printInfo(double scale = 1.0) const {
         std::cout << "{";
         for (int i = 0; i < w_.size(); ++i) {
-            std::cout << w_(i, 0);
+            std::cout << std::setprecision(7) << w_(i, 0) * scale;
             if (i != w_.size() - 1) {
                 std::cout << " ";
             }

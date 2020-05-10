@@ -65,9 +65,9 @@ TEST(LinearPolynom, ValGrad) {
     const double l2reg = 1e-5;
 
     BoostingConfig boostingConfig;
-    boostingConfig.iterations_ = 3;
-    boostingConfig.step_ = 0.5;
-    Boosting boosting(boostingConfig, createWeakTarget(l2reg), createWeakLinearLearner(3,  l2reg, grid));
+    boostingConfig.iterations_ = 1;
+    boostingConfig.step_ = 0.1;
+    Boosting boosting(boostingConfig, createWeakTarget(l2reg), createWeakLinearLearner(1,  l2reg, grid));
 
     auto trainMetricsCalcer = std::make_shared<BoostingMetricsCalcer>(ds);
     trainMetricsCalcer->addMetric(L2(ds), "l2-train");
@@ -76,13 +76,19 @@ TEST(LinearPolynom, ValGrad) {
     LinearL2 target(ds, l2reg);
     auto ensemble = boosting.fit(ds, target);
 
+    std::dynamic_pointer_cast<Ensemble>(ensemble)->visitModels([](const ModelPtr& model) {
+        std::dynamic_pointer_cast<LinearObliviousTree>(model)->printInfo();
+    });
+
     auto polynom = LinearTreesToPolynom(*std::dynamic_pointer_cast<Ensemble>(ensemble));
+    std::cout << polynom << std::endl;
 
     for (int i = 0; i < (int)ds.samplesCount(); ++i) {
-        Vec val(1);
+        Vec val(2);
         polynom.Forward(ds.sample(i).arrayRef(), val.arrayRef());
         std::cout << "val for sample #" << i << ": " << ensemble->value(ds.sample(i)) << " " << val(0) << std::endl;
-        ASSERT_NEAR(ensemble->value(ds.sample(i)), val(0), 1e-4);
+        ASSERT_NEAR(val(0), 0, 1e-9);
+        ASSERT_NEAR(ensemble->value(ds.sample(i)), val(1), 1e-9);
     }
 
     for (int i = 0; i < ds.samplesCount(); ++i) {
@@ -90,7 +96,7 @@ TEST(LinearPolynom, ValGrad) {
         ensemble->grad(ds.sample(i), gradExpected);
 
         Vec gradActual(ds.featuresCount());
-        auto outputGrads = VecFactory::fromVector({1});
+        auto outputGrads = VecFactory::fromVector({1, 1});
         polynom.Backward(ds.sample(i).arrayRef(), outputGrads.arrayRef(), gradActual.arrayRef());
 
         for (int j = 0; j < gradExpected.size(); ++j) {
@@ -112,8 +118,8 @@ TEST(LinearPolynomGpu, ValGrad) {
     const double l2reg = 1e-5;
 
     BoostingConfig boostingConfig;
-    boostingConfig.iterations_ = 3;
-    boostingConfig.step_ = 0.5;
+    boostingConfig.iterations_ = 100;
+    boostingConfig.step_ = 0.01;
     Boosting boosting(boostingConfig, createWeakTarget(l2reg), createWeakLinearLearner(3,  l2reg, grid));
 
     auto trainMetricsCalcer = std::make_shared<BoostingMetricsCalcer>(ds);
@@ -129,7 +135,8 @@ TEST(LinearPolynomGpu, ValGrad) {
     for (int i = 0; i < ds.samplesCount(); ++i) {
         auto val = gpuPolynom.Forward(ds.sample(i).data().view({1, -1}).to(torch::kCUDA)).to(torch::kCPU);
         std::cout << "val for sample #" << i << ": " << ensemble->value(ds.sample(i)) << " " << val.data_ptr<float>()[0] << std::endl;
-        ASSERT_NEAR(ensemble->value(ds.sample(i)), val.data_ptr<float>()[0], 1e-4);
+        ASSERT_NEAR(val.data_ptr<float>()[0], 0, 1e-5);
+        ASSERT_NEAR(ensemble->value(ds.sample(i)), val.data_ptr<float>()[1], 1e-5);
     }
 
     for (int i = 0; i < ds.samplesCount(); ++i) {
@@ -142,7 +149,7 @@ TEST(LinearPolynomGpu, ValGrad) {
 
         for (int j = 0; j < gradExpected.size(); ++j) {
             std::cout << "grad for sample #" << i << ": " << gradExpected(j) << " " << gradActual[0][j].data_ptr<float>()[0] << std::endl;
-            ASSERT_NEAR(gradExpected(j), gradActual[0][j].data_ptr<float>()[0], 1e-4);
+            ASSERT_NEAR(gradExpected(j), gradActual[0][j].data_ptr<float>()[0], 1e-5);
         }
     }
 }

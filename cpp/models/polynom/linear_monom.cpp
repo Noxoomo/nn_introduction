@@ -59,6 +59,10 @@ std::vector<std::tuple<TSymmetricTree, int>> LinearToSymmetricTrees(const Linear
             tree.Conditions.push_back(splitCond);
         }
 
+        if (i == 0 && origFId != -1) {
+            throw std::runtime_error("-1");
+        }
+
         for (const auto& l : loTree.leaves_) {
             tree.Leaves.push_back(0); // TODO this one is a hack for binary classificatioon
             tree.Leaves.push_back(l.w_(i, 0) * loTree.scale_ * scale);

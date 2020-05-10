@@ -4,6 +4,10 @@
 #include <methods/greedy_linear_oblivious_trees.h>
 #include <vec_tools/transform.h>
 #include <methods/greedy_oblivious_tree.h>
+#include <models/polynom/polynom.h>
+#include <models/polynom/linear_monom.h>
+#include <experiments/core/polynom_model.h>
+
 
 // TODO move it somewhere
 class BinaryAcc : public Stub<Func, BinaryAcc> {
@@ -113,6 +117,29 @@ ModelPtr LinearTreesBooster::fit(const DataSet& trainDs, const DataSet& valDs) c
 
     CrossEntropy target(trainDs);
     auto ensemble = boosting.fit(trainDs, target);
+
+    {
+        Mx cursor(valDs.samplesCount(), 1);
+        ensemble->apply(valDs, cursor);
+        std::cout << "ensemble size: " << std::dynamic_pointer_cast<Ensemble>(ensemble)->size() << std::endl;
+        std::dynamic_pointer_cast<Ensemble>(ensemble)->visitModels([&](ModelPtr model) {
+            auto cmodel = std::dynamic_pointer_cast<LinearObliviousTree>(model);
+            cmodel->printInfo();
+        });
+        std::cout << "ensemble acc: " << std::setprecision(5) << BinaryAcc(valDs).value(cursor) << std::endl;
+    }
+
+    {
+        auto polynom = std::make_shared<Polynom>(LinearTreesToPolynom(*std::dynamic_pointer_cast<Ensemble>(ensemble)));
+        std::cout << "polynom size: " << polynom->Ensemble_.size() << std::endl;
+        std::cout << *polynom << std::endl;
+        auto polynomModel = std::make_shared<PolynomModel>(Monom::MonomType::LinearMonom);
+        polynomModel->reset(polynom);
+        auto tIdxs = torch::ones({1});
+        auto res = polynomModel->forward(valDs.tensorData().view({valDs.samplesCount(), -1})).index_select(1, tIdxs);
+        Vec cursor(res);
+        std::cout << "polynom acc: " << std::setprecision(5) << BinaryAcc(valDs).value(cursor) << std::endl;
+    }
 
     return ensemble;
 }

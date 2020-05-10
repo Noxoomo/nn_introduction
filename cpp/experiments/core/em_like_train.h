@@ -108,8 +108,9 @@ protected:
 
     TensorPairDataset getRepr(TensorPairDataset& ds) {
         auto reprModel = model_->eStepModel();
+        reprModel->eval();
 
-        auto mds = ds.map(getDefaultCifar10TrainTransform());
+        auto mds = ds.map(reprTransform_);
         auto dloader = torch::data::make_data_loader(mds, torch::data::DataLoaderOptions(256));
         std::vector<torch::Tensor> reprList;
         std::vector<torch::Tensor> targetsList;

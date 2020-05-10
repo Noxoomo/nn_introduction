@@ -81,7 +81,7 @@ void LinearObliviousTree::printInfo() const {
 
     std::cout << "[";
     for (int lId = 0; lId < (int)leaves_.size(); ++lId) {
-        leaves_[lId].printInfo();
+        leaves_[lId].printInfo(scale_);
         if (lId != (int)leaves_.size() - 1) {
             std::cout << ", ";
         }

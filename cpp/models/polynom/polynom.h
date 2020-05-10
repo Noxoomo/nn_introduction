@@ -64,4 +64,11 @@ struct Polynom {
     }
 };
 
+inline std::ostream& operator<<(std::ostream& out, const Polynom& p) {
+    for (const auto& m : p.Ensemble_) {
+        out << *m << " + ";
+    }
+    return out;
+}
+
 using PolynomPtr = std::shared_ptr<Polynom>;

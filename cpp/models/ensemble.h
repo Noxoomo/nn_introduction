@@ -57,7 +57,7 @@ public:
         for (auto& model : models_) {
             res += model->value(x);
         }
-        return res;
+        return res * scale_;
     }
 
     void grad(const Vec& x, Vec to) override {
