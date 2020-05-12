@@ -35,9 +35,13 @@ private:
     class LinearTreesOptimizer : public experiments::Optimizer {
     public:
         explicit LinearTreesOptimizer(const LinearTreesBoosterOptions& opts,
-                                      TensorPairDataset valDs)
+                                      TensorPairDataset valDs,
+                                      bool trainFromLast,
+                                      std::shared_ptr<Ensemble>& prevEnsemble)
                 : opts_(opts)
-                , valDs_(std::move(valDs)) {
+                , valDs_(std::move(valDs))
+                , trainFromLast_(trainFromLast)
+                , prevEnsemble_(prevEnsemble) {
 
         }
 
@@ -46,8 +50,10 @@ private:
         void train(TensorPairDataset& trainTpds, TensorPairDataset& valTpds, LossPtr loss, experiments::ModelPtr model) const override;
 
     private:
-        LinearTreesBoosterOptions opts_;
+        mutable LinearTreesBoosterOptions opts_;
         mutable TensorPairDataset valDs_; // TODO this shouldn't be here, but I need a quick fix
+        bool trainFromLast_;
+        std::shared_ptr<Ensemble>& prevEnsemble_;
 
     };
 
@@ -88,5 +94,6 @@ private:
 
 private:
     TensorPairDataset valDs_; // TODO this shouldn't be here, but I need a quick fix
+    std::shared_ptr<Ensemble> prevEnsemble_;
 
 };

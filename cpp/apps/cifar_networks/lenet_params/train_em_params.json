@@ -9,54 +9,28 @@
         "device": "GPU"
       },
       "classifier": {
-        "num_classes": 10,
+        "num_classes": 2,
         "main": {
-          "model_arch": "MLP",
-          "num_classes": 10,
-          "dims": [400, 10],
+          "model_arch": "Id",
+          "num_classes": 2,
           "device": "GPU"
-        }
+        },
+        "device": "GPU"
       }
     },
     "m_model": {
-      "model_arch": "Id",
-      "num_classes": 10,
-      "device": "GPU"
-    },
-    "m_model_unused": {
       "model_arch": "polynom",
-      "monom_type": "SigmoidProbMonom",
+      "monom_type": "LinearMonom",
       "lambda": 1.0,
       "num_classes": 10,
       "device": "GPU"
     },
-    "checkpoint_file": "lenet_checkpoint.pt",
-    "load_from_checkpoint": false
-  },
-
-  "catboost_params": {
-    "boosting_type": "Plain",
-    "iterations": 1000,
-    "depth": 6,
-    "devices": "0",
-    "task_type": "GPU",
-    "gpu_ram_part": 0.5,
-    "eval_metric": "Accuracy",
-    "od_type": "IncToDec",
-    "loss_function": "MultiClass",
-    "learning_rate": 0.01,
-    "use_best_model": false,
-    "feature_border_type": "Uniform",
-    "rsm": 1,
-    "random_strength": 1,
-    "bootstrap_type": "Bernoulli",
-    "subsample": 1,
-    "leaf_estimation_method": "Simple",
-    "metric_period": 100
+    "checkpoint_file": "lenet_linear_checkpoint.pt"
   },
 
   "dataset": {
     "name": "cifar-10",
+    "base_classes": [0, 1, 2, 8, 9],
     "training_limit": -1,
     "test_limit": -1
   },
@@ -64,11 +38,11 @@
   "batch_size": 128,
   "reports_per_epoch": 10,
   "em_iterations": {
-    "global_iters": 4,
-    "e_iters": 0,
+    "global_iters": 20,
+    "e_iters": 10,
     "m_iters": 0
   },
-  "sgd_step": 0.1,
+  "sgd_step": 0.005,
   "dropout": 0.0,
   "device": "GPU",
 
@@ -76,30 +50,30 @@
     {
       "field": "sgd_step",
       "type": "double",
-      "values": [0.1, 0.01, 0.001, 0.0001],
-      "iters": [0, 1, 2, 3]
+      "values": [0.005, 0.0005, 0.00005, 0.000005],
+      "iters": [0, 4, 8, 12]
     },
     {
       "field": "em_iterations.e_iters",
       "type": "int",
-      "values": [150, 100, 100, 200],
-      "iters": [0, 1, 2, 3]
+      "values": [20],
+      "iters": [0]
     },
     {
       "field": "em_iterations.m_iters",
       "type": "int",
-      "values": [0, 0, 0],
+      "values": [1, 1, 1],
       "iters": [0, 1, 2]
     }
   ],
 
-  "eval_model": {
+  "decision_model_optimizer": {
     "grid_config": {
-      "borders_count": 3
+      "borders_count": 1
     },
     "boosting_config": {
       "step": 0.5,
-      "iterations": 500
+      "iterations": 100
     },
     "bootstrap_options": {
       "sample_rate": 0.7,
@@ -112,22 +86,24 @@
     }
   },
 
-  "decision_model_optimizer": {
-    "grid_config": {
-      "borders_count": 3
-    },
-    "boosting_config": {
-      "step": 0.5,
-      "iterations": 500
-    },
-    "bootstrap_options": {
-      "sample_rate": 0.7,
-      "seed": 42,
-      "type": "poisson"
-    },
-    "tree_config": {
-      "l2reg": 2.0,
-      "depth": 6
-    }
+  "catboost_params": {
+    "boosting_type": "Plain",
+    "iterations": 3000,
+    "depth": 6,
+    "devices": "0",
+    "task_type": "GPU",
+    "gpu_ram_part": 0.5,
+    "eval_metric": "Accuracy",
+    "od_type": "IncToDec",
+    "loss_function": "MultiClass",
+    "learning_rate": 0.05,
+    "use_best_model": false,
+    "feature_border_type": "Uniform",
+    "rsm": 0.5,
+    "random_strength": 1,
+    "bootstrap_type": "Bernoulli",
+    "subsample": 1,
+    "leaf_estimation_method": "Simple",
+    "metric_period": 100
   }
 }

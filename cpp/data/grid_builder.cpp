@@ -227,7 +227,9 @@ GridPtr buildGrid(const DataSet& ds, const BinarizationConfig& config) {
         auto featureBorders = buildBorders(config, &column);
 //        std::vector<float> featureBorders = jmllFBorders[fIndex];
         if (!featureBorders.empty()) {
-            borders.emplace_back(std::make_pair(fIndex, featureBorders));
+            // TODO this is here for experiments with nest, make it a param
+            borders.emplace_back(std::make_pair(fIndex, std::vector<float>({0.})));
+            //borders.emplace_back(std::make_pair(fIndex, featureBorders));
         }
     }
 

@@ -16,7 +16,7 @@
 
 
 TensorPairDataset getRepr(TensorPairDataset& ds, const experiments::ModelPtr& reprModel) {
-    auto mds = ds.map(getDefaultCifar10TrainTransform());
+    auto mds = ds.map(getDefaultCifar10TestTransform());
     auto dloader = torch::data::make_data_loader(mds, torch::data::DataLoaderOptions(256));
     std::vector<torch::Tensor> reprList;
     std::vector<torch::Tensor> targetsList;
@@ -43,6 +43,8 @@ int main(int argc, const char* argv[]) {
 
     auto paramsFolder = getParamsFolder(argc, argv);
     auto params = readJson(paramsFolder + "train_em_params.json");
+
+    std::cout << "params: " << params.dump(4) << std::endl;
 
     auto device = getDevice(params[DeviceKey]);
     int batchSize = params[BatchSizeKey];
@@ -155,27 +157,97 @@ int main(int argc, const char* argv[]) {
               << acc << "%" << std::endl;
 
     // Eval with trees
+/*
+    std::cout << "getting train ds repr" << std::endl;
 
-//    std::cout << "getting train ds repr" << std::endl;
-//
-//    auto trainRepr = getRepr(dataset.first, conv);
-//    Vec trainReprVec(trainRepr.data());
-//    Mx reprTrainDsMx(trainReprVec, trainRepr.data().sizes()[0], trainRepr.data().sizes()[1]);
-//    DataSet trainDs(reprTrainDsMx, Vec(trainRepr.targets().to(torch::kFloat)));
-//
-//    std::cout << "getting test ds repr" << std::endl;
-//
-//    auto testRepr = getRepr(dataset.second, conv);
-//    Vec testReprVec(testRepr.data());
-//    Mx reprTestDsMx(testReprVec, testRepr.data().sizes()[0], testRepr.data().sizes()[1]);
-//    DataSet testDs(reprTestDsMx, Vec(testRepr.targets().to(torch::kFloat)));
-//
-//    std::cout << "parsing options" << std::endl;
-//
-//    LinearTreesBoosterOptions opts = LinearTreesBoosterOptions::fromJson(params["eval_model"]);
-//    LinearTreesBooster ltBooster(opts);
-//
-//    std::cout << "fitting ensemble" << std::endl;
-//
-//    auto ensemble = ltBooster.fit(trainDs, testDs);
+    auto trainRepr = getRepr(dataset.first, conv);
+    Vec trainReprVec(trainRepr.data());
+    Mx reprTrainDsMx(trainReprVec, trainRepr.data().sizes()[0], trainRepr.data().sizes()[1]);
+    DataSet trainDs(reprTrainDsMx, Vec(trainRepr.targets().to(torch::kFloat)));
+
+    std::cout << "getting test ds repr" << std::endl;
+
+    auto testRepr = getRepr(dataset.second, conv);
+    Vec testReprVec(testRepr.data());
+    Mx reprTestDsMx(testReprVec, testRepr.data().sizes()[0], testRepr.data().sizes()[1]);
+    DataSet testDs(reprTestDsMx, Vec(testRepr.targets().to(torch::kFloat)));
+
+    std::cout << "parsing options" << std::endl;
+
+    LinearTreesBoosterOptions opts = LinearTreesBoosterOptions::fromJson(params["eval_model"]);
+    LinearTreesBooster ltBooster(opts);
+
+    std::cout << "fitting ensemble" << std::endl;
+
+    auto ensemble = ltBooster.fit(trainDs, testDs);
+
+    auto polynom = std::make_shared<Polynom>(LinearTreesToPolynom(*std::dynamic_pointer_cast<Ensemble>(ensemble)));
+    auto polynomModel = std::make_shared<PolynomModel>(Monom::MonomType::LinearMonom);
+    polynomModel->reset(polynom);
+
+    auto res_model = std::make_shared<experiments::EmModel>(conv, polynomModel);
+    res_model->to(torch::kCUDA);
+
+        {
+        res_model->eval();
+
+        auto dloader = torch::data::make_data_loader(mds, torch::data::DataLoaderOptions(batchSize));
+        int rightAnswersCnt = 0;
+
+        for (auto& batch : *dloader) {
+            auto data = batch.data;
+            torch::Tensor target = batch.target;
+
+            torch::Tensor prediction = res_model->forward(data);
+            prediction = torch::argmax(prediction, 1);
+
+            prediction = prediction.to(torch::kCPU);
+
+            auto targetAccessor = target.accessor<int64_t, 1>();
+            auto predictionsAccessor = prediction.accessor<int64_t, 1>();
+            int size = target.size(0);
+
+            for (int i = 0; i < size; ++i) {
+                const int targetClass = targetAccessor[i];
+                const int predictionClass = predictionsAccessor[i];
+                if (targetClass == predictionClass) {
+                    rightAnswersCnt++;
+                }
+            }
+        }
+
+        std::cout << "Test accuracy: " <<  rightAnswersCnt * 100.0f / dataset.second.size().value() << std::endl;
+    }
+    auto mds2 = dataset.first.map(getDefaultCifar10TestTransform());
+    {
+        res_model->eval();
+
+        auto dloader = torch::data::make_data_loader(mds2, torch::data::DataLoaderOptions(batchSize));
+        int rightAnswersCnt = 0;
+
+        for (auto& batch : *dloader) {
+            auto data = batch.data;
+            torch::Tensor target = batch.target;
+
+            torch::Tensor prediction = res_model->forward(data);
+            prediction = torch::argmax(prediction, 1);
+
+            prediction = prediction.to(torch::kCPU);
+
+            auto targetAccessor = target.accessor<int64_t, 1>();
+            auto predictionsAccessor = prediction.accessor<int64_t, 1>();
+            int size = target.size(0);
+
+            for (int i = 0; i < size; ++i) {
+                const int targetClass = targetAccessor[i];
+                const int predictionClass = predictionsAccessor[i];
+                if (targetClass == predictionClass) {
+                    rightAnswersCnt++;
+                }
+            }
+        }
+
+        std::cout << "Train accuracy: " <<  rightAnswersCnt * 100.0f / dataset.first.size().value() << std::endl;
+    }
+*/
 }

@@ -20,6 +20,7 @@ public:
 private:
     torch::nn::Conv2d conv1_{nullptr};
     torch::nn::Conv2d conv2_{nullptr};
+//    torch::nn::BatchNorm bn_{nullptr};
 };
 
 ModelPtr createConvLayers(const std::vector<int>& inputShape, const json& params);

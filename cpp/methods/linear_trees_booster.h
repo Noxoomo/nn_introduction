@@ -22,6 +22,7 @@ public:
 
     ModelPtr fit(const DataSet& trainDs) const;
     ModelPtr fit(const DataSet& trainDs, const DataSet& valDs) const;
+    ModelPtr fitFrom(const std::shared_ptr<Ensemble>& ensemble, const DataSet& trainDs, const DataSet& valDs) const;
 
     ~LinearTreesBooster() = default;
 

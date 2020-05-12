@@ -15,6 +15,31 @@
 #include <memory>
 #include <iostream>
 
+namespace {
+    class LrLinearDecayOptimizerListener : public experiments::OptimizerEpochListener {
+    public:
+        LrLinearDecayOptimizerListener(double from, double to, int lastEpoch)
+                : from_(from)
+                , to_(to)
+                , lastEpoch_(lastEpoch) {
+
+        }
+
+        void epochReset() override {
+
+        }
+
+        void onEpoch(int epoch, double* lr, experiments::ModelPtr model) override {
+            *lr = from_ + (to_ - from_) * epoch / lastEpoch_;
+        }
+
+    private:
+        double from_;
+        double to_;
+        int lastEpoch_;
+    };
+}
+
 // CommonEm
 
 Cifar10EM::Cifar10EM(experiments::EmModelPtr model,
@@ -45,9 +70,16 @@ experiments::OptimizerPtr Cifar10EM::getReprOptimizer(const experiments::ModelPt
 
     auto dloaderOptions = torch::data::DataLoaderOptions(params_[BatchSizeKey]);
     args.dloaderOptions_ = std::move(dloaderOptions);
-
     auto optimizer = std::make_shared<experiments::DefaultOptimizer<TransT>>(args);
+
     attachDefaultListeners(optimizer, params_);
+
+    if (params_.count("lr_decay")) {
+        double step = params_[SgdStepSizeKey];
+        double decay = params_["lr_decay"];
+        auto lrDecayListener = std::make_shared<LrLinearDecayOptimizerListener>(step, step / decay, params_["em_iterations"]["e_iters"]);
+        optimizer->registerListener(lrDecayListener);
+    }
 
     for (const auto& cb : reprEpochEndcallbacks_) {
         experiments::Optimizer::emplaceEpochListener<experiments::EpochEndCallback>(optimizer.get(), cb);
@@ -71,8 +103,9 @@ experiments::OptimizerPtr Cifar10EM::getDecisionOptimizer(const experiments::Mod
 }
 
 experiments::OptimizerPtr Cifar10EM::getLinearPolynomOptimizer(const experiments::ModelPtr& decisionModel) {
+    bool trainFromLast = params_["model"]["m_model"].value("train_from_last", false);
     LinearTreesBoosterOptions opts = LinearTreesBoosterOptions::fromJson(params_["decision_model_optimizer"]);
-    return std::make_shared<LinearTreesOptimizer>(opts, getRepr(valDs_));
+    return std::make_shared<LinearTreesOptimizer>(opts, getRepr(valDs_), trainFromLast, prevEnsemble_);
 }
 
 experiments::OptimizerPtr Cifar10EM::getCatboostPolynomOptimizer(const std::shared_ptr<PolynomModel>& model) {
@@ -120,10 +153,18 @@ void Cifar10EM::LinearTreesOptimizer::train(TensorPairDataset& trainTpds, Tensor
     Mx valDsData(Vec(flatValData), flatValData.sizes()[0], flatValData.sizes()[1]);
     DataSet valDs(valDsData, Vec(valTpds.targets().to(torch::kCPU).to(torch::kFloat).contiguous()));
 
+    if (!trainFromLast_) {
+        prevEnsemble_ = nullptr;
+    } else if (prevEnsemble_) {
+        opts_.boostingCfg.iterations_ += prevEnsemble_->size();
+    }
+
     LinearTreesBooster booster(opts_);
-    auto ensemble = booster.fit(trainDs, valDs);
+    auto ensemble = booster.fitFrom(prevEnsemble_, trainDs, valDs);
     auto polynom = std::make_shared<Polynom>(LinearTreesToPolynom(*std::dynamic_pointer_cast<Ensemble>(ensemble)));
     polynomModel->reset(polynom);
+
+    prevEnsemble_ = std::move(std::dynamic_pointer_cast<Ensemble>(ensemble));
 }
 
 inline TDataSet MakePool(int fCount,

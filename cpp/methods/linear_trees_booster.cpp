@@ -96,6 +96,10 @@ ModelPtr LinearTreesBooster::fit(const DataSet& trainDs) const {
 }
 
 ModelPtr LinearTreesBooster::fit(const DataSet& trainDs, const DataSet& valDs) const {
+    return fitFrom(nullptr, trainDs, valDs);
+}
+
+ModelPtr LinearTreesBooster::fitFrom(const std::shared_ptr<Ensemble>& oldEnsemble, const DataSet& trainDs, const DataSet& valDs) const {
     auto grid = buildGrid(trainDs, opts_.binarizationCfg);
 
     Boosting boosting(opts_.boostingCfg,
@@ -116,24 +120,23 @@ ModelPtr LinearTreesBooster::fit(const DataSet& trainDs, const DataSet& valDs) c
     boosting.addListener(fitTimeCalcer);
 
     CrossEntropy target(trainDs);
-    auto ensemble = boosting.fit(trainDs, target);
+    auto ensemble = boosting.fitFrom(oldEnsemble, trainDs, target);
 
-    /*
     Mx cursor1(valDs.samplesCount(), 1);
     {
         ensemble->apply(valDs, cursor1);
         std::cout << "ensemble size: " << std::dynamic_pointer_cast<Ensemble>(ensemble)->size() << std::endl;
-        std::dynamic_pointer_cast<Ensemble>(ensemble)->visitModels([&](ModelPtr model) {
-            auto cmodel = std::dynamic_pointer_cast<LinearObliviousTree>(model);
-            cmodel->printInfo();
-        });
+//        std::dynamic_pointer_cast<Ensemble>(ensemble)->visitModels([&](ModelPtr model) {
+//            auto cmodel = std::dynamic_pointer_cast<LinearObliviousTree>(model);
+//            cmodel->printInfo();
+//        });
         std::cout << "ensemble acc: " << std::setprecision(5) << BinaryAcc(valDs).value(cursor1) << std::endl;
     }
 
     {
         auto polynom = std::make_shared<Polynom>(LinearTreesToPolynom(*std::dynamic_pointer_cast<Ensemble>(ensemble)));
         std::cout << "polynom size: " << polynom->Ensemble_.size() << std::endl;
-        std::cout << *polynom << std::endl;
+//        std::cout << *polynom << std::endl;
         auto polynomModel = std::make_shared<PolynomModel>(Monom::MonomType::LinearMonom);
         polynomModel->reset(polynom);
         auto tIdxs = torch::ones({1}, torch::kLong);
@@ -146,22 +149,19 @@ ModelPtr LinearTreesBooster::fit(const DataSet& trainDs, const DataSet& valDs) c
         for (int i = 0; i < cursor.size(); ++i) {
             if (std::abs(cursor(i) - cursor1.get(i,0).value()) > mxdiff) {
                 idx = i;
-                mxdiff = std::abs(cursor(i) - cursor1.get(i,0).value())
+                mxdiff = std::abs(cursor(i) - cursor1.get(i,0).value());
             }
         }
 
         std::cout << "mxdiff = " << mxdiff << std::endl;
         std::cout << "ensemble val: " << cursor1.get(idx, 0).value() << ", poly val: " << cursor(idx) << std::endl;
 
-        auto sample = valDs.sample(idx).data();
+//        auto sample = valDs.sample(idx).data();
 
-        for (int i = 0; i < valDs.featuresCount(); ++i) {
-            std::cout << "f[" << i << "]: " << sample[i] << std::endl;
-        }
-
-        exit(1);
+//        for (int i = 0; i < valDs.featuresCount(); ++i) {
+//            std::cout << "f[" << i << "]: " << sample[i] << std::endl;
+//        }
     }
-     */
 
     return ensemble;
 }
