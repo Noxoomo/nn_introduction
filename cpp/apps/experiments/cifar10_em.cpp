@@ -31,6 +31,7 @@ namespace {
 
         void onEpoch(int epoch, double* lr, experiments::ModelPtr model) override {
             *lr = from_ + (to_ - from_) * epoch / lastEpoch_;
+            std::cout << "changed lr to " << (*lr) << std::endl;
         }
 
     private:
@@ -74,7 +75,7 @@ experiments::OptimizerPtr Cifar10EM::getReprOptimizer(const experiments::ModelPt
 
     attachDefaultListeners(optimizer, params_);
 
-    if (params_.count("lr_decay")) {
+    if (params_.count("lr_decay") && !pretrain_) {
         double step = params_[SgdStepSizeKey];
         double decay = params_["lr_decay"];
         auto lrDecayListener = std::make_shared<LrLinearDecayOptimizerListener>(step, step / decay, params_["em_iterations"]["e_iters"]);
@@ -130,8 +131,10 @@ void Cifar10EM::pretrainReprModel(TensorPairDataset& ds, const LossPtr& loss) {
             std::make_shared<Classifier>(std::make_shared<MLP>(std::vector<int>({400, 10}))));
     model->to(model_->eStepModel()->device());
     model->train(true);
+    pretrain_ = true;
     auto optim = getReprOptimizer(model);
     optim->train(ds, loss, model);
+    pretrain_ = false;
 }
 
 void Cifar10EM::LinearTreesOptimizer::train(TensorPairDataset& tpds, LossPtr loss, experiments::ModelPtr model) const {

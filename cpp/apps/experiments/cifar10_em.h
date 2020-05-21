@@ -95,5 +95,6 @@ private:
 private:
     TensorPairDataset valDs_; // TODO this shouldn't be here, but I need a quick fix
     std::shared_ptr<Ensemble> prevEnsemble_;
+    bool pretrain_ = false;
 
 };

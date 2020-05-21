@@ -9,18 +9,19 @@
         "device": "GPU"
       },
       "classifier": {
-        "num_classes": 2,
+        "num_classes": 10,
         "main": {
           "model_arch": "Id",
-          "num_classes": 2,
+          "num_classes": 10,
           "device": "GPU"
         },
         "device": "GPU"
       }
     },
     "m_model": {
+      "train_from_last": false,
       "model_arch": "polynom",
-      "monom_type": "LinearMonom",
+      "monom_type": "SigmoidProbMonom",
       "lambda": 1.0,
       "num_classes": 10,
       "device": "GPU"
@@ -30,7 +31,7 @@
 
   "dataset": {
     "name": "cifar-10",
-    "base_classes": [0, 1, 2, 8, 9],
+    "base_classes_unused": [0, 1, 2, 8, 9],
     "training_limit": -1,
     "test_limit": -1
   },
@@ -39,9 +40,10 @@
   "reports_per_epoch": 10,
   "em_iterations": {
     "global_iters": 20,
-    "e_iters": 10,
+    "e_iters": 20,
     "m_iters": 0
   },
+  "lr_decay": 100,
   "sgd_step": 0.005,
   "dropout": 0.0,
   "device": "GPU",
@@ -51,7 +53,7 @@
       "field": "sgd_step",
       "type": "double",
       "values": [0.005, 0.0005, 0.00005, 0.000005],
-      "iters": [0, 4, 8, 12]
+      "iters": [0, 3, 7, 10]
     },
     {
       "field": "em_iterations.e_iters",
@@ -73,10 +75,10 @@
     },
     "boosting_config": {
       "step": 0.5,
-      "iterations": 100
+      "iterations": 1200
     },
     "bootstrap_options": {
-      "sample_rate": 0.7,
+      "sample_rate": 0.6,
       "seed": 42,
       "type": "poisson"
     },
@@ -88,7 +90,7 @@
 
   "catboost_params": {
     "boosting_type": "Plain",
-    "iterations": 3000,
+    "iterations": 4000,
     "depth": 6,
     "devices": "0",
     "task_type": "GPU",
@@ -96,10 +98,10 @@
     "eval_metric": "Accuracy",
     "od_type": "IncToDec",
     "loss_function": "MultiClass",
-    "learning_rate": 0.05,
+    "learning_rate": 0.07,
     "use_best_model": false,
     "feature_border_type": "Uniform",
-    "rsm": 0.5,
+    "rsm": 0.6,
     "random_strength": 1,
     "bootstrap_type": "Bernoulli",
     "subsample": 1,

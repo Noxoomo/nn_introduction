@@ -98,7 +98,7 @@ int main(int argc, const char* argv[]) {
             }
         }
 
-        std::cout << "Test accuracy: " <<  rightAnswersCnt * 100.0f / dataset.second.size().value() << std::endl;
+        std::cout << "Test accuracy: " << std::setprecision(5) << rightAnswersCnt * 100.0f / dataset.second.size().value() << std::endl;
     });
 
     if (params["model"].contains("checkpoint_file")) {
@@ -137,7 +137,7 @@ int main(int argc, const char* argv[]) {
             }
         }
 
-        std::cout << "Test accuracy: " <<  rightAnswersCnt * 100.0f / dataset.second.size().value() << std::endl;
+        std::cout << "Test accuracy: " << std::setprecision(5) << rightAnswersCnt * 100.0f / dataset.second.size().value() << std::endl;
     });
 
     // Train
